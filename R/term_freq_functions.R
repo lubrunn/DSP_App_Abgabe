@@ -30,8 +30,23 @@ word_freq_data_wrangler <- function(df, input_date1, input_date2,
 
 names(df) <- c("date", "language", "word", "N", "emo")
 
-### stem the search term so it fits better to words we have
+
+### stem the search term so it fits better to words we have and convert to lower
 search_term <- tolower(corpus::stem_snowball(search_term, algorithm = tolower(input_lang)))
+
+
+
+## convert company term to lower
+input_comp <- tolower(input_comp)
+
+#### stem company inpptu,  control for company names that are two names
+if (length(strsplit(input_comp, " ")[[1]]) > 1){
+  input_comp <- corpus::stem_snowball(strsplit(input_comp, " ")[[1]], algorithm = tolower(input_lang))
+  input_comp <- paste0(input_comp, collapse = "|")
+} else {
+  input_comp <- corpus::stem_snowball(input_comp, algorithm = tolower(input_lang))
+}
+
 
 df <-  df %>%
   filter(between(date, as.Date(input_date1), as.Date(input_date2)) &
@@ -39,9 +54,9 @@ df <-  df %>%
   {if (input_emo == T) filter(., emo == F &
                                 !grepl(paste(emoji_words, collapse = "|"), word) ) else .} %>% ##filter out emoji words if chosen
 
- {if (input_comp != "NoFilter") filter(.,!grepl(corpus::stem_snowball(input_comp), word)) else .} %>% #filter out company name if chosen
+ {if (input_comp != "NoFilter") filter(.,!grepl(input_comp, word)) else .} %>% #filter out company name if chosen
 
-  {if (search_term != "") filter(.,grepl(corpus::stem_snowball(search_term), word)) else .} %>% # only keep what contain search term
+  {if (search_term != "") filter(.,grepl(search_term, word)) else .} %>% # only keep what contain search term
   select(-emo)
 
 return(df)

@@ -1398,9 +1398,14 @@ server <- function(input, output, session) {
 
 
       } else { #if company is chosen
-        glue('SELECT *  FROM sum_stats_companies WHERE
+        ### replace umlaute from input, 1233
+
+        comp <- gsub("ö","Ã¶", input$comp)
+        comp <- gsub("ü", "Ã¼", comp)
+
+               glue('SELECT *  FROM sum_stats_companies WHERE
          retweets_count = {input$rt} and likes_count = {input$likes} and
-         tweet_length = {long} and company  = "{input$comp}" and
+         tweet_length = {long} and company  = "{comp}" and
              language = "{tolower(input$lang)}"' )
       }
 
@@ -1427,6 +1432,12 @@ server <- function(input, output, session) {
 
       ###### querry data from sql
       df_need <- DBI::dbGetQuery(con,  querry_sum_stats_table())
+
+      #### for companies replace umlaute
+      if ("company" %in% names(df_need)){
+        df_need$company <- gsub("Ã¶", "ö", df_need$company)
+        df_need$company <- gsub("Ã¼", "ü", df_need$company)
+      }
       #### return df
       df_need
     })
@@ -1872,7 +1883,7 @@ server <- function(input, output, session) {
     #### number of unqiue words/bigrams
     number_words <-  unique_words(word_freq_df())
 
-   HTML(glue("Number of unique {tolower(input$ngram_sel)}s for current selection: {number_words} <br>
+   HTML(glue("Number of unique {tolower(input$ngram_sel)}s available for current selection: {number_words} <br>
          Number of tweets for current selection: {number_tweets}"))
 
   })
@@ -1915,7 +1926,7 @@ server <- function(input, output, session) {
     df <- data_getter_net_react()
     network_plot_filterer(df, input$rt, input$likes_net, input$long_net,
                           input$sentiment_net, input$search_term_net,
-                          input$username_net)
+                          input$username_net, input$lang_net)
   })
 
 

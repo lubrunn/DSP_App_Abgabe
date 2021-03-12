@@ -38,5 +38,6 @@
 #' @import tidymodels
 #' @import forecast
 #' @import timetk
+#' @import xgboost
 NULL
 

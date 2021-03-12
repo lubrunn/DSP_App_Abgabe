@@ -30,5 +30,7 @@ Imports:
     tseries,
     vars,
     data.table,
-    devtools
-
+    devtools,
+    tibble (>= 3.1.0)
+Remotes:  
+    lchiffon/wordcloud2

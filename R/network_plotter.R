@@ -65,11 +65,11 @@ network_plot_datagetter <- function(input_lang, input_date1, input_date2, input_
 #'@rdname network_plot
 network_plot_filterer <- function(df, input_rt, input_likes, input_tweet_length,
                                   input_sentiment, input_search_term,
-                                  input_username) {
+                                  input_username, input_lang) {
 
 
 #### convert search terms to lower
-  input_search_term <- tolower(input_search_term)
+  input_search_term <- corpus::stem_snowball(tolower(input_search_term), algorithm = tolower(input_lang))
   input_username <- tolower(input_username)
 
 
@@ -77,7 +77,7 @@ network_plot_filterer <- function(df, input_rt, input_likes, input_tweet_length,
   network <-  df %>%
 
     # if list provided to specify tweets to look at then extract only those tweets
-    { if (input_search_term != "") filter(., grepl(paste(corpus::stem_snowball(input_search_term), collapse="|"), text)) else . } %>%
+    { if (input_search_term != "") filter(., grepl(paste(input_search_term, collapse="|"), text)) else . } %>%
     { if (input_username != "") filter(., grepl(paste(input_username, collapse="|"), username)) else . } %>%
     #select(doc_id, text, created_at) %>%
 

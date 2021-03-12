@@ -1,7 +1,7 @@
 #' UI Elements
 #'
 #'
-
+#not original
 
 #####################################################   Stocks
 
@@ -402,7 +402,9 @@ tabsetPanel(
                        max = as.Date("2021-02-12"),
                        step = 1,timeFormat = "%F"),
            radioButtons("country_corona_xgb","Which country ?",c("Germany","United States"),selected = "Germany"),
-           uiOutput("corona_vars_xgb")
+           uiOutput("corona_vars_xgb"),
+           actionButton("reset_corona_xgb", "clear selected")
+           
            
            
   ),
@@ -431,7 +433,7 @@ tabsetPanel(
            numericInput("num_1","Chose length of moving average",min=0,value = 2),
            numericInput("num_2","Chose Autoregressive lags for",min=0,value = 1),
            actionButton("addButton", "Upload"),
-           actionButton("finish", "Finish"),
+           uiOutput("finish_button"),
            actionButton("reset_cus", "Reset")
            
            

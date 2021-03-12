@@ -1,3 +1,4 @@
+############################not original
 Sys.setlocale("LC_TIME", "English")
 
 
@@ -434,6 +435,7 @@ network_sidebar <- tabPanel( "Network Analysis",
 
 Sys.setlocale("LC_TIME", "English")
 ui <- fluidPage(
+  shinyFeedback::useShinyFeedback(),
   shinyjs::useShinyjs(),
   theme = shinythemes::shinytheme("darkly"),
   #shinythemes::themeSelector(),
@@ -594,7 +596,9 @@ ui <- fluidPage(
                                                                                                                      fade = TRUE,
                                                                                                                      size = "s"),
                                                       actionButton("run", "Run Model"),
+                                                      shinyjs::hidden(p(id = "text1", "Processing...")),
                                                       actionButton("pred", "Predict"),
+                                                      shinyjs::hidden(p(id = "text2", "Please run the model first")),
                                                       selectInput("forecast_plot_choice","Select plot to show:",
                                                                   c("Forecasted","Full"),selected="Full")
                                                       
@@ -616,7 +620,8 @@ ui <- fluidPage(
                                     tabsetPanel(type = "tabs", id = "tabs",
                                                 tabPanel("Summary statistics",value="Summary statistics",
                                                          tableOutput("xgb_summary"),
-                                                         tableOutput("correlation_xgb")
+                                                         tableOutput("correlation_xgb"),
+                                                         textOutput("xgb_date_check")
                                                          # plotOutput("correlation_plot")
                                                 ),
                                                 tabPanel("AR & MA structure", value = "AR & MA structure",

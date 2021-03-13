@@ -929,7 +929,9 @@ ui <- fluidPage(
                                     "Tweet Length" = "tweet_length"
                                   ),
                                   selected = "sentiment",
-                                  multiple = T)
+                                  multiple = T),
+                      shinyWidgets::materialSwitch(inputId = "roll_twitter_comp", label = "7 day smoothing?", value = F)
+
                       ),
 
 

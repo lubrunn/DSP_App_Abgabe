@@ -2271,6 +2271,110 @@ server <- function(input, output, session) {
   })
 
 
+
+  ######### get data for twitter time series
+  get_querry_twitter_comparison <- reactive({
+
+    ##### set up querry string for sql
+
+    #### get tweet_length filter, 81 for long==T, 0 for long==F
+    if (input$long_comp == T){
+      long <- 81
+    } else{
+      long <- 0
+    }
+
+
+
+    ##### for unfitlered tweets
+    if (input$twitter_comp_comp == "NoFilter"){
+      table_name <- glue("sum_stats_{tolower(input$lang_comp)}")
+
+      glue('SELECT *  FROM {table_name}  WHERE
+         retweets_count = {input$rt_comp} and likes_count = {input$likes_comp} and
+         tweet_length = {long}' )
+
+
+    } else { #if company is chosen
+      ### replace umlaute from input, 1233
+
+      comp <- gsub("ö","Ã¶", input$twitter_comp_comp)
+      comp <- gsub("ü", "Ã¼", comp)
+
+      glue('SELECT *  FROM sum_stats_companies WHERE
+         retweets_count = {input$rt} and likes_count = {input$likes_comp} and
+         tweet_length = {long} and company  = "{comp}" and
+             language = "{tolower(input$lang_comp)}"' )
+    }
+
+
+  })
+
+
+  get_twitter_comp_data <- reactive({
+    ###### need correct path
+    validate(need(correct_path() == T, "Please choose the correct path"))
+    ###### need database connection
+    validate(need(database_connector(), "Could not connect to database"))
+    ###### need at least one date selected
+
+
+    ####### store database connection
+    con <- database_connector()
+
+
+    ###### querry data from sql
+    df <- DBI::dbGetQuery(con,  get_querry_twitter_comparison())
+
+    #### for companies replace umlaute
+    if ("company" %in% names(df)){
+      df$company <- gsub("Ã¶", "ö", df$company)
+      df$company <- gsub("Ã¼", "ü", df$company)
+    }
+    #### return df
+    df
+  })
+
+
+
+  ####### get header for plot
+  ###### title for dygraphs
+  get_header_twitter_comp <- reactive({
+    ##### get data from sql
+    df_need <- get_twitter_comp_data ()
+
+    #convert to date
+    df_need$created_at <- as.Date(df_need$created_at)
+browser()
+    ##### for tweet type input get nice company name according to named list
+    if (input$twitter_comp_comp == "NoFilter"){
+      comp_name <- names(purrr::flatten(company_terms))[purrr::flatten(company_terms) == input$twitter_comp_comp]
+    } else {
+      comp_name <- glue("{names(purrr::flatten(company_terms))[purrr::flatten(company_terms) == input$twitter_comp_comp]} Tweets")
+    }
+
+    ##### set up string for header of time series graphs
+    glue("{comp_name} ({round(sum(df_need$N))} tweets total,
+           {round(mean(df_need$N))} average per day)")
+  })
+
+
+
+  ######## twitter plot
+  output$twitter_comp <- dygraphs::renderDygraph({
+    ##### get df
+    df <- get_twitter_comp_data()
+
+    #### set up header of plot
+
+    title = get_header_twitter_comp()
+    ###### plot the data
+    time_series_plotter2(df, "mean", input$value_comp, num_tweets = F,
+                         min(as.Date(df$created_at)), max(as.Date(df$created_at)), dates = NA, date_range =F,
+                                     title)
+  })
+
+
   ###############################################################################
   ########################   XGboost    #########################################
   ###############################################################################

@@ -109,14 +109,8 @@ time_series_plotter2 <- function(df, filter_type, selected_metrics, num_tweets, 
   if (length(selected_metrics_new) > 1){
 
 
-    selected_metrics <- stringr::str_replace(selected_metrics, "sentiment_rt", "Retweets weighted Sentiment")
-    selected_metrics <- stringr::str_replace(selected_metrics, "sentiment_likes", "Likes weighted Sentiment")
-    selected_metrics <- stringr::str_replace(selected_metrics, "sentiment_length", "Tweet Length weighted Sentiment")
-    selected_metrics <- stringr::str_replace(selected_metrics, "likes", "Likes")
-    selected_metrics <- stringr::str_replace(selected_metrics, "rt", "Retweets")
-    selected_metrics <- stringr::str_replace(selected_metrics, "tweet_length", "Tweet Length")
-    selected_metrics <- stringr::str_replace(selected_metrics, "sentiment", "Sentiment")
 
+  selected_metrics <- selected_metrics_converter(selected_metrics)
 
 
 
@@ -124,7 +118,7 @@ time_series_plotter2 <- function(df, filter_type, selected_metrics, num_tweets, 
     df_values <- df %>% select(selected_metrics_new)%>%
       scale()
 
-    colnames(df_values) <- selected_metrics_new
+    colnames(df_values) <- selected_metrics
 
 
     don <- xts::xts(x = df_values, order.by = df$created_at)
@@ -134,7 +128,8 @@ time_series_plotter2 <- function(df, filter_type, selected_metrics, num_tweets, 
 
     dygraphs::dygraph(don,
                       ylab = "Scaled Values",
-                      main = input_title) %>%
+                      main = input_title,
+                      group = "comp_plots") %>%
     dygraphs::dyOptions(axisLineWidth = 2, drawGrid = FALSE) %>%
     dygraphs::dyLegend() %>%
 
@@ -159,13 +154,7 @@ time_series_plotter2 <- function(df, filter_type, selected_metrics, num_tweets, 
     }
 
 
-    selected_metrics_new <- stringr::str_replace(selected_metrics_new, "sentiment_rt", "Retweets weighted Sentiment")
-    selected_metrics_new <- stringr::str_replace(selected_metrics_new, "sentiment_likes", "Likes weighted Sentiment")
-    selected_metrics_new <- stringr::str_replace(selected_metrics_new, "sentiment_length", "Tweet Length weighted Sentiment")
-    selected_metrics_new <- stringr::str_replace(selected_metrics_new, "likes", "Likes")
-    selected_metrics_new <- stringr::str_replace(selected_metrics_new, "rt", "Retweets")
-    selected_metrics_new <- stringr::str_replace(selected_metrics_new, "tweet_length", "Tweet Length")
-    selected_metrics_new <- stringr::str_replace(selected_metrics_new, "sentiment", "Sentiment")
+    selected_metrics_new <- selected_metrics_converter(selected_metrics_new)
 
 
     names(df) <- c("Date", selected_metrics_new)
@@ -180,7 +169,8 @@ time_series_plotter2 <- function(df, filter_type, selected_metrics, num_tweets, 
 
     dygraphs::dygraph(dyData,
                       ylab = selected_metrics_new,
-                      main = input_title) %>%
+                      main = input_title,
+                      group = "comp_plots") %>%
       dygraphs::dySeries(label = selected_metrics_new) %>%
       dygraphs::dyRibbon(data = ribbonData, top = 0.05, bottom = 0) %>%
       dygraphs::dyOptions(axisLineWidth = 2, drawGrid = FALSE) %>%
@@ -190,6 +180,19 @@ time_series_plotter2 <- function(df, filter_type, selected_metrics, num_tweets, 
       dygraphs::dyShading(from = min(df$Date), to = max(df$Date), color = "white")
 
   }
+}
+
+
+selected_metrics_converter <- function(selected_metrics){
+  selected_metrics <- stringr::str_replace(selected_metrics, "sentiment_rt", "Retweets weighted Sentiment")
+  selected_metrics <- stringr::str_replace(selected_metrics, "sentiment_likes", "Likes weighted Sentiment")
+  selected_metrics <- stringr::str_replace(selected_metrics, "sentiment_tweet_length", "Tweet Length weighted Sentiment")
+  selected_metrics <- stringr::str_replace(selected_metrics, "likes", "Likes")
+  selected_metrics <- stringr::str_replace(selected_metrics, "rt", "Retweets")
+  selected_metrics <- stringr::str_replace(selected_metrics, "tweet_length", "Tweet Length")
+  selected_metrics <- stringr::str_replace(selected_metrics, "sentiment", "Sentiment")
+
+  return(selected_metrics)
 }
 
 

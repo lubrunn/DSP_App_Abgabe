@@ -69,3 +69,6 @@ covid_plotter <- function(df, selected_metric, input_country, input_roll = F){
   }
 
 
+
+
+

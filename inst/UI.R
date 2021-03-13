@@ -860,7 +860,7 @@ ui <- fluidPage(
                         tags$h4("Filter Tweets"),
 
                         ###### langauge of tweets selector
-                        shinyWidgets::radioGroupButtons("lang", "Language of tweets",
+                        shinyWidgets::radioGroupButtons("lang_comp", "Language of tweets",
                                                         choices = c("English" = "EN",
                                                                     "German" = "DE"),
                                                         status = "primary",
@@ -874,11 +874,6 @@ ui <- fluidPage(
                         selectInput("twitter_comp_comp","Choose tweets",
                                     company_terms,
                                     selected = "NoFilter"),
-
-
-
-
-
 
 
                         ####### filter min rt, likes, long tweets
@@ -898,7 +893,7 @@ ui <- fluidPage(
                                               size = "s"),
 
 
-
+                      ####### minimum likes
                         shinyWidgets::radioGroupButtons("likes_comp", "Minimum Likes",
                                                         choices = c(0, 10, 50, 100, 200),
                                                         status = "primary",
@@ -914,15 +909,7 @@ ui <- fluidPage(
                                                                 a tweet needs to have"),
                                               size = "s"),
 
-
-
-
-
-
-
-
-
-                        #switchInput(inputId = "long", value = TRUE),
+                        ####### long tweet switch
                         shinyWidgets::materialSwitch(inputId = "long_comp",
                                                      label = "Long Tweets only?", value = F) %>%
                           shinyhelper::helper(type = "inline",
@@ -930,6 +917,19 @@ ui <- fluidPage(
                                               content = c("Long Tweets are tweets that contain more
                                                                 than 80 characters"),
                                               size = "s"),
+                      ##### select a value retweets/likes etc.
+                      selectInput("value_comp", "Select a value to show (multiple possible)",
+                                  choices = c(
+                                    "Sentiment" = "sentiment",
+                                    "Retweets Weighted Sentiment" = "sentiment_rt",
+                                    "Likes Weighted Sentiment" = "sentiment_likes",
+                                    "Length Weighted Sentiment" = "sentiment_tweet_length",
+                                    "Retweets" = "rt",
+                                    "Likes"="likes",
+                                    "Tweet Length" = "tweet_length"
+                                  ),
+                                  selected = "sentiment",
+                                  multiple = T)
                       ),
 
 

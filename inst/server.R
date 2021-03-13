@@ -1580,12 +1580,14 @@ server <- function(input, output, session) {
     if (input$num_tweets_box == F){
       time_series_plotter2(df, input$metric, input$value, num_tweets = F,
                            input$dates_desc[1], input$dates_desc[2],
-                           input_title = input_title )
+                           input_title = input_title,
+                           group = "twitter_desc")
     } else { ##### when number of tweets should be plotted
 
       time_series_plotter2(df, input$metric, input$value, num_tweets = T,
                            input$dates_desc[1], input$dates_desc[2],
-                           input_title = input_title )
+                           input_title = input_title,
+                           group = "twitter_desc")
     }
 
   })
@@ -1618,12 +1620,14 @@ server <- function(input, output, session) {
       save_plot$plot <- time_series_plotter2(df, input$metric, input$value, num_tweets = F,
                                              input$dates_desc[1], input$dates_desc[2], r,
                                               date_range = F,
-                                             input_title = input_title)
+                                             input_title = input_title,
+                                             group = "twitter_desc")
     } else { ## in case where number of tweets should be included in plot
       save_plot$plot <- time_series_plotter2(df, input$metric, input$value, num_tweets = F,
                                              input$dates_desc[1], input$dates_desc[2], r,
                                              date_range = F,
-                                             input_title = input_title)
+                                             input_title = input_title,
+                                             group = "twitter_desc")
     }
 
   })
@@ -2345,7 +2349,7 @@ server <- function(input, output, session) {
 
     #convert to date
     df_need$created_at <- as.Date(df_need$created_at)
-browser()
+
     ##### for tweet type input get nice company name according to named list
     if (input$twitter_comp_comp == "NoFilter"){
       comp_name <- names(purrr::flatten(company_terms))[purrr::flatten(company_terms) == input$twitter_comp_comp]
@@ -2371,7 +2375,9 @@ browser()
     ###### plot the data
     time_series_plotter2(df, "mean", input$value_comp, num_tweets = F,
                          min(as.Date(df$created_at)), max(as.Date(df$created_at)), dates = NA, date_range =F,
-                                     title)
+                                     title, group = "comp_plots",
+                         input_roll = input$roll_twitter_comp,
+                         ribbon = F)
   })
 
 

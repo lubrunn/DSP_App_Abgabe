@@ -1,3 +1,4 @@
+###############################################not orig
 server <- function(input, output, session) {
 
   ############################################################# Stocks
@@ -80,7 +81,7 @@ server <- function(input, output, session) {
 
   corona_data <- reactive({
     req(path_setter()[[3]][1] == "correct_path")
-    CORONA(input$CoronaCountry,input$dates_corona[1],input$dates_corona[2])
+    CORONA_xgb(input$CoronaCountry,input$dates_corona[1],input$dates_corona[2])
   })
 
   output$corona_plot <- renderPlot({
@@ -1790,7 +1791,7 @@ long <- long()
 ########################   XGboost    #########################################
 ###############################################################################
 ###flexible input for stocks: show either german or us companies
-observe_helpers(withMathJax = TRUE, help_dir = "C:/Users/simon/Desktop/WS_20_21/Git_tracked_Sentiment_App/DSP_Sentiment_Covid_App/test_simon/SimonApp/helpers")
+observe_helpers(withMathJax = TRUE, help_dir = "helpers")
   
   
 output$stock_regression_xgb <- renderUI({
@@ -1991,10 +1992,11 @@ df_selected_corona_xgb <- reactive({
   res
 })
 
+
 corona_data_xgb <- reactive({
   req(path_setter()[[3]][1] == "correct_path")
   req(input$country_corona_xgb)
-  CORONA(input$country_corona_xgb)
+  CORONA_xgb(input$country_corona_xgb)
 })
 
 output$corona_vars_xgb <- renderUI({
@@ -2002,8 +2004,11 @@ output$corona_vars_xgb <- renderUI({
   res <- corona_data_xgb()
   res <- res %>% dplyr::select(-X,-location,-date)
   input <- selectizeInput("corona_xgb","Choose a corona related variable:",
-                          names(res),multiple = FALSE)
+                          names(res),multiple = TRUE)
   
+})
+observeEvent(input$reset_corona_xgb,{
+  updateSelectizeInput(session,"corona_vars_xgb",selected = "")
 })
 
 
@@ -2108,22 +2113,43 @@ v <- reactive({
   validate(validate_MA(input$num_1))
 })
 # validate that MA cannot be 1
+
+rv_action_button <- reactiveValues(i = 0)
+
+observeEvent(input$addButton,{
+  rv_action_button$i <- 0
+})
+
 observe({
-  if(input$addButton > 0) {
-   
-    if((input$var_1 == "Close") | (input$var_1 == "Open")){
+  isolate({rv_action_button$i = rv_action_button$i + 1})
+})
+
+
+
+observe({
+  #if(input$addButton > 0) {
+  if(rv_action_button$i == 0){ 
+   if((input$var_1 == "Close") | (input$var_1 == "Open")){
+      v()
+      rv_action_button$i <- 1
       Ma_part <- MA_creator(final_regression_diff() ,input$var_1,input$num_1)
       Ar_part <- AR_creator(final_regression_diff() ,input$var_1,input$num_2)
       isolate(xchange$df_full <-  cbind(final_regression_diff(),Ar_part,Ma_part))}
     else if(input$var_1 == "VIX"){
+      v()
+      rv_action_button$i <- 1
       Ma_part <- MA_creator(final_regression_diff() ,input$var_1,input$num_1)
       Ar_part <- AR_creator(final_regression_diff() ,input$var_1,input$num_2)
       isolate(xchange$df_full2 <-  cbind(final_regression_diff(),Ar_part,Ma_part))}
     else if(input$var_1 == "coronavirus"){
+      v()
+      rv_action_button$i <- 1
       Ma_part <- MA_creator(final_regression_diff() ,input$var_1,input$num_1)
       Ar_part <- AR_creator(final_regression_diff() ,input$var_1,input$num_2)
       isolate(xchange$df_full3 <-  cbind(final_regression_diff(),Ar_part,Ma_part))}
     else{
+      v()
+      rv_action_button$i <- 1
       Ma_part <- MA_creator(final_regression_diff() ,input$var_1,input$num_1)
       Ar_part <- AR_creator(final_regression_diff() ,input$var_1,input$num_2)
       isolate(xchange$df_full4 <-  cbind(final_regression_diff(),Ar_part,Ma_part))
@@ -2153,21 +2179,14 @@ custom_df <- eventReactive(input$finish, {
 })
 
 
-# custom_df <- reactive({
-#   if(input$finish > 0){
-#     list_dfs <- c(xchange$df_full,xchange$df_full2,xchange$df_full3)
-#     df <- data.frame((sapply(list_dfs,c)))
-#     df <- df %>% dplyr::select(-contains("."))
-#     df$Dates <- as.Date(df$Dates)
-#     browser()
-#     cols <- setdiff(colnames(df), "date")
-#     df <- df[,cols]
-#     
-#   }
-#   df
+# Render text when button is clicked
+# output$text <- renderText({
+#   if (input$actionButtonId == 0)
+#     return("")
+#   isolate({
+#     # Your logic here
+#   })
 # })
-# 
-
 output$tableCustom <- DT::renderDataTable({
   DT::datatable(custom_df(),options = list(
     autoWidth = FALSE, scrollX = TRUE)) %>% DT::formatStyle(names(custom_df()),
@@ -2182,6 +2201,14 @@ df_xgb <- reactive({
 
   res <- ARMA_creator(res,input$regression_outcome_xgb)
 })
+
+observeEvent(input$lag_tabs, {
+  req(input$lag_tabs)
+  if((ncol(final_regression_df_xgb()) == 2)){
+  showNotification("No further variables selected. Model will be trained on features from dep. variable", type = "warning")}
+
+})
+
 
 output$df_xgb_default <- DT::renderDataTable({
   DT::datatable(df_xgb(),options = list(
@@ -2212,7 +2239,9 @@ df_xgb_train <- reactive({
 
   #rename with columns from train
   list_dfs$df_forecast <- res
-
+  # corona dummy
+  
+  
   list_dfs
 })
 
@@ -2262,7 +2291,7 @@ model_xgbi <- eventReactive(input$run,{
     model1
     
     
-    waitress$close()
+    #waitress$close()
   }else if(input$model_spec == "custom"){
     res <- df_xgb_train()
     model2 <- model_xgb_custom(res$df_train,input$mtry,input$trees,input$min_n,input$tree_depth,
@@ -2292,8 +2321,40 @@ observeEvent(input$model_spec_for, {                         #Observe event from
   req(input$model_spec_for)
   updateTabsetPanel(session, "mod_spec_for", selected = input$model_spec_for)
 })
+##########disable prediction when the forecast window changes --> enable when model is trained
+rv_disable <- reactiveValues(i = 1)
+
+observeEvent(input$run,{
+  rv_disable$i <- 0
+})
+
+observe({
+  isolate({rv_disable$i = rv_disable$i + 1})
+})
+
+observe({
+  if(rv_disable$i == 0){ 
+    shinyjs::enable("pred")}
+  else{
+    shinyjs::disable("pred")
+    shinyjs::show("text2")
+    
+  }
+})
+
+rv_prev_input <- reactiveValues(prev_input = NULL)
+
+observeEvent(input$n_ahead, {
+  rv_prev_input$prev_input <- c(rv_prev_input$prev_input , input$n_ahead)
+  if(rv_prev_input$prev_input[1] != input$n_ahead){
+    rv_disable$i <- 1
+  }
+})
+
+##############
 
 prediction_xgb <-  eventReactive(input$pred,{
+  
   
   res <- df_xgb_train() 
   colnames(res$df_forecast)[which(names(res$df_forecast) == input$regression_outcome_xgb)] <- "y"
@@ -2313,7 +2374,20 @@ prediction_xgb <-  eventReactive(input$pred,{
 })
 
 
+observeEvent(input$run, {
+  shinyjs::disable("run")
+  shinyjs::show("text1")
+  shinyjs::disable("pred")
+  shinyjs::hide("text2")
+  
+})  
+
 output$model_fit <- function(){
+  
+  shinyjs::enable("run")
+  shinyjs::hide("text1")
+  shinyjs::enable("pred")
+  shinyjs::hide("text2")
     each_fold_sum <- model_xgbi()[[2]]
     each_fold_sum <- each_fold_sum %>%  dplyr::select(id,.metric,.estimate) %>% 
                               filter(.metric == "rmse")
@@ -2473,9 +2547,28 @@ output$serial_out_xgb_for <- renderPrint({
 })
 
 
+output$xgb_date_check <- renderText({
+  
+  if(length(input$date_regression_xgb) > 1){
+    days_inrange <- difftime(as.Date(input$date_regression_xgb[2]) ,as.Date(input$date_regression_xgb[1]) , units = c("days"))
+    if (days_inrange < 30){
+      
+      validate("Less than 30 days selected. Please choose more days.")
+      
+    }
+  } else if (is.null(input$date_regression_xgb)){
+    
+    validate("Need to select at least one day.")
+  }
+})
+
+output$finish_button <- renderUI({
+  req(!is.null(xchange$df_full) | !is.null(xchange$df_full2) | !is.null(xchange$df_full3)
+      | !is.null(xchange$df_full4) | !is.null(xchange$df_full5))
+  actionButton("finish", "Finish")
+  
+})
 
 
-#  slidng_eval_window <- sliding_period(res,index = date,"month",lookback = 5  , assess_stop = 2,step = 2)
-#  graph before model
 
 }

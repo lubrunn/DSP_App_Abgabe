@@ -127,13 +127,16 @@ server <- function(input, output, session) {
     validate(need(correct_path() == T, "Please choose the correct path"))
     if (input$country_granger == "Germany"){
       input <- selectizeInput("Stock_Granger","Choose dependent variable:",
-                              c(COMPONENTS_DE()[["Company.Name"]],"GDAXI"),
-                              selected = "Bayer ",multiple = FALSE)
+                              #c(COMPONENTS_DE()[["Company.Name"]],"GDAXI"),
+                              company_terms_stock_ger,
+                              selected = "DAX",multiple = FALSE)
     } else {
       input <- selectizeInput("Stock_Granger","Choose dependent variable:",
-                              c(COMPONENTS_US()[["Company.Name"]],"DJI"),
-                              selected = "Apple ",multiple = FALSE)
+                              #c(COMPONENTS_US()[["Company.Name"]],"DJI"),
+                              company_terms_stock_us,
+                              selected = "Dow Jones Industrial",multiple = FALSE)
     }
+
   })
 
 
@@ -173,12 +176,14 @@ server <- function(input, output, session) {
     req(input$Stock_Granger)
     if (input$country_granger == "Germany"){
       granger1 <- dplyr::filter(stockdata_DE(),
-                         .data$name %in% (c(COMPONENTS_DE()[["Symbol"]], "GDAXI")[c(COMPONENTS_DE()[["Company.Name"]], "GDAXI") %in% .env$input$Stock_Granger]) &
-                           .data$Dates >= .env$input$date_granger[1] & .data$Dates <= .env$input$date_granger[2])[c("Dates", input$Granger_outcome)]
+                         #.data$name %in% (c(COMPONENTS_DE()[["Symbol"]], "GDAXI")[c(COMPONENTS_DE()[["Company.Name"]], "GDAXI") %in% .env$input$Stock_Granger]) &
+                         .data$name %in% .env$input$Stock_Granger &
+                         .data$Dates >= .env$input$date_granger[1] & .data$Dates <= .env$input$date_granger[2])[c("Dates", input$Granger_outcome)]
     } else {
       granger1 <-dplyr:: filter(stockdata_US(),
-                         .data$name %in% (c(COMPONENTS_US()[["Symbol"]], "DJI")[c(COMPONENTS_US()[["Company.Name"]], "DJI") %in% .env$input$Stock_Granger]) &
-                           .data$Dates >= .env$input$date_granger[1] & .data$Dates <= .env$input$date_granger[2])[c("Dates", input$Granger_outcome)]
+                         #.data$name %in% (c(COMPONENTS_US()[["Symbol"]], "DJI")[c(COMPONENTS_US()[["Company.Name"]], "DJI") %in% .env$input$Stock_Granger]) &
+                         .data$name %in% .env$input$Stock_Granger &
+                         .data$Dates >= .env$input$date_granger[1] & .data$Dates <= .env$input$date_granger[2])[c("Dates", input$Granger_outcome)]
 
     }
 
@@ -1046,13 +1051,22 @@ server <- function(input, output, session) {
   #forecast
   forecast_var <- reactive({
     fcast <- stats::predict(var_model(), n.ahead = input$ahead)
-    if (ncol(forecast_data()) == 1) {
-      x <- fcast$pred[1:input$ahead]
-      x <- cumsum(x) + forecast_data()[nrow(forecast_data()),1]
-    }else {
-      x <- fcast$fcst[[1]]
-      x <- x[,1]
-      x <- cumsum(x) + forecast_data()[nrow(forecast_data()),1]
+    if(nrow(stationary())!=nrow(forecast_data())){
+      if (ncol(forecast_data()) == 1) {
+        x <- fcast$pred[1:input$ahead]
+        x <- cumsum(x) + forecast_data()[nrow(forecast_data()),1]
+      }else {
+        x <- fcast$fcst[[1]]
+        x <- x[,1]
+        x <- cumsum(x) + forecast_data()[nrow(forecast_data()),1]
+      }
+    }else{
+      if (ncol(forecast_data()) == 1) {
+        x <- fcast$pred[1:input$ahead]
+      }else {
+        x <- fcast$fcst[[1]]
+        x <- x[,1]
+      }
     }
     x
   })
@@ -1090,13 +1104,45 @@ server <- function(input, output, session) {
 
 
 
-  output$var_metrics <- function(){
+  insample_var <- reactive({
+    fcast <- stats::predict(var_model(), stationary())
+    if(nrow(stationary())!=nrow(forecast_data())){
+      if (ncol(forecast_data()) == 1) {
+        x <- NA
+      }else {
+        x <- fcast$model$varresult[[1]]$fitted.values
+        x <- cumsum(x) + forecast_data()[1,1]
+      }
+    }else{
+      if (ncol(forecast_data()) == 1) {
+        x <- NA
+      }else {
+        x <- fcast$model$varresult[[1]]$fitted.values
+      }
+    }
+    x
+  })
 
+
+
+
+
+
+  output$var_metrics <- function(){
+    if (ncol(forecast_data()) == 1){
+      test <- c("Not available for ARIMA","Not available for ARIMA","Not available for ARIMA")
+    }else{
+    test <- c(sqrt(mean((insample_var()-forecast_data()[1:(nrow(forecast_data())-2),1])^2)),
+              mean(abs(insample_var()-forecast_data()[1:(nrow(forecast_data())-2),1])),
+              mean(abs((forecast_data()[1:(nrow(forecast_data())-2),1]-insample_var())/actual_values()) * 100))
+    }
     df_need <- data.frame(c(sqrt(mean((forecast_var()-actual_values())^2)),
                             mean(abs(forecast_var()-actual_values())),
                             mean(abs((actual_values()-forecast_var())/actual_values()) * 100)),
                           row.names = c("RMSE","MAE","MAPE"))
-    colnames(df_need)<- "value"
+
+    colnames(df_need)<- "forecast"
+    df_need$insample <- test
     knitr::kable(df_need, caption = glue("Performance metrics"),colnames = NULL) %>%
       kableExtra::kable_styling(c("striped","hover"), full_width = F,
                                 position = "center",

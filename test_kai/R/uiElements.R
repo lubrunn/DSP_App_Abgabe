@@ -82,6 +82,117 @@ hover_info_corona <- function() {
 
 
 }
+
+####################################################################################################################  Granger
+
+
+
+
+#' @export
+#' @rdname uiElements
+parameter_tabsi_gra <- function(){
+  tabsetPanel(
+    id = "industry_tab_gra",
+    type = "hidden",
+    tabPanel("no",
+             selectize_Stocks_reg(),
+             radioButtons("language1_gra","Language of tweets ?",
+                          choices = c("en","de"),inline=T),
+             selectizeInput("aggregation1_gra", "Aggregation", choices = c("Mean","Mean weighted by retweets",
+                                                                           "Mean weighted by likes", "Mean weighted by length"),
+                            select = "Mean"),
+             actionButton("reset1_gra", "clear selected"),
+             radioButtons("minRetweet_stocks1_gra", "Select minimum number of retweets:", choices = c("0","10","50","100","200"),inline=T),
+             radioButtons("tweet_length_stock1_gra","Tweet larger than median length:",
+                          choices = c("yes","no"),selected = "no",inline=T)
+
+
+    ),
+    tabPanel("yes",
+             selectInput("industry_gra", "Industry", choices = c("Consumer Cyclical","Financial Services")),
+
+             radioButtons("language2_gra","Language of tweets ?",
+                          choices = c("en","de"),inline=T),
+
+             selectizeInput("aggregation2_gra", "Aggregation", choices = c("Mean","Mean weighted by retweets",
+                                                                           "Mean weighted by likes", "Mean weighted by length"),
+                            select = "Mean"),
+             actionButton("reset2_gra", "clear selected"),
+             radioButtons("minRetweet_stocks2_gra", "Select minimum number of retweets:", choices = c("0","10","50","100","200"),inline=T),
+             radioButtons("tweet_length_stock2_gra","Tweet larger than median length:",
+                          choices = c("yes","no"),selected = "no",inline=T)
+
+    )
+
+  )
+}
+
+#' @export
+#' @rdname uiElements
+parameter_tabs_gra <- function(){
+  tabsetPanel(
+    id = "params_gra",
+    type = "hidden",
+    tabPanel("NoFilter",
+             radioButtons("language_gra","Choose Langugage of Tweets:",choices = c("En","De")),
+             selectizeInput("aggregation_gra", "Aggregation", choices = c("Mean","Mean weighted by retweets",
+                                                                          "Mean weighted by likes", "Mean weighted by length"),
+                            select = "Mean"),
+             radioButtons("minRetweet_gra", "Select minimum number of retweets", choices = c("0","10","50","100","200"),selected = "0",inline=T),
+             radioButtons("minLikes_gra", "Select minimum number of likes", choices = c("0","10","50","100","200"),selected = "0",inline=T),
+             radioButtons("tweet_length_gra","Tweet larger than median length:",
+                          choices = c("yes","no"),inline=T)
+
+
+    ),
+    tabPanel("Stocks",
+             radioButtons("industry_sentiment_gra","Sentiment by industry ?",
+                          choices = c("yes","no"),selected = "no",inline=T),
+             parameter_tabsi_gra()
+
+    )
+
+  )
+}
+
+
+#' @export
+#' @rdname uiElements
+tabs_custom_gra <- function(){
+  tabsetPanel(
+    id = "regression_tabs_gra",
+    tabPanel("Model specifcation",
+             radioButtons("country_granger","Which country?",c("Germany","USA"),selected = "Germany"),
+             uiOutput("Stock_Granger"),
+             radioButtons("Granger_outcome","Which variable?",c("Open","High","Low","Close","Adj.Close","Volume","Return"),selected = "Close"),
+             switchInput("senti_yesno_gra","Include Sentiment?",onLabel="Yes",offLabel="No"),
+             uiOutput("ControlsGranger"),
+             selectize_corona_granger(),
+             sliderInput("date_granger",label="Timeseries",
+                         value = c(as.Date("2020-02-12"),as.Date("2021-02-12")),
+                         min = as.Date("2020-01-02"),
+                         max = as.Date("2021-02-12"),
+                         step = 1,timeFormat = "%F"),
+             checkboxInput("direction_granger","Second variable causes first?",value = TRUE)
+
+
+
+    ),
+    tabPanel("Filter sentiment input",
+             selectInput("Sentiment_type_gra", "Type of Sentiment:", choices = c("NoFilter","Stocks"),
+                         selected = "NoFilter"),
+             parameter_tabs_gra()
+
+    )
+
+  )
+}
+
+
+
+
+
+
 ################################################################## Regression
 
 

@@ -620,7 +620,7 @@ ui <- fluidPage(
                                     tabsetPanel(type = "tabs", id = "tabs",
                                                 tabPanel("Summary statistics",value="Summary statistics",
                                                          tableOutput("xgb_summary"),
-                                                         tableOutput("correlation_xgb"),
+                                                         plotOutput("correlation_xgb"),
                                                          textOutput("xgb_date_check")
                                                          # plotOutput("correlation_plot")
                                                 ),
@@ -631,7 +631,8 @@ ui <- fluidPage(
                                                          conditionalPanel(
                                                            condition = "input.correlation_type == 'PACF'  && input.lag_tabs == 'custom'",
                                                            plotOutput("pacf_plot_xgb")),
-                                                         conditionalPanel("input.lag_tabs == 'custom'",
+                                                         conditionalPanel("input.lag_tabs == 'custom'",     
+                                                                          textOutput("error_text"),
                                                                           DT::dataTableOutput("tableCustom")),
                                                          conditionalPanel("input.lag_tabs == 'default'",
                                                                           DT::dataTableOutput("df_xgb_default"))

@@ -150,9 +150,6 @@ make_ts_stationary <- function(res){
 }
 #' @export
 #' @rdname xgboost_prep   
-sample <- res 
-n_ahead <- 5
-variable <- "Close"
 split_data_for <- function(sample,n_ahead,ftype,variable){
   names(sample)[1] <- "date"
   sample <- sample %>%
@@ -227,8 +224,6 @@ split_data_for <- function(sample,n_ahead,ftype,variable){
 
 #' @export
 #' @rdname xgboost_prep
-sample <- aa
-n_ahead2 <- 5
 split_data_for_ahead <- function(sample,n_ahead2,ftype2){
   names(sample)[1] <- "date"
   sample <- sample %>%
@@ -345,3 +340,39 @@ corona_dummy <- function(res){
   res$corona_shock_dummy[(res$date >= "2020-02-10") & (res$date <= "2020-05-25")] <- 1
 return(res)
 }
+#' 
+#' #' @export
+#' #' @rdname xgboost_prep
+# Ma_part_neu <- function(res,var,list_input){
+
+# 
+#   list_nums <- regmatches(list_input, gregexpr("[[:digit:]]+", list_input))
+#   num_vec <- as.numeric(unlist(list_nums))
+#   single_nums <- unlist(str_split(list_input, ","))
+#   variables_list <- rep(var, length(num_vec))
+#   helpi <- rep("MA",length(num_vec))
+#   names_vec <- paste0(helpi,variables_list, single_nums)
+#   #
+# 
+#   help_matrix <- mapply(c,num_vec, variables_list, SIMPLIFY = T)
+#   lies <- NULL
+# 
+#   for(i in 1:length(num_vec)){
+# 
+#     if(help_matrix[1,i] > 0){
+#       avg_len <- as.numeric(help_matrix[1,i])
+#       x <- zoo(res[,help_matrix[2,i]])
+#       x <- as.data.frame(zoo::rollmean(x, k = avg_len, fill = NA))
+#       names(x)[1] <- paste("MA_",help_matrix[2,i],sep = "")
+#       lies[[i]] <- x
+#     }else{
+#       res
+#     }
+# 
+# 
+#   }
+# 
+#   lies <- as.data.frame(do.call(cbind, lies))
+#   colnames(lies) <- names_vec
+#   return(lies)
+# }

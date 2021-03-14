@@ -2095,15 +2095,93 @@ observeEvent(input$lag_tabs, {                         #Observe event from input
 ######################################Custom dataset############################
 xchange <- reactiveValues()
 xchange$df_full <- NULL
+xchange$df_fullb <- NULL
 xchange$df_full2 <- NULL
 xchange$df_full3 <- NULL
 xchange$df_full4 <- NULL
 xchange$df_full5 <- NULL
 
+
 xchange$df1 <- NULL
 xchange$df2 <- NULL
+#
+Ma_part1 <- reactive({
+  res <- final_regression_df_xgb()
+  res <- lag_cols(res,input$regression_outcome_xgb)
+  res <- make_ts_stationary(res)
+  list_nums <- regmatches(input$ma_select, gregexpr("[[:digit:]]+", input$ma_select))
+  num_vec <- as.numeric(unlist(list_nums))
+  single_nums <- unlist(str_split(input$ma_select, ","))
+  variables_list <- rep(input$var_1, length(num_vec))
+  helpi <- rep("MA",length(num_vec))
+  names_vec <- paste0(helpi,variables_list, single_nums)
+  #
+
+  help_matrix <- mapply(c,num_vec, variables_list, SIMPLIFY = T)
+  lies <- NULL
+
+  for(i in 1:length(num_vec)){
+
+    if(help_matrix[1,i] > 0){
+      avg_len <- as.numeric(help_matrix[1,i])
+      x <- zoo(res[,help_matrix[2,i]])
+      x <- as.data.frame(zoo::rollmean(x, k = avg_len, fill = NA))
+     # names(x)[1] <- paste("MA_",help_matrix[2,i],sep = "")
+      lies[[i]] <- x
+    }else{
+      res
+    }
+
+
+  }
+
+  lies <- as.data.frame(do.call(cbind, lies))
+  colnames(lies) <- names_vec
+  lies
+  
+})
+
+Ma_part2 <- reactive({
+  
+  a <- input$ma_select2
+  res <- final_regression_df_xgb()
+  res <- lag_cols(res,input$regression_outcome_xgb)
+  res <- make_ts_stationary(res)
+  list_nums <- regmatches(a, gregexpr("[[:digit:]]+", a))
+  num_vec <- as.numeric(unlist(list_nums))
+  single_nums <- unlist(str_split(a, ","))
+  variables_list <- rep(input$var_1, length(num_vec))
+  helpi <- rep("EMA",length(num_vec))
+  names_vec <- paste0(helpi,variables_list, single_nums)
+  #
+
+  help_matrix <- mapply(c,num_vec, variables_list, SIMPLIFY = T)
+  lies <- NULL
+
+  for(i in 1:length(num_vec)){
+
+    if(help_matrix[1,i] > 0){
+      avg_len <- as.numeric(help_matrix[1,i])
+      x <- res[,help_matrix[2,i]]
+      x <- as.data.frame(TTR::EMA(x, avg_len))
+      lies[[i]] <- x
+    }else{
+      res
+    }
+
+
+  }
+
+  lies <- as.data.frame(do.call(cbind, lies))
+  colnames(lies) <- names_vec
+  lies
+
+
+})
+
 
 final_regression_diff <- reactive({
+  
   res <- final_regression_df_xgb()
   res <- lag_cols(res,input$regression_outcome_xgb)
   res <- make_ts_stationary(res)
@@ -2122,46 +2200,120 @@ observeEvent(input$addButton,{
 
 observe({
   isolate({rv_action_button$i = rv_action_button$i + 1})
+}) 
+
+output$error_text <- renderText({
+  if(input$ma_select == "" | input$ma_select2 == ""){
+    b <- "If you dont want to add a moving average - set  input to 1"
+  }
+  else{
+    b <- ""
+  }
 })
 
+validate_no_decimals <- function(input) {
+  c <- stri_detect_fixed(input,".")
+  if (c == TRUE) {
+    "No decimals allowed"
+  } else {
+    NULL
+  }
+}
+validate_iregulars <- function(input) {
+  single_nums <- unlist(str_split(input, ","))
+  c <- !is.na(as.numeric(single_nums))
+  if (is.element(FALSE, c)) {
+    "Please choose numbers"
+  } else {
+    NULL
+  }
+}
 
+validate_negatives <- function(input) {
+  single_nums <- unlist(str_split(input, ","))
+  if (any(single_nums < 0)) {
+    "Please choose numbers"
+  } else {
+    NULL
+  }
+}
+
+        
+v_1a <- reactive({
+  validate(validate_iregulars(input$ma_select))
+})
+v_1b <- reactive({
+  validate(validate_iregulars(input$ma_select2))
+})
+
+v_2a <- reactive({
+  validate(validate_no_decimals(input$ma_select))
+})
+v_2b <- reactive({
+  validate(validate_no_decimals(input$ma_select2))
+})
+
+v_3a <- reactive({
+  validate(validate_negatives(input$ma_select))
+})
+
+v_3b <- reactive({
+  validate(validate_negatives(input$ma_select2))
+})
 
 observe({
   #if(input$addButton > 0) {
   if(rv_action_button$i == 0){ 
-   if((input$var_1 == "Close") | (input$var_1 == "Open")){
-      v()
+    validate(
+      need(input$ma_select != "","dont"))
+    validate(
+      need(input$ma_select2 != "","dont"))
+    v_1a()
+    v_1b()
+    v_2a()
+    v_2b()
+    v_3a()
+    v_3b()
+    if((input$var_1 == "Close") | (input$var_1 == "Return")){
+      #v()
+      
+      isolate(c <- Ma_part2())
+      isolate(b <- Ma_part1())
       rv_action_button$i <- 1
-      Ma_part <- MA_creator(final_regression_diff() ,input$var_1,input$num_1)
       Ar_part <- AR_creator(final_regression_diff() ,input$var_1,input$num_2)
-      isolate(xchange$df_full <-  cbind(final_regression_diff(),Ar_part,Ma_part))}
+      isolate(xchange$df_full <-  cbind(final_regression_diff(),Ar_part,c,b))}
+    
     else if(input$var_1 == "VIX"){
-      v()
+     # v()
       rv_action_button$i <- 1
-      Ma_part <- MA_creator(final_regression_diff() ,input$var_1,input$num_1)
+      isolate(b <- Ma_part1())
+      isolate(c <- Ma_part2())
       Ar_part <- AR_creator(final_regression_diff() ,input$var_1,input$num_2)
-      isolate(xchange$df_full2 <-  cbind(final_regression_diff(),Ar_part,Ma_part))}
+      isolate(xchange$df_full2 <-  cbind(final_regression_diff(),Ar_part,c,b))}
     else if(input$var_1 == "coronavirus"){
-      v()
+      #v()
       rv_action_button$i <- 1
-      Ma_part <- MA_creator(final_regression_diff() ,input$var_1,input$num_1)
+      isolate(b <- Ma_part1())
+      isolate(c <- Ma_part2())
       Ar_part <- AR_creator(final_regression_diff() ,input$var_1,input$num_2)
-      isolate(xchange$df_full3 <-  cbind(final_regression_diff(),Ar_part,Ma_part))}
+      isolate(xchange$df_full3 <-  cbind(final_regression_diff(),Ar_part,c,b))}
     else{
-      v()
+      #v()
       rv_action_button$i <- 1
-      Ma_part <- MA_creator(final_regression_diff() ,input$var_1,input$num_1)
+      isolate(b <- Ma_part1())
+      isolate(c <- Ma_part2())
       Ar_part <- AR_creator(final_regression_diff() ,input$var_1,input$num_2)
-      isolate(xchange$df_full4 <-  cbind(final_regression_diff(),Ar_part,Ma_part))
+      isolate(xchange$df_full4 <-  cbind(final_regression_diff(),Ar_part,c,b))
     }
   }
-
+ 
 })
 
  
 observe({
   if(input$reset_cus > 0) {
   xchange$df_full <- NULL
+  xchange$df_fullb <- NULL
   xchange$df_full2 <- NULL
   xchange$df_full3 <- NULL
   xchange$df_full4 <- NULL
@@ -2169,7 +2321,8 @@ observe({
 })
 
 custom_df <- eventReactive(input$finish, { 
-      list_dfs <- c(xchange$df_full,xchange$df_full2,xchange$df_full3,xchange$df_full4)
+    list_dfs <- c(xchange$df_full,xchange$df_full2,xchange$df_full3,xchange$df_full4)
+      # conttrol for the duplicates from 1
       df <- data.frame((sapply(list_dfs,c)))
       df <- df %>% dplyr::select(-contains("."))
       df$Dates <- as.Date(df$Dates)
@@ -2241,7 +2394,6 @@ df_xgb_train <- reactive({
   list_dfs$df_forecast <- res
   # corona dummy
   
-  
   list_dfs
 })
 
@@ -2276,7 +2428,6 @@ df_xgb_train_for <- reactive({
 # 
 # })
 # 
-
 model_xgbi <- eventReactive(input$run,{
   #waitress <- waiter::Waitress$new("model", max = 4,  theme = "overlay")
   #Automatically close it when done
@@ -2369,8 +2520,11 @@ prediction_xgb <-  eventReactive(input$pred,{
   df_orig <- final_regression_df_xgb()
   #a <- df_orig$Close[1]
   #abc <- diffinv(res$df_train$y, xi = a)
+
+  if(adf.test(df_orig[,2],k=2)$p.value > 0.1){
   preds <- cumsum(preds) + df_orig[(nrow(res$df_train)),2]
-  
+  }
+  preds
 })
 
 
@@ -2408,9 +2562,16 @@ output$xgb_metrics <- function(){
   res <- df_xgb_train()
   df_orig <- final_regression_df_xgb()
   y <- df_orig  %>% filter(Dates >= min(res$f_dates) & Dates <= max(res$f_dates))
-  df_need <- data.frame(c(sqrt(mean((preds[,1]-y[,2])^2)),
-                          mean(abs(preds[,1]-y[,2])),
-                          mean(abs((y[,2]-preds[,1])/y[,2]) * 100)),
+  diff <- (preds[,1]-y[,2])
+  mean_diff <- mean(diff[,1]^2)
+  rsme <- sqrt(mean_diff)
+  mean_abs <- mean(abs(diff[,1]))
+  diff_per <- ((y[,2]-preds[,1])/y[,2]) 
+  mape <- mean(abs(diff_per[,1])*100)
+  
+  df_need <- data.frame(c(rsme,
+                          mean_abs,
+                          mape),
                         row.names = c("RMSE","MAE","MAPE"))
   colnames(df_need)<- "value"
   knitr::kable(df_need, caption = glue("Performance metrics"),colnames = NULL) %>%
@@ -2447,19 +2608,19 @@ output$forecast_xgb <- renderDygraph({
   res <- df_xgb_train()
   preds <- prediction_xgb()
   preds <- preds %>%
-    zoo(seq(from = as.Date(min(res$f_dates) + 1), to = as.Date(max(res$f_dates) + 1), by = "day"))
+    zoo(seq(from = as.Date(min(res$f_dates)), to = as.Date(max(res$f_dates)), by = "day"))
   
   if(input$forecast_plot_choice == "Full"){
 
-    ts <- full_df %>% pull(Close) %>%
+    ts <- full_df %>% pull(input$regression_outcome_xgb) %>%
       zoo(seq(from = as.Date(min(full_df$Dates)), to = as.Date(max(full_df$Dates)), by = "day"))
     
     {cbind(actuals=ts, predicted=preds)} %>% dygraph() %>%
       dyEvent(as.Date(min(res$f_dates)), "Start of prediction", labelLoc = "bottom",color = "red") %>%  dyOptions(colors = c("white","green"))
     
   }else{
-    ts <- full_df %>% pull(Close) %>%
-      zoo(seq(from = as.Date(min(full_df$Dates)), to = as.Date(max(full_df$Dates)), by = "day"))
+    ts <- full_df %>% pull(input$regression_outcome_xgb) %>%
+      zoo(seq(from = as.Date(min(res$f_dates)), to = as.Date(max(res$f_dates)), by = "day"))
     
     {cbind(actuals=ts, predicted=preds)} %>% dygraph() %>%  dyOptions(colors = c("white","green"))
     
@@ -2500,7 +2661,12 @@ prediction_xgb_actual <-  eventReactive(input$pred2,{
     fit(formula = y ~ .,data = res$df_train[,c(-1)]) %>%
     predict(new_data = res$df_forecast[,c(-1)])
   df_orig <- final_regression_df_xgb()
-  preds <- cumsum(preds) + df_orig[(nrow(res$df_train)),2]
+  #a <- df_orig$Close[1]
+  #abc <- diffinv(res$df_train$y, xi = a)
+  if(adf.test(df_orig[,2],k=2)$p.value > 0.1){
+    preds <- cumsum(preds) + df_orig[(nrow(res$df_train)),2]
+  }
+
 })
 
 
@@ -2513,7 +2679,7 @@ output$plot_1_xgb_actual <- renderDygraph({
     zoo(seq(from = as.Date(max(full_df$Dates)) +1,
             to = as.Date(max(full_df$Dates)) + input$n_ahead2, by = "day"))
   
-  ts <- full_df %>% pull(Close) %>%
+  ts <- full_df %>% pull(input$regression_outcome_xgb) %>%
     zoo(seq(from = as.Date(min(full_df$Dates)), to = as.Date(max(full_df$Dates)), by = "day"))
   
   {cbind(actuals=ts, predicted=preds)} %>% dygraph() %>%

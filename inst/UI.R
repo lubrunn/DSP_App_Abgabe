@@ -367,7 +367,7 @@ histo_tab <- sidebarPanel(
                 "Tweet Length" = "tweet_length"
               ),
               selected = "sentiment"),
-  sliderInput("bins", "Adjust the number of bins for the histogram", min = 5, max = 500, value = 50),
+  sliderInput("bins", "Adjust the number of bins for the histogram", min = 5, max = 100, value = 50),
 
 
   # add switch whether to use logarithmic scale
@@ -700,7 +700,7 @@ network_sidebar <- shinyWidgets::dropdown(
                    size = "s"),
 
           #### removing plot
-          actionButton("reset_net", "Remove Plot"),
+          actionButton("reset_net", "Remove Network"),
 
 
           ### canceling computation

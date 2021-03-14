@@ -270,22 +270,62 @@ parameter_tabs <- function(){
              selectInput("sentiment_company_regression","Choose tweets",
                          company_terms,
                          selected = "NoFilter"),
-             radioButtons("language","Choose Langugage of Tweets:",choices = c("En","De")),
+             ###### langauge of tweets selector
+             shinyWidgets::radioGroupButtons("language", "Language of tweets",
+                                             choices = c("English" = "EN",
+                                                         "German" = "DE"),
+                                             status = "primary",
+                                             checkIcon = list(
+                                               yes = icon("ok",
+                                                          lib = "glyphicon"),
+                                               no = icon("remove",
+                                                         lib = "glyphicon")),
+                                             size = "sm"),
              selectizeInput("aggregation", "Aggregation", choices = c("Mean" = "mean_sentiment",
                                                                       "Mean weighted by retweets" = "mean_sentiment_rt",
                                                                       "Mean weighted by likes" = "mean_sentiment_likes",
                                                                       "Mean weighted by length" = "mean_sentiment_length"),
-                            select = "Mean"),
-             radioButtons("minRetweet", "Select minimum number of retweets", choices = c("0","10","50","100","200"),selected = "0",inline=T),
-             radioButtons("minLikes", "Select minimum number of likes", choices = c("0","10","50","100","200"),selected = "0",inline=T),
+                            select = "mean_sentiment"),
+             shinyWidgets::radioGroupButtons("minRetweets", "Minimum tweets",
+                                             choices = c(0, 10, 50, 100, 200),
+                                             status = "primary",
+                                             checkIcon = list(
+                                               yes = icon("ok",
+                                                          lib = "glyphicon"),
+                                               no = icon("remove",
+                                                         lib = "glyphicon")),
+                                             size = "xs") %>%
+               shinyhelper::helper(type = "inline",
+                                   title = "",
+                                   content = c("Choose the minimum number of retweets
+                                                    a tweet needs to have"),
+                                   size = "s"),
+
+
+             ####### minimum likes
+             shinyWidgets::radioGroupButtons("minLikes", "Minimum Likes",
+                                             choices = c(0, 10, 50, 100, 200),
+                                             status = "primary",
+                                             checkIcon = list(
+                                               yes = icon("ok",
+                                                          lib = "glyphicon"),
+                                               no = icon("remove",
+                                                         lib = "glyphicon")),
+                                             size = "xs") %>%
+               shinyhelper::helper(type = "inline",
+                                   title = "",
+                                   content = c("Choose the minimum number of likes
+                                                                a tweet needs to have"),
+                                   size = "s"),
+
+
              shinyWidgets::materialSwitch(inputId = "tweet_length",
                                           label = "Long Tweets only?", value = F) %>%
                shinyhelper::helper(type = "inline",
                                    title = "",
                                    content = c("Long Tweets are tweets that contain more
                                                                 than 80 characters"),
-                                   size = "s"),
-             actionButton("test", "test")
+                                   size = "s")
 
 
     ),

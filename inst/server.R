@@ -23,7 +23,7 @@ server <- function(input, output, session) {
 
       input <- selectizeInput("Stock","Choose Companies:",
                               c(COMPONENTS_DE()[["Company.Name"]],"DAX" = "GDAXI",
-                                COMPONENTS_US()[["Company.Name"]],"DJI" = "DOW"),
+                                COMPONENTS_US()[["Company.Name"]],"DJI" = "DJI"),
                               selected = "Bayer ",multiple = TRUE)
 
 
@@ -47,7 +47,7 @@ server <- function(input, output, session) {
                            .data$Dates >= .env$input$dates[1] & .data$Dates <= .env$input$dates[2])
     } else {
       plotdata <- filter(stockdata_US(),
-                         .data$name %in% (c(COMPONENTS_US()[["Symbol"]], "DOW")[c(COMPONENTS_US()[["Company.Name"]], "DOW") %in% .env$input$Stock]) &
+                         .data$name %in% (c(COMPONENTS_US()[["Symbol"]], "DJI")[c(COMPONENTS_US()[["Company.Name"]], "DJI") %in% .env$input$Stock]) &
                            .data$Dates >= .env$input$dates[1] & .data$Dates <= .env$input$dates[2])
     }
 
@@ -131,29 +131,39 @@ server <- function(input, output, session) {
                               selected = "Bayer ",multiple = FALSE)
     } else {
       input <- selectizeInput("Stock_Granger","Choose dependent variable:",
-                              c(COMPONENTS_US()[["Company.Name"]],"DOW"),
+                              c(COMPONENTS_US()[["Company.Name"]],"DJI"),
                               selected = "Apple ",multiple = FALSE)
     }
   })
 
 
   output$ControlsGranger <- renderUI({
-    if (input$country_regression == "Germany"){
+    if (input$country_granger == "Germany"){
       input <- selectizeInput("Controls_GRANGER","Choose control variables:",
                               c(colnames(global_controls_test_DE())[-1],"DAX"),selected = "VIX",multiple = FALSE)
       #c(colnames(res[3:length(res)])),multiple = TRUE
     }else{
       input <- selectizeInput("Controls_GRANGER","Choose control variables:",
-                              c(colnames(global_controls_test_US())[-1],"DOW"),selected = "VIX",multiple = FALSE)
+                              c(colnames(global_controls_test_US())[-1],"DJI"),selected = "VIX",multiple = FALSE)
     }
   })
 
+
   observeEvent(req(input$corona_measurement_granger != ""), {                         #Observe event from input (model choices)
     updateSelectizeInput(session, "Controls_GRANGER", selected = "")
+    updateSwitchInput(session, "senti_yesno_gra", value = FALSE)
   })
   observeEvent(req(input$Controls_GRANGER!=""), {                         #Observe event from input (model choices)
     updateSelectizeInput(session, "corona_measurement_granger", selected = "")
+    updateSwitchInput(session, "senti_yesno_gra", value = FALSE)
   })
+
+  observeEvent(req(input$senti_yesno_gra==TRUE), {                         #Observe event from input (model choices)
+    updateSelectizeInput(session, "corona_measurement_granger", selected = "")
+    updateSelectizeInput(session, "Controls_GRANGER", selected = "")
+  })
+
+
 
 
 
@@ -167,7 +177,7 @@ server <- function(input, output, session) {
                            .data$Dates >= .env$input$date_granger[1] & .data$Dates <= .env$input$date_granger[2])[c("Dates", input$Granger_outcome)]
     } else {
       granger1 <-dplyr:: filter(stockdata_US(),
-                         .data$name %in% (c(COMPONENTS_US()[["Symbol"]], "DOW")[c(COMPONENTS_US()[["Company.Name"]], "DOW") %in% .env$input$Stock_Granger]) &
+                         .data$name %in% (c(COMPONENTS_US()[["Symbol"]], "DJI")[c(COMPONENTS_US()[["Company.Name"]], "DJI") %in% .env$input$Stock_Granger]) &
                            .data$Dates >= .env$input$date_granger[1] & .data$Dates <= .env$input$date_granger[2])[c("Dates", input$Granger_outcome)]
 
     }
@@ -176,9 +186,12 @@ server <- function(input, output, session) {
       if(input$Controls_GRANGER!=""){
         global_controls <- global_controls_test_DE()   #load controls
         global_controls$Date <- as.Date(global_controls$Date) #transform date
-        dax <- GDAXI()  #load dax
-        dax$Date <- as.Date(dax$Date, "%d %b %Y") #transform date
-        dax <- missing_date_imputer(dax,"Close.") #transform time series by imputing missing values
+        dax <- dplyr::filter(stockdata_DE(),.data$name %in% c("GDAXI")&
+                               .data$Dates >= min(global_controls$Date) & .data$Dates <= max(global_controls$Date))[c("Dates","Close")]
+        colnames(dax)[1]<-"Date"
+        # dax <- GDAXI()  #load dax
+        # dax$Date <- as.Date(dax$Date, "%d %b %Y") #transform date
+        # dax <- missing_date_imputer(dax,"Close.") #transform time series by imputing missing values
         colnames(dax)[2] <- "DAX"  #rename ->   !! is not renamed in final dataset !! -> dont know why
         global_controls <- dplyr::left_join(dax,global_controls,by = c("Date")) #join final
       }else{
@@ -190,11 +203,15 @@ server <- function(input, output, session) {
       if(input$Controls_GRANGER!=""){
         global_controls <- global_controls_test_US() #same procedure as above
         global_controls$Date <- as.Date(global_controls$Date)
-        dow <- DOW()
-        dow$Date <- as.Date(dow$Date, " %b %d, %Y")
-        dow <- missing_date_imputer(dow,"Close.")
-        colnames(dow)[2] <- "DOW"
-        global_controls <- dplyr::left_join(dow,global_controls,by = c("Date"))
+        dji <- dplyr::filter(stockdata_US(),.data$name %in% c("DJI")&
+                               .data$Dates >= min(global_controls$Date) & .data$Dates <= max(global_controls$Date))[c("Dates","Close")]
+        colnames(dji)[1]<-"Date"
+
+        # dow <- DOW()
+        # dow$Date <- as.Date(dow$Date, " %b %d, %Y")
+        # dow <- missing_date_imputer(dow,"Close.")
+        colnames(dji)[2] <- "DJI"
+        global_controls <- dplyr::left_join(dji,global_controls,by = c("Date"))
       }else{
         global_controls <- CORONA_neu("United States")[c("date",input$corona_measurement_granger)]
         colnames(global_controls)[1]<-"Dates"
@@ -209,6 +226,15 @@ server <- function(input, output, session) {
     granger[is.na(granger)]<-0
     granger
   })
+
+
+
+
+
+
+
+
+
 
 
   optlags <- reactive({
@@ -413,7 +439,7 @@ server <- function(input, output, session) {
                               selected = "Bayer ",multiple = FALSE)
     } else {
       input <- selectizeInput("Stock_Regression","Choose dependent variable:",
-                              c(COMPONENTS_US()[["Company.Name"]],"DOW"),
+                              c(COMPONENTS_US()[["Company.Name"]],"DJI"),
                               selected = "Apple ",multiple = FALSE)
     }
   })
@@ -428,7 +454,7 @@ server <- function(input, output, session) {
       #c(colnames(res[3:length(res)])),multiple = TRUE
     }else{
       input <- selectizeInput("Controls","Choose control variables:",
-                              c(colnames(global_controls_test_US())[-1],"DOW"),multiple = TRUE)
+                              c(colnames(global_controls_test_US())[-1],"DJI"),multiple = TRUE)
     }
 
   })
@@ -441,16 +467,19 @@ server <- function(input, output, session) {
                            .data$Dates >= .env$input$date_regression[1] & .data$Dates <= .env$input$date_regression[2])[c("Dates",input$regression_outcome,"name")] #hier später noch CLose flexibel machen
     } else {
       data_reg <- dplyr::filter(stockdata_US(),                                                                               #nur hier nach datum filtern, rest wird draufgemerged
-                         .data$name %in% (c(COMPONENTS_US()[["Symbol"]], "DOW")[c(COMPONENTS_US()[["Company.Name"]], "DOW") %in% .env$input$Stock_Regression]) &
+                         .data$name %in% (c(COMPONENTS_US()[["Symbol"]], "DJI")[c(COMPONENTS_US()[["Company.Name"]], "DJI") %in% .env$input$Stock_Regression]) &
                            .data$Dates >= .env$input$date_regression[1] & .data$Dates <= .env$input$date_regression[2])[c("Dates",input$regression_outcome,"name")] #hier später noch CLose flexibel machen
     }
 
     if (input$country_regression == "Germany"){
       global_controls <- global_controls_test_DE()   #load controls
       global_controls$Date <- as.Date(global_controls$Date) #transform date
-      dax <- GDAXI()  #load dax
-      dax$Date <- as.Date(dax$Date, "%d %b %Y") #transform date
-      dax <- missing_date_imputer(dax,"Close.") #transform time series by imputing missing values
+      dax <- dplyr::filter(stockdata_DE(),.data$name %in% c("GDAXI")&
+                             .data$Dates >= min(global_controls$Date) & .data$Dates <= max(global_controls$Date))[c("Dates","Close")]
+      colnames(dax)[1]<-"Date"
+      # dax <- GDAXI()  #load dax
+      # dax$Date <- as.Date(dax$Date, "%d %b %Y") #transform date
+      # dax <- missing_date_imputer(dax,"Close.") #transform time series by imputing missing values
       colnames(dax)[2] <- "DAX"  #rename ->   !! is not renamed in final dataset !! -> dont know why
       global_controls <- dplyr::left_join(dax,global_controls,by = c("Date")) #join final
       if(input$corona_measurement_regression!=""){
@@ -463,11 +492,14 @@ server <- function(input, output, session) {
     }else {
       global_controls <- global_controls_test_US() #same procedure as above
       global_controls$Date <- as.Date(global_controls$Date)
-      dow <- DOW()
-      dow$Date <- as.Date(dow$Date, " %b %d, %Y")
-      dow <- missing_date_imputer(dow,"Close.")
-      colnames(dow)[2] <- "DOW"
-      global_controls <- dplyr::left_join(dow,global_controls,by = c("Date"))
+      dji <- dplyr::filter(stockdata_US(),.data$name %in% c("DJI")&
+                             .data$Dates >= min(global_controls$Date) & .data$Dates <= max(global_controls$Date))[c("Dates","Close")]
+      colnames(dji)[1]<-"Date"
+      # dow <- DOW()
+      # dow$Date <- as.Date(dow$Date, " %b %d, %Y")
+      # dow <- missing_date_imputer(dow,"Close.")
+      colnames(dji)[2] <- "DJI"
+      global_controls <- dplyr::left_join(dji,global_controls,by = c("Date"))
       if(input$corona_measurement_regression!=""){
         help <- CORONA_neu("United States")[c("date",input$corona_measurement_regression)]
         colnames(help)[1]<-"Date"
@@ -735,7 +767,7 @@ server <- function(input, output, session) {
                               selected = "Bayer ",multiple = FALSE)
     } else {
       input <- selectizeInput("Stock_Regression_var","Choose dependent variable:",
-                              c(COMPONENTS_US()[["Company.Name"]],"DOW"),
+                              c(COMPONENTS_US()[["Company.Name"]],"DJI"),
                               selected = "Apple ",multiple = FALSE)
     }
   })
@@ -749,7 +781,7 @@ server <- function(input, output, session) {
       #c(colnames(res[3:length(res)])),multiple = TRUE
     }else{
       input <- selectizeInput("Controls_var","Choose control variables:",
-                              c("",colnames(global_controls_test_US())[-1],"DOW"),selected = "", multiple = TRUE)
+                              c("",colnames(global_controls_test_US())[-1],"DJI"),selected = "", multiple = TRUE)
     }
 
   })
@@ -762,16 +794,19 @@ server <- function(input, output, session) {
                            .data$Dates >= .env$input$date_regression_var[1] & .data$Dates <= .env$input$date_regression_var[2])[c("Dates",input$regression_outcome_var,"name")] #hier später noch CLose flexibel machen
     } else {
       data_reg <- dplyr::filter(stockdata_US(),                                                                               #nur hier nach datum filtern, rest wird draufgemerged
-                         .data$name %in% (c(COMPONENTS_US()[["Symbol"]], "DOW")[c(COMPONENTS_US()[["Company.Name"]], "DOW") %in% .env$input$Stock_Regression_var]) &
+                         .data$name %in% (c(COMPONENTS_US()[["Symbol"]], "DJI")[c(COMPONENTS_US()[["Company.Name"]], "DJI") %in% .env$input$Stock_Regression_var]) &
                            .data$Dates >= .env$input$date_regression_var[1] & .data$Dates <= .env$input$date_regression_var[2])[c("Dates",input$regression_outcome_var,"name")] #hier später noch CLose flexibel machen
     }
 
     if (input$country_regression_var == "Germany"){
       global_controls <- global_controls_test_DE()   #load controls
       global_controls$Date <- as.Date(global_controls$Date) #transform date
-      dax <- GDAXI()  #load dax
-      dax$Date <- as.Date(dax$Date, "%d %b %Y") #transform date
-      dax <- missing_date_imputer(dax,"Close.") #transform time series by imputing missing values
+      dax <- dplyr::filter(stockdata_DE(),.data$name %in% c("GDAXI")&
+                             .data$Dates >= min(global_controls$Date) & .data$Dates <= max(global_controls$Date))[c("Dates","Close")]
+      colnames(dax)[1]<-"Date"
+      # dax <- GDAXI()  #load dax
+      # dax$Date <- as.Date(dax$Date, "%d %b %Y") #transform date
+      # dax <- missing_date_imputer(dax,"Close.") #transform time series by imputing missing values
       colnames(dax)[2] <- "DAX"  #rename ->   !! is not renamed in final dataset !! -> dont know why
       global_controls <- dplyr::left_join(dax,global_controls,by = c("Date")) #join final
       if(input$corona_measurement_var!=""){
@@ -783,11 +818,14 @@ server <- function(input, output, session) {
     }else {
       global_controls <- global_controls_test_US() #same procedure as above
       global_controls$Date <- as.Date(global_controls$Date)
-      dow <- DOW()
-      dow$Date <- as.Date(dow$Date, " %b %d, %Y")
-      dow <- missing_date_imputer(dow,"Close.")
-      colnames(dow)[2] <- "DOW"
-      global_controls <- dplyr::left_join(dow,global_controls,by = c("Date"))
+      dji <- dplyr::filter(stockdata_US(),.data$name %in% c("DJI")&
+                             .data$Dates >= min(global_controls$Date) & .data$Dates <= max(global_controls$Date))[c("Dates","Close")]
+      colnames(dji)[1]<-"Date"
+      # dow <- DOW()
+      # dow$Date <- as.Date(dow$Date, " %b %d, %Y")
+      # dow <- missing_date_imputer(dow,"Close.")
+      colnames(dji)[2] <- "DJI"
+      global_controls <- dplyr::left_join(dji,global_controls,by = c("Date"))
       if(input$corona_measurement_var!=""){
         help <- CORONA_neu("United States")[c("date",input$corona_measurement_var)]
         colnames(help)[1]<-"Date"
@@ -2396,7 +2434,7 @@ browser()
                               selected = "Bayer ",multiple = FALSE)
     } else {
       input <- selectizeInput("Stock_Regression_xgb","Choose dependent variable:",
-                              c(COMPONENTS_US()[["Company.Name"]],"DOW"),
+                              c(COMPONENTS_US()[["Company.Name"]],"DJI"),
                               selected = "Apple ",multiple = FALSE)
     }
   })
@@ -2412,7 +2450,7 @@ browser()
       #c(colnames(res[3:length(res)])),multiple = TRUE
     }else{
       input <- selectizeInput("Controls_xgb","Choose control variables:",
-                              c(colnames(global_controls_test_US())[-1],"DOW"),multiple = TRUE)
+                              c(colnames(global_controls_test_US())[-1],"DJI"),multiple = TRUE)
     }
 
   })
@@ -2426,27 +2464,33 @@ browser()
                            .data$Dates >= .env$input$date_regression_xgb[1] & .data$Dates <= .env$input$date_regression_xgb[2])[c("Dates",input$regression_outcome_xgb,"name")] #hier später noch CLose flexibel machen
     } else {
       data_reg <- filter(stockdata_US(),                                                                               #nur hier nach datum filtern, rest wird draufgemerged
-                         .data$name %in% (c(COMPONENTS_US()[["Symbol"]], "DOW")[c(COMPONENTS_US()[["Company.Name"]], "DOW") %in% .env$input$Stock_Regression_xgb]) &
+                         .data$name %in% (c(COMPONENTS_US()[["Symbol"]], "DJI")[c(COMPONENTS_US()[["Company.Name"]], "DJI") %in% .env$input$Stock_Regression_xgb]) &
                            .data$Dates >= .env$input$date_regression_xgb[1] & .data$Dates <= .env$input$date_regression_xgb[2])[c("Dates",input$regression_outcome_xgb,"name")] #hier später noch CLose flexibel machen
     }
 
     if (input$country_regression_xgb == "Germany"){
       global_controls <- global_controls_test_DE()   #load controls
       global_controls$Date <- as.Date(global_controls$Date) #transform date
-      dax <- GDAXI()  #load dax
-      dax$Date <- as.Date(dax$Date, "%d %b %Y") #transform date
-      dax <- missing_date_imputer(dax,"Close.") #transform time series by imputing missing values
+      dax <- dplyr::filter(stockdata_DE(),.data$name %in% c("GDAXI")&
+                             .data$Dates >= min(global_controls$Date) & .data$Dates <= max(global_controls$Date))[c("Dates","Close")]
+      colnames(dax)[1]<-"Date"
+      # dax <- GDAXI()  #load dax
+      # dax$Date <- as.Date(dax$Date, "%d %b %Y") #transform date
+      # dax <- missing_date_imputer(dax,"Close.") #transform time series by imputing missing values
       colnames(dax)[2] <- "DAX"  #rename ->   !! is not renamed in final dataset !! -> dont know why
-      global_controls <- left_join(dax,global_controls,by = c("Date")) #join final
+      global_controls <- dplyr::left_join(dax,global_controls,by = c("Date")) #join final
 
     }else {
       global_controls <- global_controls_test_US() #same procedure as above
       global_controls$Date <- as.Date(global_controls$Date)
-      dow <- DOW()
-      dow$Date <- as.Date(dow$Date, " %b %d, %Y")
-      dow <- missing_date_imputer(dow,"Close.")
-      colnames(dow)[2] <- "DOW"
-      global_controls <- left_join(dow,global_controls,by = c("Date"))
+      dji <- dplyr::filter(stockdata_US(),.data$name %in% c("DJI")&
+                             .data$Dates >= min(global_controls$Date) & .data$Dates <= max(global_controls$Date))[c("Dates","Close")]
+      colnames(dji)[1]<-"Date"
+      # dow <- DOW()
+      # dow$Date <- as.Date(dow$Date, " %b %d, %Y")
+      # dow <- missing_date_imputer(dow,"Close.")
+      colnames(dji)[2] <- "DJI"
+      global_controls <- dplyr::left_join(dji,global_controls,by = c("Date"))
     }
     names(global_controls)[1] <- "Dates"
     data_reg2 <- left_join(data_reg,global_controls,by = c("Dates")) #hierdurch kommt die varible "global" in den datensatz

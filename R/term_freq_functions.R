@@ -84,7 +84,7 @@ df <- df %>%
   group_by( word) %>%
   summarise(n = sum(N)) %>%
   arrange(desc(n)) %>%
-  top_n(input_n, n)
+  head(input_n)
 
 return(df)
 

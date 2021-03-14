@@ -7,7 +7,7 @@ stock_plotter <- function(df, input_metric, input_comp, input_roll){
 
 ####### filter out relevant variable and companies
     df <- df %>% select(Dates, input_metric, name) %>%
-      filter(name != "DOW" &
+      filter(
           grepl(paste(input_comp, collapse = "|"), name))
     ## convert to wide format for dygraph
     df <- df %>% pivot_wider(names_from = name, values_from = input_metric)

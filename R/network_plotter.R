@@ -37,7 +37,8 @@ network_plot_datagetter <- function(input_lang, input_date1, input_date2, input_
    for (file in all_files){
 
      df <- data.table::fread(file.path(path_source, file),
-                             encoding = 'UTF-8')
+                             encoding = 'UTF-8',
+                             colClasses = c("doc_id" = "character"))
 
    # if its the first file set it up as df_all
    if (is.null(df)){
@@ -80,7 +81,7 @@ network_plot_filterer <- function(df, input_rt, input_likes, input_tweet_length,
     { if (input_search_term != "") filter(., grepl(paste(input_search_term, collapse="|"), text)) else . } %>%
     { if (input_username != "") filter(., grepl(paste(input_username, collapse="|"), username)) else . } %>%
     #select(doc_id, text, created_at) %>%
-
+    ##### filter according to user
     filter(
       retweets_count >= input_rt &
         likes_count >= input_likes &
@@ -99,11 +100,11 @@ network_unnester <- function(network, df, input_emo_net){
   network <- network %>%
 
 
-
+    ##### get all single words in data
     tidytext::unnest_tokens(word, text) %>%
     {if (input_emo_net == T) filter(.,
                                 !grepl(paste(emoji_words, collapse = "|") , word)) else .} %>% ### filter out emoji words
-    left_join(subset(df, select = c(doc_id, text, username)), by = "doc_id")
+    left_join(subset(df, select = c(doc_id, text, username)), by = c("doc_id", "username"))  ### get username and text info back to data
 
   return(network)
 
@@ -137,12 +138,13 @@ network <- network %>%
 
 
 network_word_corr <- function(network, input_n,
-                              input_corr){
+                              input_corr, min_n){
   network <- network %>%
 
     # filter out uncommon words
     group_by(word) %>%
     filter(n() >= input_n) %>%
+    filter(n() >= min_n) %>%
     ungroup()
 
     if (dim(network)[1] == 0){
@@ -159,8 +161,8 @@ network_word_corr <- function(network, input_n,
     # create network
     # filter out words with too low correaltion as baseline and even more if user
     # want it
-    filter(correlation > 0.15) %>% # fix in order to avoid overcrowed plot
-    filter(correlation > input_corr)
+    filter(correlation >= 0.15) %>% # fix in order to avoid overcrowed plot
+    filter(correlation >= input_corr)
 
  if (dim(network)[1] == 0){
    return()
@@ -187,13 +189,15 @@ network_word_corr <- function(network, input_n,
 
 
 
-network_bigrammer <- function(df, network, input_n, input_bigrams_n){
+network_bigrammer <- function(df, network, input_n, input_bigrams_n,
+                              min_n){
 
 
   words_above_threshold <- df %>% unnest_tokens(word, text) %>%
     group_by(word) %>%
     summarise(n = n()) %>%
-    filter(n > input_n) %>%
+    filter(n >= input_n) %>%
+    filter(n >= min_n) %>%
     select(word)
 
   setDT(network)

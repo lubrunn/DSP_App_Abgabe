@@ -633,17 +633,98 @@ server <- function(input, output, session) {
 
   #merge sentiment with control+dep vars
   final_regression_df <- reactive ({
+    browser()
     if (input$senti_yesno_reg == TRUE){
-      res <- aggri_select()
+      #res <- aggri_select()
+      res <- get_sentiment_regression()
     } else {
-      res <- aggri_select()[1]
+      #res <- aggri_select()[1]
+      res <- get_sentiment_regression()[1]
     }
-    res$date <- as.Date(res$date)
+
+
+    res$created_at <- as.Date(res$created_at)
     res_c <- df_selected_controls()
-    res <- dplyr::left_join(res_c,res, by=c("Dates" = "date"))
+    res <- dplyr::left_join(res_c,res, by=c("Dates" = "created_at"))
     res <- res[-1]
     res
   })
+
+
+########################### sql data
+  dates_reg <- reactive({
+    if (length(input$date_regression) > 1){
+      input$date_regression
+    } else {
+      c(input$date_regression, input$date_regression)
+    }
+  })
+
+
+  querry_sentiment_model_reg <- reactive({
+
+    #### check which tweet length
+    if (input$tweet_length == T){
+      tweetLength <- 81
+    } else {
+      tweetLength <- 0
+    }
+
+
+
+    dates <- dates_reg()
+
+
+
+
+    ###### table name
+    ### get language
+    if (input$sentiment_company_regression == "NoFilter"){
+      glue('select created_at, {input$aggregation} from sum_stats_{tolower(input$language)} where
+    created_at >= "{dates[1]}" and created_at <= "{dates[2]}" and
+    retweets_count = {input$minRetweet} and likes_count = {input$minLikes} and
+    tweet_length = {tweetLength}')
+    } else {
+      comp <- gsub("ö","Ã¶", input$sentiment_company_regression)
+      comp <- gsub("ü", "Ã¼", comp)
+
+      glue('SELECT created_at, {input$aggregation}  FROM sum_stats_companies WHERE
+      created_at >= "{dates[1]}" and created_at <= "{dates[2]}" and
+         retweets_count = {input$minRetweet} and likes_count = {input$minLikes} and
+         tweet_length = {tweetLength} and company  = "{comp}" and
+             language = "{tolower(input$language)}"' )
+    }
+
+
+  })
+
+
+  get_sentiment_regression <- reactive({
+    ###### need correct path
+    validate(need(correct_path() == T, "Please choose the correct path"))
+    ###### need database connection
+    validate(need(database_connector(), "Could not connect to database"))
+    ###### need at least one date selected
+    validate(need(!is.null(input$date_regression), "Please select a date."))
+
+    ####### store database connection
+    con <- database_connector()
+
+
+
+    ###### querry data from sql
+    df_need <- DBI::dbGetQuery(con,  querry_sentiment_model_reg())
+
+    #### for companies replace umlaute
+    if ("company" %in% names(df_need)){
+      df_need$company <- gsub("Ã¶", "ö", df_need$company)
+      df_need$company <- gsub("Ã¼", "ü", df_need$company)
+    }
+    #### return df
+    df_need
+  })
+
+
 
   ####################################################Summary statistics  Regression #####################################################
 

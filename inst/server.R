@@ -1550,7 +1550,7 @@ server <- function(input, output, session) {
 
       ##### set up string for header of time series graphs
       glue("{comp_name} ({round(sum(df_need$N))} tweets total,
-           {round(mean(df_need$N))} average per day)")
+           {round(mean(df_need$N))} on average per day)")
     })
 
 
@@ -1839,7 +1839,7 @@ server <- function(input, output, session) {
 
 
 
-
+browser()
 
         df <- df_filterer(word_freq_df() , input$n_freq)
 
@@ -2359,7 +2359,7 @@ server <- function(input, output, session) {
 
     ##### set up string for header of time series graphs
     glue("{comp_name} ({round(sum(df_need$N))} tweets total,
-           {round(mean(df_need$N))} average per day)")
+           {round(mean(df_need$N))} on average per day)")
   })
 
 

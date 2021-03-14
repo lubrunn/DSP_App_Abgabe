@@ -478,7 +478,7 @@ server <- function(input, output, session) {
                          #.data$name %in% (c(COMPONENTS_US()[["Symbol"]], "DJI")[c(COMPONENTS_US()[["Company.Name"]], "DJI") %in% .env$input$Stock_Regression]) &
                            .data$name %in% .env$input$Stock_Regression &
                            .data$Dates >= .env$input$date_regression[1] & .data$Dates <= .env$input$date_regression[2])[c("Dates",input$regression_outcome,"name")] #hier später noch CLose flexibel machen
-    browser()
+
       }
 
     if (input$country_regression == "Germany"){
@@ -643,7 +643,7 @@ server <- function(input, output, session) {
 
   #merge sentiment with control+dep vars
   final_regression_df <- reactive ({
-    #browser()
+
     if (input$senti_yesno_reg == TRUE){
       #res <- aggri_select()
       res <- get_sentiment_regression()
@@ -1867,7 +1867,7 @@ server <- function(input, output, session) {
 
   ##################### disable log scale option for sentiment because as negative values
   observeEvent(input$histo_value, {
-    #browser()
+
     if (grepl("sentiment",input$histo_value)) {
       shinyWidgets::updateSwitchInput(session = session,
                                       "log_scale",
@@ -2011,7 +2011,7 @@ server <- function(input, output, session) {
 
 
 
-browser()
+
 
         df <- df_filterer(word_freq_df() , input$n_freq)
 
@@ -2145,10 +2145,12 @@ browser()
       }
     })
 
-
-  # if button is clicked compute correlations und plot the plot
+    ############################################################
+    ############################ BUTTON RENDER PLOT ############
+    ############################################################
+  # if button is clicked compute correlations and plot the plot
   observeEvent(input$button_net,{
-
+    removeUI("#network_plot")
     ##### need correct path
     validate(need(correct_path() == T, "Please choose the correct path"))
 
@@ -2182,12 +2184,9 @@ browser()
     ################################
 
 
-    insertUI("#placeholder", "beforeEnd", ui = networkD3::forceNetworkOutput("network_plot", height ="800px"))
 
-    # insertUI("#network_plotr", "beforeEnd", ui = networkD3::forceNetworkOutput("network_plot") %>%
-    #            shinycssloaders::withSpinner())
 
-    #insertUI("#placeholder", "afterEnd", ui = networkD3::forceNetworkOutput('network_plot'))
+
 
     initial.ok <- input$cancel_net
 
@@ -2228,10 +2227,16 @@ browser()
 
       network <- data_filterer_net_react()
 
+
+
       if(is.null(network) | dim(network)[1] == 0){
         enable("button_net")
+        removeUI("#network_plot")
         return()
       }
+
+      ##### compute minimum n which is set to 0.05% of the number of tweets for the current dataset
+      min_n <- round(0.0005 * dim(network)[1])
 
       #hostess$set(2 * 10)
       waitress$inc(1)
@@ -2263,13 +2268,15 @@ browser()
 
     if (input$word_type_net == "word_pairs_net"){
       df <- network_word_corr(network, input$n_net,
-                                             input$corr_net)
+                                             input$corr_net, min_n)
     } else {
-      df <- network_bigrammer(df, network, input$n_net, input$n_bigrams_net)
+      df <- network_bigrammer(df, network, input$n_net, input$n_bigrams_net,
+                              min_n)
     }
 
       if(is.null(df) | length(df) == 0){
         enable("button_net")
+        removeUI("#network_plot")
         return()
       }
 
@@ -2286,7 +2293,7 @@ browser()
       validate(need(initial.ok == 0, message = "The computation has been aborted."))
     }
 
-
+      insertUI("#placeholder", "beforeEnd", ui = networkD3::forceNetworkOutput("network_plot", height ="800px"))
 
 
     # render the network plot

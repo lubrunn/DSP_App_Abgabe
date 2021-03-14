@@ -958,17 +958,7 @@ ui <- fluidPage(
              navbarMenu("Model",
                         tabPanel("Granger",
                                  sidebarPanel(
-                                   radioButtons("country_granger","Which country?",c("Germany","USA"),selected = "Germany"),
-                                   uiOutput("Stock_Granger"),
-                                   radioButtons("Granger_outcome","Which variable?",c("Open","High","Low","Close","Adj.Close","Volume","Return"),selected = "Close"),
-                                   uiOutput("ControlsGranger"),
-                                   selectize_corona_granger(),
-                                   sliderInput("date_granger",label="Timeseries",
-                                               value = c(as.Date("2020-02-12"),as.Date("2021-02-12")),
-                                               min = as.Date("2020-01-02"),
-                                               max = as.Date("2021-02-12"),
-                                               step = 1,timeFormat = "%F"),
-                                   checkboxInput("direction_granger","Second variable causes first?",value = TRUE)
+                                   tabs_custom_gra()
                                  ),
                                  mainPanel(
                                    tabsetPanel(

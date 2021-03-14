@@ -266,14 +266,26 @@ parameter_tabs <- function(){
     id = "params",
     type = "hidden",
     tabPanel("NoFilter",
+             #### select company
+             selectInput("sentiment_company_regression","Choose tweets",
+                         company_terms,
+                         selected = "NoFilter"),
              radioButtons("language","Choose Langugage of Tweets:",choices = c("En","De")),
-             selectizeInput("aggregation", "Aggregation", choices = c("Mean","Mean weighted by retweets",
-                                                                      "Mean weighted by likes", "Mean weighted by length"),
+             selectizeInput("aggregation", "Aggregation", choices = c("Mean" = "mean_sentiment",
+                                                                      "Mean weighted by retweets" = "mean_sentiment_rt",
+                                                                      "Mean weighted by likes" = "mean_sentiment_likes",
+                                                                      "Mean weighted by length" = "mean_sentiment_length"),
                             select = "Mean"),
              radioButtons("minRetweet", "Select minimum number of retweets", choices = c("0","10","50","100","200"),selected = "0",inline=T),
              radioButtons("minLikes", "Select minimum number of likes", choices = c("0","10","50","100","200"),selected = "0",inline=T),
-             radioButtons("tweet_length","Tweet larger than median length:",
-                          choices = c("yes","no"),inline=T)
+             shinyWidgets::materialSwitch(inputId = "tweet_length",
+                                          label = "Long Tweets only?", value = F) %>%
+               shinyhelper::helper(type = "inline",
+                                   title = "",
+                                   content = c("Long Tweets are tweets that contain more
+                                                                than 80 characters"),
+                                   size = "s"),
+             actionButton("test", "test")
 
 
     ),

@@ -139,6 +139,10 @@ network <- network %>%
 
 network_word_corr <- function(network, input_n,
                               input_corr, min_n){
+  #### get minimum n, either provided min_n which is 1% of nrows of of but at least 10
+
+  min_n <- max(10, min_n)
+
   network <- network %>%
 
     # filter out uncommon words
@@ -175,7 +179,9 @@ network_word_corr <- function(network, input_n,
     return()
   }
 
-  network <- network %>% # optional
+  #### only keep top 2000
+  network <- network %>%  # optional
+    head(2000) %>%
     igraph::graph_from_data_frame(directed = FALSE)
 
 
@@ -183,6 +189,13 @@ network_word_corr <- function(network, input_n,
   return(network)
 
 }
+
+###########################################
+
+
+
+
+
 
 
 
@@ -192,6 +205,8 @@ network_word_corr <- function(network, input_n,
 network_bigrammer <- function(df, network, input_n, input_bigrams_n,
                               min_n){
 
+  ##### set input_bigrams_n to at least 10
+  input_bigrams_n <- max(10,input_bigrams_n)
 
   words_above_threshold <- df %>% unnest_tokens(word, text) %>%
     group_by(word) %>%

@@ -61,7 +61,8 @@ twitter_main_panel <- function(){
                       # sidebar panel for descriptive
                       #twitter_desc_panel(),
                       sidebarPanel(
-                        twitter_tab_desc
+                        twitter_tab_desc,
+
                       ),
 
 
@@ -94,8 +95,9 @@ twitter_main_panel <- function(){
                                           color: black;
                                         }
                                         .dygraph-title{
-                                        font-size: 16px;
+                                        font-size: 18px;
                                         }
+
 
 
                                                      "))
@@ -130,7 +132,9 @@ twitter_main_panel <- function(){
 
 
 
+
                                    ),
+
 
                           ##### main panel with wod frequency and raw tweets
                           tabPanel("Exploratory Output", value = 3,
@@ -165,26 +169,41 @@ twitter_main_panel <- function(){
                                     )),
                       ##### histogram
 
-
+                      tags$hr(),
                       conditionalPanel(
-                        condition = "input.tabselected == 1",
 
+                        condition = "input.tabselected == 1",
+                        tags$hr(),
                         fluidRow(column(10, offset = 1,
+                                        tags$hr(),
+
                                         textOutput("sum_stats_table_header"),
+                                        #### change font sizhe
+                                        tags$head(tags$style("#sum_stats_table_header{
+                                 font-size: 20px;
+
+                                 }"
+                                        )
+                                        ),
+                                 tags$br(),
                                         tableOutput("sum_stats_table")%>% shinycssloaders::withSpinner(type = 5),
+
                         )),
 
                         #########################################
                         ###########################################
-
-                        ##### violin plot
-                      fluidRow(column(10, offset = 1,
-                                      tags$h4("Distrubtion of aggregated tweets"),
-                                      plotOutput("violin_sum")%>% shinycssloaders::withSpinner(type = 5))),
-                        tags$br(),
-                      tags$hr(),
+#
+#                         ##### violin plot
+#                       fluidRow(column(10, offset = 1,
+#                                       tags$h4("Distrubtion of aggregated tweets"),
+#                                       plotOutput("violin_sum")%>% shinycssloaders::withSpinner(type = 5))),
+#                         tags$br(),
+#                       tags$hr(),
                         #########################################
                         ###########################################
+                      tags$hr(),
+
+                      tags$br(),
                       histo_tab,
                       histo_output_tab
 

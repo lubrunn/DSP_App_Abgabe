@@ -221,6 +221,8 @@ network_bigrammer <- function(df, network, input_n, input_bigrams_n,
 
   ##### set input_bigrams_n to at least 10
   input_bigrams_n <- max(10,input_bigrams_n)
+  ### same for n
+  min_n <- max(10, min_n)
 
   words_above_threshold <- df %>% unnest_tokens(word, text) %>%
     group_by(word) %>%

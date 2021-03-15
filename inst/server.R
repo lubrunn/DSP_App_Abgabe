@@ -23,7 +23,7 @@ server <- function(input, output, session) {
 
       input <- selectizeInput("Stock","Choose Companies:",
                               c(COMPONENTS_DE()[["Company.Name"]],"DAX" = "GDAXI",
-                                COMPONENTS_US()[["Company.Name"]],"DJI" = "DOW"),
+                                COMPONENTS_US()[["Company.Name"]],"DJI" = "DJI"),
                               selected = "Bayer ",multiple = TRUE)
 
 
@@ -47,7 +47,7 @@ server <- function(input, output, session) {
                            .data$Dates >= .env$input$dates[1] & .data$Dates <= .env$input$dates[2])
     } else {
       plotdata <- filter(stockdata_US(),
-                         .data$name %in% (c(COMPONENTS_US()[["Symbol"]], "DOW")[c(COMPONENTS_US()[["Company.Name"]], "DOW") %in% .env$input$Stock]) &
+                         .data$name %in% (c(COMPONENTS_US()[["Symbol"]], "DJI")[c(COMPONENTS_US()[["Company.Name"]], "DJI") %in% .env$input$Stock]) &
                            .data$Dates >= .env$input$dates[1] & .data$Dates <= .env$input$dates[2])
     }
 
@@ -127,33 +127,46 @@ server <- function(input, output, session) {
     validate(need(correct_path() == T, "Please choose the correct path"))
     if (input$country_granger == "Germany"){
       input <- selectizeInput("Stock_Granger","Choose dependent variable:",
-                              c(COMPONENTS_DE()[["Company.Name"]],"GDAXI"),
-                              selected = "Bayer ",multiple = FALSE)
+                              #c(COMPONENTS_DE()[["Company.Name"]],"GDAXI"),
+                              company_terms_stock_ger,
+                              selected = "DAX",multiple = FALSE)
     } else {
       input <- selectizeInput("Stock_Granger","Choose dependent variable:",
-                              c(COMPONENTS_US()[["Company.Name"]],"DOW"),
-                              selected = "Apple ",multiple = FALSE)
+                              #c(COMPONENTS_US()[["Company.Name"]],"DJI"),
+                              company_terms_stock_us,
+                              selected = "Dow Jones Industrial",multiple = FALSE)
     }
+
   })
 
 
   output$ControlsGranger <- renderUI({
-    if (input$country_regression == "Germany"){
+    if (input$country_granger == "Germany"){
       input <- selectizeInput("Controls_GRANGER","Choose control variables:",
                               c(colnames(global_controls_test_DE())[-1],"DAX"),selected = "VIX",multiple = FALSE)
       #c(colnames(res[3:length(res)])),multiple = TRUE
     }else{
       input <- selectizeInput("Controls_GRANGER","Choose control variables:",
-                              c(colnames(global_controls_test_US())[-1],"DOW"),selected = "VIX",multiple = FALSE)
+                              c(colnames(global_controls_test_US())[-1],"DJI"),selected = "VIX",multiple = FALSE)
     }
   })
 
+
   observeEvent(req(input$corona_measurement_granger != ""), {                         #Observe event from input (model choices)
     updateSelectizeInput(session, "Controls_GRANGER", selected = "")
+    updateSwitchInput(session, "senti_yesno_gra", value = FALSE)
   })
   observeEvent(req(input$Controls_GRANGER!=""), {                         #Observe event from input (model choices)
     updateSelectizeInput(session, "corona_measurement_granger", selected = "")
+    updateSwitchInput(session, "senti_yesno_gra", value = FALSE)
   })
+
+  observeEvent(req(input$senti_yesno_gra==TRUE), {                         #Observe event from input (model choices)
+    updateSelectizeInput(session, "corona_measurement_granger", selected = "")
+    updateSelectizeInput(session, "Controls_GRANGER", selected = "")
+  })
+
+
 
 
 
@@ -163,12 +176,14 @@ server <- function(input, output, session) {
     req(input$Stock_Granger)
     if (input$country_granger == "Germany"){
       granger1 <- dplyr::filter(stockdata_DE(),
-                         .data$name %in% (c(COMPONENTS_DE()[["Symbol"]], "GDAXI")[c(COMPONENTS_DE()[["Company.Name"]], "GDAXI") %in% .env$input$Stock_Granger]) &
-                           .data$Dates >= .env$input$date_granger[1] & .data$Dates <= .env$input$date_granger[2])[c("Dates", input$Granger_outcome)]
+                                #.data$name %in% (c(COMPONENTS_DE()[["Symbol"]], "GDAXI")[c(COMPONENTS_DE()[["Company.Name"]], "GDAXI") %in% .env$input$Stock_Granger]) &
+                                .data$name %in% .env$input$Stock_Granger &
+                                  .data$Dates >= .env$input$date_granger[1] & .data$Dates <= .env$input$date_granger[2])[c("Dates", input$Granger_outcome)]
     } else {
       granger1 <-dplyr:: filter(stockdata_US(),
-                         .data$name %in% (c(COMPONENTS_US()[["Symbol"]], "DOW")[c(COMPONENTS_US()[["Company.Name"]], "DOW") %in% .env$input$Stock_Granger]) &
-                           .data$Dates >= .env$input$date_granger[1] & .data$Dates <= .env$input$date_granger[2])[c("Dates", input$Granger_outcome)]
+                                #.data$name %in% (c(COMPONENTS_US()[["Symbol"]], "DJI")[c(COMPONENTS_US()[["Company.Name"]], "DJI") %in% .env$input$Stock_Granger]) &
+                                .data$name %in% .env$input$Stock_Granger &
+                                  .data$Dates >= .env$input$date_granger[1] & .data$Dates <= .env$input$date_granger[2])[c("Dates", input$Granger_outcome)]
 
     }
 
@@ -176,9 +191,12 @@ server <- function(input, output, session) {
       if(input$Controls_GRANGER!=""){
         global_controls <- global_controls_test_DE()   #load controls
         global_controls$Date <- as.Date(global_controls$Date) #transform date
-        dax <- GDAXI()  #load dax
-        dax$Date <- as.Date(dax$Date, "%d %b %Y") #transform date
-        dax <- missing_date_imputer(dax,"Close.") #transform time series by imputing missing values
+        dax <- dplyr::filter(stockdata_DE(),.data$name %in% c("GDAXI")&
+                               .data$Dates >= min(global_controls$Date) & .data$Dates <= max(global_controls$Date))[c("Dates","Close")]
+        colnames(dax)[1]<-"Date"
+        # dax <- GDAXI()  #load dax
+        # dax$Date <- as.Date(dax$Date, "%d %b %Y") #transform date
+        # dax <- missing_date_imputer(dax,"Close.") #transform time series by imputing missing values
         colnames(dax)[2] <- "DAX"  #rename ->   !! is not renamed in final dataset !! -> dont know why
         global_controls <- dplyr::left_join(dax,global_controls,by = c("Date")) #join final
       }else{
@@ -190,11 +208,15 @@ server <- function(input, output, session) {
       if(input$Controls_GRANGER!=""){
         global_controls <- global_controls_test_US() #same procedure as above
         global_controls$Date <- as.Date(global_controls$Date)
-        dow <- DOW()
-        dow$Date <- as.Date(dow$Date, " %b %d, %Y")
-        dow <- missing_date_imputer(dow,"Close.")
-        colnames(dow)[2] <- "DOW"
-        global_controls <- dplyr::left_join(dow,global_controls,by = c("Date"))
+        dji <- dplyr::filter(stockdata_US(),.data$name %in% c("DJI")&
+                               .data$Dates >= min(global_controls$Date) & .data$Dates <= max(global_controls$Date))[c("Dates","Close")]
+        colnames(dji)[1]<-"Date"
+
+        # dow <- DOW()
+        # dow$Date <- as.Date(dow$Date, " %b %d, %Y")
+        # dow <- missing_date_imputer(dow,"Close.")
+        colnames(dji)[2] <- "DJI"
+        global_controls <- dplyr::left_join(dji,global_controls,by = c("Date"))
       }else{
         global_controls <- CORONA_neu("United States")[c("date",input$corona_measurement_granger)]
         colnames(global_controls)[1]<-"Dates"
@@ -209,6 +231,15 @@ server <- function(input, output, session) {
     granger[is.na(granger)]<-0
     granger
   })
+
+
+
+
+
+
+
+
+
 
 
   optlags <- reactive({
@@ -409,12 +440,14 @@ server <- function(input, output, session) {
     validate(need(correct_path() == T, "Please choose the correct path"))
     if (input$country_regression == "Germany"){
       input <- selectizeInput("Stock_Regression","Choose dependent variable:",
-                              c(COMPONENTS_DE()[["Company.Name"]],"GDAXI"),
-                              selected = "Bayer ",multiple = FALSE)
+                              #c(COMPONENTS_DE()[["Company.Name"]],"GDAXI"),
+                              company_terms_stock_ger,
+                              selected = "DAX",multiple = FALSE)
     } else {
       input <- selectizeInput("Stock_Regression","Choose dependent variable:",
-                              c(COMPONENTS_US()[["Company.Name"]],"DOW"),
-                              selected = "Apple ",multiple = FALSE)
+                              #c(COMPONENTS_US()[["Company.Name"]],"DJI"),
+                              company_terms_stock_us,
+                              selected = "Dow Jones Industrial",multiple = FALSE)
     }
   })
 
@@ -428,7 +461,7 @@ server <- function(input, output, session) {
       #c(colnames(res[3:length(res)])),multiple = TRUE
     }else{
       input <- selectizeInput("Controls","Choose control variables:",
-                              c(colnames(global_controls_test_US())[-1],"DOW"),multiple = TRUE)
+                              c(colnames(global_controls_test_US())[-1],"DJI"),multiple = TRUE)
     }
 
   })
@@ -437,20 +470,26 @@ server <- function(input, output, session) {
     validate(need(correct_path() == T, "Please choose the correct path"))
     if (input$country_regression == "Germany"){
       data_reg <- dplyr::filter(stockdata_DE(),                                                                               #nur hier nach datum filtern, rest wird draufgemerged
-                         .data$name %in% (c(COMPONENTS_DE()[["Symbol"]], "GDAXI")[c(COMPONENTS_DE()[["Company.Name"]], "GDAXI") %in% .env$input$Stock_Regression]) &
-                           .data$Dates >= .env$input$date_regression[1] & .data$Dates <= .env$input$date_regression[2])[c("Dates",input$regression_outcome,"name")] #hier später noch CLose flexibel machen
+                         #.data$name %in% (c(COMPONENTS_DE()[["Symbol"]], "GDAXI")[c(COMPONENTS_DE()[["Company.Name"]], "GDAXI") %in% .env$input$Stock_Regression]) &
+                         .data$name %in% .env$input$Stock_Regression &
+                         .data$Dates >= .env$input$date_regression[1] & .data$Dates <= .env$input$date_regression[2])[c("Dates",input$regression_outcome,"name")] #hier später noch CLose flexibel machen
     } else {
       data_reg <- dplyr::filter(stockdata_US(),                                                                               #nur hier nach datum filtern, rest wird draufgemerged
-                         .data$name %in% (c(COMPONENTS_US()[["Symbol"]], "DOW")[c(COMPONENTS_US()[["Company.Name"]], "DOW") %in% .env$input$Stock_Regression]) &
+                         #.data$name %in% (c(COMPONENTS_US()[["Symbol"]], "DJI")[c(COMPONENTS_US()[["Company.Name"]], "DJI") %in% .env$input$Stock_Regression]) &
+                           .data$name %in% .env$input$Stock_Regression &
                            .data$Dates >= .env$input$date_regression[1] & .data$Dates <= .env$input$date_regression[2])[c("Dates",input$regression_outcome,"name")] #hier später noch CLose flexibel machen
-    }
+
+      }
 
     if (input$country_regression == "Germany"){
       global_controls <- global_controls_test_DE()   #load controls
       global_controls$Date <- as.Date(global_controls$Date) #transform date
-      dax <- GDAXI()  #load dax
-      dax$Date <- as.Date(dax$Date, "%d %b %Y") #transform date
-      dax <- missing_date_imputer(dax,"Close.") #transform time series by imputing missing values
+      dax <- dplyr::filter(stockdata_DE(),.data$name %in% c("GDAXI")&
+                             .data$Dates >= min(global_controls$Date) & .data$Dates <= max(global_controls$Date))[c("Dates","Close")]
+      colnames(dax)[1]<-"Date"
+      # dax <- GDAXI()  #load dax
+      # dax$Date <- as.Date(dax$Date, "%d %b %Y") #transform date
+      # dax <- missing_date_imputer(dax,"Close.") #transform time series by imputing missing values
       colnames(dax)[2] <- "DAX"  #rename ->   !! is not renamed in final dataset !! -> dont know why
       global_controls <- dplyr::left_join(dax,global_controls,by = c("Date")) #join final
       if(input$corona_measurement_regression!=""){
@@ -463,11 +502,14 @@ server <- function(input, output, session) {
     }else {
       global_controls <- global_controls_test_US() #same procedure as above
       global_controls$Date <- as.Date(global_controls$Date)
-      dow <- DOW()
-      dow$Date <- as.Date(dow$Date, " %b %d, %Y")
-      dow <- missing_date_imputer(dow,"Close.")
-      colnames(dow)[2] <- "DOW"
-      global_controls <- dplyr::left_join(dow,global_controls,by = c("Date"))
+      dji <- dplyr::filter(stockdata_US(),.data$name %in% c("DJI")&
+                             .data$Dates >= min(global_controls$Date) & .data$Dates <= max(global_controls$Date))[c("Dates","Close")]
+      colnames(dji)[1]<-"Date"
+      # dow <- DOW()
+      # dow$Date <- as.Date(dow$Date, " %b %d, %Y")
+      # dow <- missing_date_imputer(dow,"Close.")
+      colnames(dji)[2] <- "DJI"
+      global_controls <- dplyr::left_join(dji,global_controls,by = c("Date"))
       if(input$corona_measurement_regression!=""){
         help <- CORONA_neu("United States")[c("date",input$corona_measurement_regression)]
         colnames(help)[1]<-"Date"
@@ -601,17 +643,98 @@ server <- function(input, output, session) {
 
   #merge sentiment with control+dep vars
   final_regression_df <- reactive ({
+
     if (input$senti_yesno_reg == TRUE){
-      res <- aggri_select()
+      #res <- aggri_select()
+      res <- get_sentiment_regression()
     } else {
-      res <- aggri_select()[1]
+      #res <- aggri_select()[1]
+      res <- get_sentiment_regression()[1]
     }
-    res$date <- as.Date(res$date)
+
+
+    res$created_at <- as.Date(res$created_at)
     res_c <- df_selected_controls()
-    res <- dplyr::left_join(res_c,res, by=c("Dates" = "date"))
+    res <- dplyr::left_join(res_c,res, by=c("Dates" = "created_at"))
     res <- res[-1]
     res
   })
+
+
+########################### sql data
+  dates_reg <- reactive({
+    if (length(input$date_regression) > 1){
+      input$date_regression
+    } else {
+      c(input$date_regression, input$date_regression)
+    }
+  })
+
+
+  querry_sentiment_model_reg <- reactive({
+
+    #### check which tweet length
+    if (input$tweet_length == T){
+      tweetLength <- 81
+    } else {
+      tweetLength <- 0
+    }
+
+
+
+    dates <- dates_reg()
+
+
+
+
+    ###### table name
+    ### get language
+    if (input$sentiment_company_regression == "NoFilter"){
+      glue('select created_at, {input$aggregation} from sum_stats_{tolower(input$language)} where
+    created_at >= "{dates[1]}" and created_at <= "{dates[2]}" and
+    retweets_count = {input$minRetweet} and likes_count = {input$minLikes} and
+    tweet_length = {tweetLength}')
+    } else {
+      comp <- gsub("ö","Ã¶", input$sentiment_company_regression)
+      comp <- gsub("ü", "Ã¼", comp)
+
+      glue('SELECT created_at, {input$aggregation}  FROM sum_stats_companies WHERE
+      created_at >= "{dates[1]}" and created_at <= "{dates[2]}" and
+         retweets_count = {input$minRetweet} and likes_count = {input$minLikes} and
+         tweet_length = {tweetLength} and company  = "{comp}" and
+             language = "{tolower(input$language)}"' )
+    }
+
+
+  })
+
+
+  get_sentiment_regression <- reactive({
+    ###### need correct path
+    validate(need(correct_path() == T, "Please choose the correct path"))
+    ###### need database connection
+    validate(need(database_connector(), "Could not connect to database"))
+    ###### need at least one date selected
+    validate(need(!is.null(input$date_regression), "Please select a date."))
+
+    ####### store database connection
+    con <- database_connector()
+
+
+
+    ###### querry data from sql
+    df_need <- DBI::dbGetQuery(con,  querry_sentiment_model_reg())
+
+    #### for companies replace umlaute
+    if ("company" %in% names(df_need)){
+      df_need$company <- gsub("Ã¶", "ö", df_need$company)
+      df_need$company <- gsub("Ã¼", "ü", df_need$company)
+    }
+    #### return df
+    df_need
+  })
+
+
 
   ####################################################Summary statistics  Regression #####################################################
 
@@ -731,12 +854,14 @@ server <- function(input, output, session) {
     validate(need(correct_path() == T, "Please choose the correct path"))
     if (input$country_regression_var == "Germany"){
       input <- selectizeInput("Stock_Regression_var","Choose dependent variable:",
-                              c(COMPONENTS_DE()[["Company.Name"]],"GDAXI"),
-                              selected = "Bayer ",multiple = FALSE)
+                              #c(COMPONENTS_DE()[["Company.Name"]],"GDAXI"),
+                              company_terms_stock_ger,
+                              selected = "DAX",multiple = FALSE)
     } else {
       input <- selectizeInput("Stock_Regression_var","Choose dependent variable:",
-                              c(COMPONENTS_US()[["Company.Name"]],"DOW"),
-                              selected = "Apple ",multiple = FALSE)
+                              #c(COMPONENTS_US()[["Company.Name"]],"DJI"),
+                              company_terms_stock_us,
+                              selected = "Dow Jones Industrial",multiple = FALSE)
     }
   })
 
@@ -749,7 +874,7 @@ server <- function(input, output, session) {
       #c(colnames(res[3:length(res)])),multiple = TRUE
     }else{
       input <- selectizeInput("Controls_var","Choose control variables:",
-                              c("",colnames(global_controls_test_US())[-1],"DOW"),selected = "", multiple = TRUE)
+                              c("",colnames(global_controls_test_US())[-1],"DJI"),selected = "", multiple = TRUE)
     }
 
   })
@@ -758,20 +883,25 @@ server <- function(input, output, session) {
     validate(need(correct_path() == T, "Please choose the correct path"))
     if (input$country_regression_var == "Germany"){
       data_reg <- dplyr::filter(stockdata_DE(),                                                                               #nur hier nach datum filtern, rest wird draufgemerged
-                         .data$name %in% (c(COMPONENTS_DE()[["Symbol"]], "GDAXI")[c(COMPONENTS_DE()[["Company.Name"]], "GDAXI") %in% .env$input$Stock_Regression_var]) &
+                         #.data$name %in% (c(COMPONENTS_DE()[["Symbol"]], "GDAXI")[c(COMPONENTS_DE()[["Company.Name"]], "GDAXI") %in% .env$input$Stock_Regression_var]) &
+                         .data$name %in% .env$input$Stock_Regression_var &
                            .data$Dates >= .env$input$date_regression_var[1] & .data$Dates <= .env$input$date_regression_var[2])[c("Dates",input$regression_outcome_var,"name")] #hier später noch CLose flexibel machen
     } else {
       data_reg <- dplyr::filter(stockdata_US(),                                                                               #nur hier nach datum filtern, rest wird draufgemerged
-                         .data$name %in% (c(COMPONENTS_US()[["Symbol"]], "DOW")[c(COMPONENTS_US()[["Company.Name"]], "DOW") %in% .env$input$Stock_Regression_var]) &
-                           .data$Dates >= .env$input$date_regression_var[1] & .data$Dates <= .env$input$date_regression_var[2])[c("Dates",input$regression_outcome_var,"name")] #hier später noch CLose flexibel machen
+                         #.data$name %in% (c(COMPONENTS_US()[["Symbol"]], "DJI")[c(COMPONENTS_US()[["Company.Name"]], "DJI") %in% .env$input$Stock_Regression_var]) &
+                         .data$name %in% .env$input$Stock_Regression_var &
+                         .data$Dates >= .env$input$date_regression_var[1] & .data$Dates <= .env$input$date_regression_var[2])[c("Dates",input$regression_outcome_var,"name")] #hier später noch CLose flexibel machen
     }
 
     if (input$country_regression_var == "Germany"){
       global_controls <- global_controls_test_DE()   #load controls
       global_controls$Date <- as.Date(global_controls$Date) #transform date
-      dax <- GDAXI()  #load dax
-      dax$Date <- as.Date(dax$Date, "%d %b %Y") #transform date
-      dax <- missing_date_imputer(dax,"Close.") #transform time series by imputing missing values
+      dax <- dplyr::filter(stockdata_DE(),.data$name %in% c("GDAXI")&
+                             .data$Dates >= min(global_controls$Date) & .data$Dates <= max(global_controls$Date))[c("Dates","Close")]
+      colnames(dax)[1]<-"Date"
+      # dax <- GDAXI()  #load dax
+      # dax$Date <- as.Date(dax$Date, "%d %b %Y") #transform date
+      # dax <- missing_date_imputer(dax,"Close.") #transform time series by imputing missing values
       colnames(dax)[2] <- "DAX"  #rename ->   !! is not renamed in final dataset !! -> dont know why
       global_controls <- dplyr::left_join(dax,global_controls,by = c("Date")) #join final
       if(input$corona_measurement_var!=""){
@@ -783,11 +913,14 @@ server <- function(input, output, session) {
     }else {
       global_controls <- global_controls_test_US() #same procedure as above
       global_controls$Date <- as.Date(global_controls$Date)
-      dow <- DOW()
-      dow$Date <- as.Date(dow$Date, " %b %d, %Y")
-      dow <- missing_date_imputer(dow,"Close.")
-      colnames(dow)[2] <- "DOW"
-      global_controls <- dplyr::left_join(dow,global_controls,by = c("Date"))
+      dji <- dplyr::filter(stockdata_US(),.data$name %in% c("DJI")&
+                             .data$Dates >= min(global_controls$Date) & .data$Dates <= max(global_controls$Date))[c("Dates","Close")]
+      colnames(dji)[1]<-"Date"
+      # dow <- DOW()
+      # dow$Date <- as.Date(dow$Date, " %b %d, %Y")
+      # dow <- missing_date_imputer(dow,"Close.")
+      colnames(dji)[2] <- "DJI"
+      global_controls <- dplyr::left_join(dji,global_controls,by = c("Date"))
       if(input$corona_measurement_var!=""){
         help <- CORONA_neu("United States")[c("date",input$corona_measurement_var)]
         colnames(help)[1]<-"Date"
@@ -1008,13 +1141,22 @@ server <- function(input, output, session) {
   #forecast
   forecast_var <- reactive({
     fcast <- stats::predict(var_model(), n.ahead = input$ahead)
-    if (ncol(forecast_data()) == 1) {
-      x <- fcast$pred[1:input$ahead]
-      x <- cumsum(x) + forecast_data()[nrow(forecast_data()),1]
-    }else {
-      x <- fcast$fcst[[1]]
-      x <- x[,1]
-      x <- cumsum(x) + forecast_data()[nrow(forecast_data()),1]
+    if(nrow(stationary())!=nrow(forecast_data())){
+      if (ncol(forecast_data()) == 1) {
+        x <- fcast$pred[1:input$ahead]
+        x <- cumsum(x) + forecast_data()[nrow(forecast_data()),1]
+      }else {
+        x <- fcast$fcst[[1]]
+        x <- x[,1]
+        x <- cumsum(x) + forecast_data()[nrow(forecast_data()),1]
+      }
+    }else{
+      if (ncol(forecast_data()) == 1) {
+        x <- fcast$pred[1:input$ahead]
+      }else {
+        x <- fcast$fcst[[1]]
+        x <- x[,1]
+      }
     }
     x
   })
@@ -1051,14 +1193,44 @@ server <- function(input, output, session) {
   })
 
 
+  insample_var <- reactive({
+    fcast <- stats::predict(var_model(), stationary())
+    if(nrow(stationary())!=nrow(forecast_data())){
+      if (ncol(forecast_data()) == 1) {
+        x <- NA
+      }else {
+        x <- fcast$model$varresult[[1]]$fitted.values
+        x <- cumsum(x) + forecast_data()[1,1]
+      }
+    }else{
+      if (ncol(forecast_data()) == 1) {
+        x <- NA
+      }else {
+        x <- fcast$model$varresult[[1]]$fitted.values
+      }
+    }
+    x
+  })
+
+
+
+
 
   output$var_metrics <- function(){
-
+    if (ncol(forecast_data()) == 1){
+      test <- c("Not available for ARIMA","Not available for ARIMA","Not available for ARIMA")
+    }else{
+      test <- c(sqrt(mean((insample_var()-forecast_data()[1:(nrow(forecast_data())-2),1])^2)),
+                mean(abs(insample_var()-forecast_data()[1:(nrow(forecast_data())-2),1])),
+                mean(abs((forecast_data()[1:(nrow(forecast_data())-2),1]-insample_var())/actual_values()) * 100))
+    }
     df_need <- data.frame(c(sqrt(mean((forecast_var()-actual_values())^2)),
                             mean(abs(forecast_var()-actual_values())),
                             mean(abs((actual_values()-forecast_var())/actual_values()) * 100)),
                           row.names = c("RMSE","MAE","MAPE"))
-    colnames(df_need)<- "value"
+
+    colnames(df_need)<- "forecast"
+    df_need$insample <- test
     knitr::kable(df_need, caption = glue("Performance metrics"),colnames = NULL) %>%
       kableExtra::kable_styling(c("striped","hover"), full_width = F,
                                 position = "center",
@@ -1550,7 +1722,7 @@ server <- function(input, output, session) {
 
       ##### set up string for header of time series graphs
       glue("{comp_name} ({round(sum(df_need$N))} tweets total,
-           {round(mean(df_need$N))} average per day)")
+           {round(mean(df_need$N))} on average per day)")
     })
 
 
@@ -1580,12 +1752,14 @@ server <- function(input, output, session) {
     if (input$num_tweets_box == F){
       time_series_plotter2(df, input$metric, input$value, num_tweets = F,
                            input$dates_desc[1], input$dates_desc[2],
-                           input_title = input_title )
+                           input_title = input_title,
+                           group = "twitter_desc")
     } else { ##### when number of tweets should be plotted
 
       time_series_plotter2(df, input$metric, input$value, num_tweets = T,
                            input$dates_desc[1], input$dates_desc[2],
-                           input_title = input_title )
+                           input_title = input_title,
+                           group = "twitter_desc")
     }
 
   })
@@ -1618,12 +1792,14 @@ server <- function(input, output, session) {
       save_plot$plot <- time_series_plotter2(df, input$metric, input$value, num_tweets = F,
                                              input$dates_desc[1], input$dates_desc[2], r,
                                               date_range = F,
-                                             input_title = input_title)
+                                             input_title = input_title,
+                                             group = "twitter_desc")
     } else { ## in case where number of tweets should be included in plot
       save_plot$plot <- time_series_plotter2(df, input$metric, input$value, num_tweets = F,
                                              input$dates_desc[1], input$dates_desc[2], r,
                                              date_range = F,
-                                             input_title = input_title)
+                                             input_title = input_title,
+                                             group = "twitter_desc")
     }
 
   })
@@ -1691,7 +1867,7 @@ server <- function(input, output, session) {
 
   ##################### disable log scale option for sentiment because as negative values
   observeEvent(input$histo_value, {
-    #browser()
+
     if (grepl("sentiment",input$histo_value)) {
       shinyWidgets::updateSwitchInput(session = session,
                                       "log_scale",
@@ -1969,10 +2145,12 @@ server <- function(input, output, session) {
       }
     })
 
-
-  # if button is clicked compute correlations und plot the plot
+    ############################################################
+    ############################ BUTTON RENDER PLOT ############
+    ############################################################
+  # if button is clicked compute correlations and plot the plot
   observeEvent(input$button_net,{
-
+    removeUI("#network_plot")
     ##### need correct path
     validate(need(correct_path() == T, "Please choose the correct path"))
 
@@ -2006,12 +2184,9 @@ server <- function(input, output, session) {
     ################################
 
 
-    insertUI("#placeholder", "beforeEnd", ui = networkD3::forceNetworkOutput("network_plot", height ="800px"))
 
-    # insertUI("#network_plotr", "beforeEnd", ui = networkD3::forceNetworkOutput("network_plot") %>%
-    #            shinycssloaders::withSpinner())
 
-    #insertUI("#placeholder", "afterEnd", ui = networkD3::forceNetworkOutput('network_plot'))
+
 
     initial.ok <- input$cancel_net
 
@@ -2052,10 +2227,16 @@ server <- function(input, output, session) {
 
       network <- data_filterer_net_react()
 
+
+
       if(is.null(network) | dim(network)[1] == 0){
         enable("button_net")
+        removeUI("#network_plot")
         return()
       }
+
+      ##### compute minimum n which is set to 0.05% of the number of tweets for the current dataset
+      min_n <- round(0.0005 * dim(network)[1])
 
       #hostess$set(2 * 10)
       waitress$inc(1)
@@ -2087,13 +2268,15 @@ server <- function(input, output, session) {
 
     if (input$word_type_net == "word_pairs_net"){
       df <- network_word_corr(network, input$n_net,
-                                             input$corr_net)
+                                             input$corr_net, min_n)
     } else {
-      df <- network_bigrammer(df, network, input$n_net, input$n_bigrams_net)
+      df <- network_bigrammer(df, network, input$n_net, input$n_bigrams_net,
+                              min_n)
     }
 
       if(is.null(df) | length(df) == 0){
         enable("button_net")
+        removeUI("#network_plot")
         return()
       }
 
@@ -2110,7 +2293,7 @@ server <- function(input, output, session) {
       validate(need(initial.ok == 0, message = "The computation has been aborted."))
     }
 
-
+      insertUI("#placeholder", "beforeEnd", ui = networkD3::forceNetworkOutput("network_plot", height ="800px"))
 
 
     # render the network plot
@@ -2271,6 +2454,112 @@ server <- function(input, output, session) {
   })
 
 
+
+  ######### get data for twitter time series
+  get_querry_twitter_comparison <- reactive({
+
+    ##### set up querry string for sql
+
+    #### get tweet_length filter, 81 for long==T, 0 for long==F
+    if (input$long_comp == T){
+      long <- 81
+    } else{
+      long <- 0
+    }
+
+
+
+    ##### for unfitlered tweets
+    if (input$twitter_comp_comp == "NoFilter"){
+      table_name <- glue("sum_stats_{tolower(input$lang_comp)}")
+
+      glue('SELECT *  FROM {table_name}  WHERE
+         retweets_count = {input$rt_comp} and likes_count = {input$likes_comp} and
+         tweet_length = {long}' )
+
+
+    } else { #if company is chosen
+      ### replace umlaute from input, 1233
+
+      comp <- gsub("ö","Ã¶", input$twitter_comp_comp)
+      comp <- gsub("ü", "Ã¼", comp)
+
+      glue('SELECT *  FROM sum_stats_companies WHERE
+         retweets_count = {input$rt} and likes_count = {input$likes_comp} and
+         tweet_length = {long} and company  = "{comp}" and
+             language = "{tolower(input$lang_comp)}"' )
+    }
+
+
+  })
+
+
+  get_twitter_comp_data <- reactive({
+    ###### need correct path
+    validate(need(correct_path() == T, "Please choose the correct path"))
+    ###### need database connection
+    validate(need(database_connector(), "Could not connect to database"))
+    ###### need at least one date selected
+
+
+    ####### store database connection
+    con <- database_connector()
+
+
+    ###### querry data from sql
+    df <- DBI::dbGetQuery(con,  get_querry_twitter_comparison())
+
+    #### for companies replace umlaute
+    if ("company" %in% names(df)){
+      df$company <- gsub("Ã¶", "ö", df$company)
+      df$company <- gsub("Ã¼", "ü", df$company)
+    }
+    #### return df
+    df
+  })
+
+
+
+  ####### get header for plot
+  ###### title for dygraphs
+  get_header_twitter_comp <- reactive({
+    ##### get data from sql
+    df_need <- get_twitter_comp_data ()
+
+    #convert to date
+    df_need$created_at <- as.Date(df_need$created_at)
+
+    ##### for tweet type input get nice company name according to named list
+    if (input$twitter_comp_comp == "NoFilter"){
+      comp_name <- names(purrr::flatten(company_terms))[purrr::flatten(company_terms) == input$twitter_comp_comp]
+    } else {
+      comp_name <- glue("{names(purrr::flatten(company_terms))[purrr::flatten(company_terms) == input$twitter_comp_comp]} Tweets")
+    }
+
+    ##### set up string for header of time series graphs
+    glue("{comp_name} ({round(sum(df_need$N))} tweets total,
+           {round(mean(df_need$N))} on average per day)")
+  })
+
+
+
+  ######## twitter plot
+  output$twitter_comp <- dygraphs::renderDygraph({
+    ##### get df
+    df <- get_twitter_comp_data()
+
+    #### set up header of plot
+
+    title = get_header_twitter_comp()
+    ###### plot the data
+    time_series_plotter2(df, "mean", input$value_comp, num_tweets = F,
+                         min(as.Date(df$created_at)), max(as.Date(df$created_at)), dates = NA, date_range =F,
+                                     title, group = "comp_plots",
+                         input_roll = input$roll_twitter_comp,
+                         ribbon = F)
+  })
+
+
   ###############################################################################
   ########################   XGboost    #########################################
   ###############################################################################
@@ -2282,12 +2571,14 @@ server <- function(input, output, session) {
     req( correct_path()== T)
     if (input$country_regression_xgb == "Germany"){
       input <- selectizeInput("Stock_Regression_xgb","Choose dependent variable:",
-                              c(COMPONENTS_DE()[["Company.Name"]],"GDAXI"),
-                              selected = "Bayer ",multiple = FALSE)
+                              #c(COMPONENTS_DE()[["Company.Name"]],"GDAXI"),
+                              company_terms_stock_ger,
+                              selected = "DAX",multiple = FALSE)
     } else {
       input <- selectizeInput("Stock_Regression_xgb","Choose dependent variable:",
-                              c(COMPONENTS_US()[["Company.Name"]],"DOW"),
-                              selected = "Apple ",multiple = FALSE)
+                              #c(COMPONENTS_US()[["Company.Name"]],"DJI"),
+                              company_terms_stock_us,
+                              selected = "Dow Jones Industrial",multiple = FALSE)
     }
   })
 
@@ -2302,7 +2593,7 @@ server <- function(input, output, session) {
       #c(colnames(res[3:length(res)])),multiple = TRUE
     }else{
       input <- selectizeInput("Controls_xgb","Choose control variables:",
-                              c(colnames(global_controls_test_US())[-1],"DOW"),multiple = TRUE)
+                              c(colnames(global_controls_test_US())[-1],"DJI"),multiple = TRUE)
     }
 
   })
@@ -2312,31 +2603,39 @@ server <- function(input, output, session) {
     req( correct_path()== T)
     if (input$country_regression_xgb == "Germany"){
       data_reg <- filter(stockdata_DE(),                                                                               #nur hier nach datum filtern, rest wird draufgemerged
-                         .data$name %in% (c(COMPONENTS_DE()[["Symbol"]], "GDAXI")[c(COMPONENTS_DE()[["Company.Name"]], "GDAXI") %in% .env$input$Stock_Regression_xgb]) &
-                           .data$Dates >= .env$input$date_regression_xgb[1] & .data$Dates <= .env$input$date_regression_xgb[2])[c("Dates",input$regression_outcome_xgb,"name")] #hier später noch CLose flexibel machen
+                         #.data$name %in% (c(COMPONENTS_DE()[["Symbol"]], "GDAXI")[c(COMPONENTS_DE()[["Company.Name"]], "GDAXI") %in% .env$input$Stock_Regression_xgb]) &
+                         .data$name %in% .env$input$Stock_Regression_xgb &
+                         .data$Dates >= .env$input$date_regression_xgb[1] & .data$Dates <= .env$input$date_regression_xgb[2])[c("Dates",input$regression_outcome_xgb,"name")] #hier später noch CLose flexibel machen
     } else {
       data_reg <- filter(stockdata_US(),                                                                               #nur hier nach datum filtern, rest wird draufgemerged
-                         .data$name %in% (c(COMPONENTS_US()[["Symbol"]], "DOW")[c(COMPONENTS_US()[["Company.Name"]], "DOW") %in% .env$input$Stock_Regression_xgb]) &
-                           .data$Dates >= .env$input$date_regression_xgb[1] & .data$Dates <= .env$input$date_regression_xgb[2])[c("Dates",input$regression_outcome_xgb,"name")] #hier später noch CLose flexibel machen
+                         #.data$name %in% (c(COMPONENTS_US()[["Symbol"]], "DJI")[c(COMPONENTS_US()[["Company.Name"]], "DJI") %in% .env$input$Stock_Regression_xgb]) &
+                         .data$name %in% .env$input$Stock_Regression_xgb &
+                         .data$Dates >= .env$input$date_regression_xgb[1] & .data$Dates <= .env$input$date_regression_xgb[2])[c("Dates",input$regression_outcome_xgb,"name")] #hier später noch CLose flexibel machen
     }
 
     if (input$country_regression_xgb == "Germany"){
       global_controls <- global_controls_test_DE()   #load controls
       global_controls$Date <- as.Date(global_controls$Date) #transform date
-      dax <- GDAXI()  #load dax
-      dax$Date <- as.Date(dax$Date, "%d %b %Y") #transform date
-      dax <- missing_date_imputer(dax,"Close.") #transform time series by imputing missing values
+      dax <- dplyr::filter(stockdata_DE(),.data$name %in% c("GDAXI")&
+                             .data$Dates >= min(global_controls$Date) & .data$Dates <= max(global_controls$Date))[c("Dates","Close")]
+      colnames(dax)[1]<-"Date"
+      # dax <- GDAXI()  #load dax
+      # dax$Date <- as.Date(dax$Date, "%d %b %Y") #transform date
+      # dax <- missing_date_imputer(dax,"Close.") #transform time series by imputing missing values
       colnames(dax)[2] <- "DAX"  #rename ->   !! is not renamed in final dataset !! -> dont know why
-      global_controls <- left_join(dax,global_controls,by = c("Date")) #join final
+      global_controls <- dplyr::left_join(dax,global_controls,by = c("Date")) #join final
 
     }else {
       global_controls <- global_controls_test_US() #same procedure as above
       global_controls$Date <- as.Date(global_controls$Date)
-      dow <- DOW()
-      dow$Date <- as.Date(dow$Date, " %b %d, %Y")
-      dow <- missing_date_imputer(dow,"Close.")
-      colnames(dow)[2] <- "DOW"
-      global_controls <- left_join(dow,global_controls,by = c("Date"))
+      dji <- dplyr::filter(stockdata_US(),.data$name %in% c("DJI")&
+                             .data$Dates >= min(global_controls$Date) & .data$Dates <= max(global_controls$Date))[c("Dates","Close")]
+      colnames(dji)[1]<-"Date"
+      # dow <- DOW()
+      # dow$Date <- as.Date(dow$Date, " %b %d, %Y")
+      # dow <- missing_date_imputer(dow,"Close.")
+      colnames(dji)[2] <- "DJI"
+      global_controls <- dplyr::left_join(dji,global_controls,by = c("Date"))
     }
     names(global_controls)[1] <- "Dates"
     data_reg2 <- left_join(data_reg,global_controls,by = c("Dates")) #hierdurch kommt die varible "global" in den datensatz

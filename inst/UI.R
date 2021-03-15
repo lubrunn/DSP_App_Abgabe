@@ -367,7 +367,7 @@ histo_tab <- sidebarPanel(
                 "Tweet Length" = "tweet_length"
               ),
               selected = "sentiment"),
-  sliderInput("bins", "Adjust the number of bins for the histogram", min = 5, max = 500, value = 50),
+  sliderInput("bins", "Adjust the number of bins for the histogram", min = 5, max = 100, value = 50),
 
 
   # add switch whether to use logarithmic scale
@@ -700,7 +700,7 @@ network_sidebar <- shinyWidgets::dropdown(
                    size = "s"),
 
           #### removing plot
-          actionButton("reset_net", "Remove Plot"),
+          actionButton("reset_net", "Remove Network"),
 
 
           ### canceling computation
@@ -860,7 +860,7 @@ ui <- fluidPage(
                         tags$h4("Filter Tweets"),
 
                         ###### langauge of tweets selector
-                        shinyWidgets::radioGroupButtons("lang", "Language of tweets",
+                        shinyWidgets::radioGroupButtons("lang_comp", "Language of tweets",
                                                         choices = c("English" = "EN",
                                                                     "German" = "DE"),
                                                         status = "primary",
@@ -874,11 +874,6 @@ ui <- fluidPage(
                         selectInput("twitter_comp_comp","Choose tweets",
                                     company_terms,
                                     selected = "NoFilter"),
-
-
-
-
-
 
 
                         ####### filter min rt, likes, long tweets
@@ -898,7 +893,7 @@ ui <- fluidPage(
                                               size = "s"),
 
 
-
+                      ####### minimum likes
                         shinyWidgets::radioGroupButtons("likes_comp", "Minimum Likes",
                                                         choices = c(0, 10, 50, 100, 200),
                                                         status = "primary",
@@ -914,15 +909,7 @@ ui <- fluidPage(
                                                                 a tweet needs to have"),
                                               size = "s"),
 
-
-
-
-
-
-
-
-
-                        #switchInput(inputId = "long", value = TRUE),
+                        ####### long tweet switch
                         shinyWidgets::materialSwitch(inputId = "long_comp",
                                                      label = "Long Tweets only?", value = F) %>%
                           shinyhelper::helper(type = "inline",
@@ -930,6 +917,21 @@ ui <- fluidPage(
                                               content = c("Long Tweets are tweets that contain more
                                                                 than 80 characters"),
                                               size = "s"),
+                      ##### select a value retweets/likes etc.
+                      selectInput("value_comp", "Select a value to show (multiple possible)",
+                                  choices = c(
+                                    "Sentiment" = "sentiment",
+                                    "Retweets Weighted Sentiment" = "sentiment_rt",
+                                    "Likes Weighted Sentiment" = "sentiment_likes",
+                                    "Length Weighted Sentiment" = "sentiment_tweet_length",
+                                    "Retweets" = "rt",
+                                    "Likes"="likes",
+                                    "Tweet Length" = "tweet_length"
+                                  ),
+                                  selected = "sentiment",
+                                  multiple = T),
+                      shinyWidgets::materialSwitch(inputId = "roll_twitter_comp", label = "7 day smoothing?", value = F)
+
                       ),
 
 
@@ -956,17 +958,7 @@ ui <- fluidPage(
              navbarMenu("Model",
                         tabPanel("Granger",
                                  sidebarPanel(
-                                   radioButtons("country_granger","Which country?",c("Germany","USA"),selected = "Germany"),
-                                   uiOutput("Stock_Granger"),
-                                   radioButtons("Granger_outcome","Which variable?",c("Open","High","Low","Close","Adj.Close","Volume","Return"),selected = "Close"),
-                                   uiOutput("ControlsGranger"),
-                                   selectize_corona_granger(),
-                                   sliderInput("date_granger",label="Timeseries",
-                                               value = c(as.Date("2020-02-12"),as.Date("2021-02-12")),
-                                               min = as.Date("2020-01-02"),
-                                               max = as.Date("2021-02-12"),
-                                               step = 1,timeFormat = "%F"),
-                                   checkboxInput("direction_granger","Second variable causes first?",value = TRUE)
+                                   tabs_custom_gra()
                                  ),
                                  mainPanel(
                                    tabsetPanel(

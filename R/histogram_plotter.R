@@ -50,8 +50,8 @@ histogram_plotter <- function(df, date_input1, date_input2, input_bins, input_lo
   input_metric <- stringr::str_replace(input_metric, "sentiment_rt_rd", "Retweets weighted Sentiment")
   input_metric <- stringr::str_replace(input_metric, "sentiment_likes_rd", "Likes weighted Sentiment")
   input_metric <- stringr::str_replace(input_metric, "sentiment_length_rd", "Tweet Length weighted Sentiment")
-  input_metric <- stringr::str_replace(input_metric, "likes", "Likes")
-  input_metric <- stringr::str_replace(input_metric, "rt", "Retweets")
+  input_metric <- stringr::str_replace(input_metric, "likes_count", "Likes")
+  input_metric <- stringr::str_replace(input_metric, "retweets_count", "Retweets")
   input_metric <- stringr::str_replace(input_metric, "tweet_length", "Tweet Length")
   input_metric <- stringr::str_replace(input_metric, "sentiment_rd", "Sentiment")
 

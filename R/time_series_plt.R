@@ -87,8 +87,9 @@ if (length(selected_metrics) == 1){
 #
 # filter_type = "mean"
 
-time_series_plotter2 <- function(df, filter_type, selected_metrics, num_tweets, input_dates1, input_dates2, dates = NA, date_range =T,
-                                 input_title){
+time_series_plotter2 <- function(df, filter_type, selected_metrics, num_tweets, input_dates1,
+                                 input_dates2, dates = NA, date_range =T,
+                                 input_title, group, input_roll = F, ribbon = T){
 
 
 
@@ -109,14 +110,8 @@ time_series_plotter2 <- function(df, filter_type, selected_metrics, num_tweets, 
   if (length(selected_metrics_new) > 1){
 
 
-    selected_metrics <- stringr::str_replace(selected_metrics, "sentiment_rt", "Retweets weighted Sentiment")
-    selected_metrics <- stringr::str_replace(selected_metrics, "sentiment_likes", "Likes weighted Sentiment")
-    selected_metrics <- stringr::str_replace(selected_metrics, "sentiment_length", "Tweet Length weighted Sentiment")
-    selected_metrics <- stringr::str_replace(selected_metrics, "likes", "Likes")
-    selected_metrics <- stringr::str_replace(selected_metrics, "rt", "Retweets")
-    selected_metrics <- stringr::str_replace(selected_metrics, "tweet_length", "Tweet Length")
-    selected_metrics <- stringr::str_replace(selected_metrics, "sentiment", "Sentiment")
 
+  selected_metrics <- selected_metrics_converter(selected_metrics)
 
 
 
@@ -124,7 +119,7 @@ time_series_plotter2 <- function(df, filter_type, selected_metrics, num_tweets, 
     df_values <- df %>% select(selected_metrics_new)%>%
       scale()
 
-    colnames(df_values) <- selected_metrics_new
+    colnames(df_values) <- selected_metrics
 
 
     don <- xts::xts(x = df_values, order.by = df$created_at)
@@ -134,12 +129,14 @@ time_series_plotter2 <- function(df, filter_type, selected_metrics, num_tweets, 
 
     dygraphs::dygraph(don,
                       ylab = "Scaled Values",
-                      main = input_title) %>%
+                      main = input_title,
+                      group = group) %>%
     dygraphs::dyOptions(axisLineWidth = 2, drawGrid = FALSE) %>%
     dygraphs::dyLegend() %>%
 
      # {if(date_range == T)  dygraphs::dyRangeSelector(.,dates + 1) else .} %>%
-    dygraphs::dyShading(from = min(df$created_at), to = max(df$created_at), color = "white")
+    dygraphs::dyShading(from = min(df$created_at), to = max(df$created_at), color = "white") %>%
+      {if (input_roll == T) dygraphs::dyRoller(., rollPeriod = 7, showRoller = F) else .}
 
 
   } else{
@@ -159,13 +156,7 @@ time_series_plotter2 <- function(df, filter_type, selected_metrics, num_tweets, 
     }
 
 
-    selected_metrics_new <- stringr::str_replace(selected_metrics_new, "sentiment_rt", "Retweets weighted Sentiment")
-    selected_metrics_new <- stringr::str_replace(selected_metrics_new, "sentiment_likes", "Likes weighted Sentiment")
-    selected_metrics_new <- stringr::str_replace(selected_metrics_new, "sentiment_length", "Tweet Length weighted Sentiment")
-    selected_metrics_new <- stringr::str_replace(selected_metrics_new, "likes", "Likes")
-    selected_metrics_new <- stringr::str_replace(selected_metrics_new, "rt", "Retweets")
-    selected_metrics_new <- stringr::str_replace(selected_metrics_new, "tweet_length", "Tweet Length")
-    selected_metrics_new <- stringr::str_replace(selected_metrics_new, "sentiment", "Sentiment")
+    selected_metrics_new <- selected_metrics_converter(selected_metrics_new)
 
 
     names(df) <- c("Date", selected_metrics_new)
@@ -180,16 +171,31 @@ time_series_plotter2 <- function(df, filter_type, selected_metrics, num_tweets, 
 
     dygraphs::dygraph(dyData,
                       ylab = selected_metrics_new,
-                      main = input_title) %>%
+                      main = input_title,
+                      group = group) %>%
       dygraphs::dySeries(label = selected_metrics_new) %>%
-      dygraphs::dyRibbon(data = ribbonData, top = 0.05, bottom = 0) %>%
+     {if (ribbon == T) dygraphs::dyRibbon(.,data = ribbonData, top = 0.05, bottom = 0) else . } %>%
       dygraphs::dyOptions(axisLineWidth = 2, drawGrid = FALSE) %>%
       dygraphs::dyLegend() %>%
 
       #{if(date_range == T)  dygraphs::dyRangeSelector(.,dates + 1) else .} %>%
-      dygraphs::dyShading(from = min(df$Date), to = max(df$Date), color = "white")
+      dygraphs::dyShading(from = min(df$Date), to = max(df$Date), color = "white") %>%
+      {if (input_roll == T) dygraphs::dyRoller(., rollPeriod = 7, showRoller = F) else .}
 
   }
+}
+
+
+selected_metrics_converter <- function(selected_metrics){
+  selected_metrics <- stringr::str_replace(selected_metrics, "sentiment_rt", "Retweets weighted Sentiment")
+  selected_metrics <- stringr::str_replace(selected_metrics, "sentiment_likes", "Likes weighted Sentiment")
+  selected_metrics <- stringr::str_replace(selected_metrics, "sentiment_tweet_length", "Tweet Length weighted Sentiment")
+  selected_metrics <- stringr::str_replace(selected_metrics, "likes", "Likes")
+  selected_metrics <- stringr::str_replace(selected_metrics, "rt", "Retweets")
+  selected_metrics <- stringr::str_replace(selected_metrics, "tweet_length", "Tweet Length")
+  selected_metrics <- stringr::str_replace(selected_metrics, "sentiment", "Sentiment")
+
+  return(selected_metrics)
 }
 
 

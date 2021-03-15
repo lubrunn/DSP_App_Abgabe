@@ -8,32 +8,19 @@
 #' @rdname corona_calculations
 CORONA <- function(country,datestart,dateend){
   filename <- "Corona/owid.csv"
-  help <- dplyr::filter(read.csv(filename),location %in% c(country))
+  help <- filter(read.csv(filename),location %in% c(country))
   help$date <- as.Date(help$date)
-  help <- dplyr::filter(help,date >= datestart & date <= dateend)
+  help <- filter(help,date >= datestart & date <= dateend)
   help
 }
-#' @export
-#' @rdname corona_calculations
-CORONA_xgb <- function(country){
-  filename <- "Corona/owid.csv"
-  help <- dplyr::filter(read.csv(filename),location %in% c(country))
-  help$date <- as.Date(help$date)
-  #help <- filter(help,date >= datestart & date <= dateend)
-  help
-}
-
-
 #' @export
 #' @rdname corona_calculations
 CORONA_neu <- function(country){
   filename <- "Corona/owid.csv"
-  help <- dplyr::filter(read.csv(filename),location %in% c(country))
+  help <- filter(read.csv(filename),location %in% c(country))
   help$date <- as.Date(help$date)
   help
 }
-
-
 #' @export
 #' @rdname corona_calculations
 selectize_corona_granger <- function() {
@@ -103,7 +90,7 @@ create_hover_info_corona <- function(hovercorona,coronadata,selectedmeasure){
   # actual tooltip created as wellPanel
   wellPanel(
     style = style,
-    p(htmltools::HTML(paste0("<b> Company: </b>", point$location, "<br/>",
+    p(HTML(paste0("<b> Company: </b>", point$location, "<br/>",
                   "<b> Date: </b>", point$date, "<br/>",
                   "<b>" ,selectedmeasure,": </b>", point[selectedmeasure], "<br/>")))
   )

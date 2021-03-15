@@ -11,7 +11,7 @@ emoji_words <- c(
   "grin","bicep","flex","note","popper","fist","car","follow","retweet","year","ago",
   "social media","woman","voltag","star","ball","camera","man","ass","video","cake","cool",
   "fac","smil","see","evil","party","sweat","thumb","big","the","crying","fing",
-  "crossed","god","watch","leaf","food","arrow", "hugg"
+  "crossed","god","watch","leaf","food","arrow", "hugg", "cri", "tone"
 
 )
 
@@ -30,8 +30,23 @@ word_freq_data_wrangler <- function(df, input_date1, input_date2,
 
 names(df) <- c("date", "language", "word", "N", "emo")
 
-### stem the search term so it fits better to words we have
-search_term <- corpus::stem_snowball(search_term, algorithm = tolower(input_lang))
+
+### stem the search term so it fits better to words we have and convert to lower
+search_term <- tolower(corpus::stem_snowball(search_term, algorithm = tolower(input_lang)))
+
+
+
+## convert company term to lower
+input_comp <- tolower(input_comp)
+
+#### stem company inpptu,  control for company names that are two names
+if (length(strsplit(input_comp, " ")[[1]]) > 1){
+  input_comp <- corpus::stem_snowball(strsplit(input_comp, " ")[[1]], algorithm = tolower(input_lang))
+  input_comp <- paste0(input_comp, collapse = "|")
+} else {
+  input_comp <- corpus::stem_snowball(input_comp, algorithm = tolower(input_lang))
+}
+
 
 df <-  df %>%
   filter(between(date, as.Date(input_date1), as.Date(input_date2)) &
@@ -39,12 +54,17 @@ df <-  df %>%
   {if (input_emo == T) filter(., emo == F &
                                 !grepl(paste(emoji_words, collapse = "|"), word) ) else .} %>% ##filter out emoji words if chosen
 
- {if (!is.null(input_comp)) filter(.,!grepl(corpus::stem_snowball(input_comp), word)) else .} %>% #filter out company name if chosen
+ {if (input_comp != "NoFilter") filter(.,!grepl(input_comp, word)) else .} %>% #filter out company name if chosen
 
   {if (search_term != "") filter(.,grepl(search_term, word)) else .} %>% # only keep what contain search term
   select(-emo)
 
 return(df)
+}
+
+###### compute total number of unique words/bigrams
+unique_words <- function(df){
+  length(unique(df$word))
 }
 
 
@@ -59,11 +79,12 @@ return(df)
 #'@rdname term_freq_computers
 df_filterer <- function(df, input_n){
 
+
 df <- df %>%
   group_by( word) %>%
   summarise(n = sum(N)) %>%
   arrange(desc(n)) %>%
-  top_n(input_n, n)
+  head(input_n)
 
 return(df)
 
@@ -75,11 +96,11 @@ return(df)
 
 #'@export
 #'@rdname term_freq_computers
-word_cloud_plotter <- function(df, input_size){
+word_cloud_plotter <- function(df, input_size = 1){
 
   df    %>%
-     wordcloud2::wordcloud2(size = input_size,shape = 'star',
-                                              color = "random-light", backgroundColor = "grey")
+     wordcloud2::wordcloud2(size = input_size,
+                                              color = "random-light", backgroundColor = "#2b3e50")
 }
 
 #################################################################
@@ -87,13 +108,23 @@ word_cloud_plotter <- function(df, input_size){
 
 # term freq bar plot
 term_freq_bar_plot <- function(df){
-  df %>%
+  options(scipen=999)
 
-    ggplot(aes(reorder(x = word, n), y = n)) +
-    geom_col() +
-    coord_flip()
+df$n <- df$n / 1000
+p <-   df %>%
 
+    ggplot(aes(reorder(x = word, n), y = n, label = word)) +
+    geom_col(width = 0.5, color = "#4e5d6c") +
+  coord_flip() +
+  labs(x = "",
+       y = "N (in thousands)")+
+  theme_classic() +
+  theme(text = element_text(size=18)) +
 
+  scale_y_continuous(expand = c(0, 0))
+
+plotly::ggplotly(p,
+                 tooltip = c("label", "y"))
 }
 
 
@@ -104,14 +135,27 @@ term_freq_bar_plot <- function(df){
 word_filter_time_series_plotter <- function(df){
 
 
-df %>%
+p <- df %>%
    group_by(date) %>%
     summarise(n = sum(N)) %>%
 
 
   ggplot() +
-  geom_line(aes(date, n))
+  geom_line(aes(date, n)) +
+  theme_classic() +
+  theme(text = element_text(size=18)) +
+  labs(x = "Date",
+       y = "N")
+
+
+plotly::ggplotly(p)
 
 }
+
+
+
+
+
+
 
 

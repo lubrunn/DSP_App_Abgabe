@@ -2847,9 +2847,9 @@ server <- function(input, output, session) {
   #merge sentiment with control+dep vars
   final_regression_df_xgb <- reactive ({
     if (input$senti_yesno_xgb == TRUE){
-      res <- get_sentiment_var()
+      res <- get_sentiment_xgb()
     } else {
-      res <- get_sentiment_var()[1]
+      res <- get_sentiment_xgb()[1]
     }
     res$created_at <- as.Date(res$created_at)
     res_c <- df_selected_controls_xgb()

@@ -1,12 +1,19 @@
+'
+In this file we compute everything needed for the network plot shown in the going deeper tab
+'
+
+
+
+#### this function gets the data from the source and appends files if multiple dates
+# are selected
 #'@export
 #'@rdname network_plot
 #'
-
-
 network_plot_datagetter <- function(input_lang, input_date1, input_date2, input_company){
 
 
-   # create date range
+   # create date range to be loaded accroding to user input
+  ### if second date provided set up sequence of dates
   if (!is.na(input_date2)){
    date_list <- seq(as.Date(input_date1), as.Date(input_date2), "days")
   } else{
@@ -61,7 +68,8 @@ network_plot_datagetter <- function(input_lang, input_date1, input_date2, input_
 
 
 
-
+###### this function filters the data retrieved accroding to user
+# search_term, username, rt, likes, length, language, comapny name
 #'@export
 #'@rdname network_plot
 network_plot_filterer <- function(df, input_rt, input_likes, input_tweet_length,
@@ -94,8 +102,10 @@ network_plot_filterer <- function(df, input_rt, input_likes, input_tweet_length,
 }
 
 
-
-
+##### this function unnests the tweets, i.e. gets every single word contained into new row
+### potentially filters out emoji words
+#'@export
+#'@rdname network_plot
 network_unnester <- function(network, df, input_emo_net){
   network <- network %>%
 
@@ -111,8 +121,9 @@ network_unnester <- function(network, df, input_emo_net){
 }
 
 
-
-
+#### this function unnests bigrams instead of single words
+#'@export
+#'@rdname network_plot
 network_unnester_bigrams <- function(network, input_emo){
 
 network <- network %>%
@@ -135,8 +146,10 @@ network <- network %>%
 
 }
 
-
-
+#### this funciton takes the df and converts it into a network after filtering for
+# minmium correlation and occruences
+#'@export
+#'@rdname network_plot
 network_word_corr <- function(network, input_n,
                               input_corr, min_n){
   #### get minimum n, either provided min_n which is 1% of nrows of of but at least 10
@@ -200,8 +213,9 @@ network_word_corr <- function(network, input_n,
 
 
 
-
-
+###### this function createds network after filtering df with minimum occuruences
+#'@export
+#'@rdname network_plot
 network_bigrammer <- function(df, network, input_n, input_bigrams_n,
                               min_n){
 
@@ -247,7 +261,7 @@ network_bigrammer <- function(df, network, input_n, input_bigrams_n,
 
 
 
-
+##### this funciton plots the network for word pairs
 #'@export
 #'@rdname network_plot
 network_plot_plotter <- function(network){
@@ -310,8 +324,9 @@ network_plot_plotter <- function(network){
 
 
 
-
-
+#### this function plots the network for bigrams
+#'@export
+#'@rdname network_plot
 network_plot_plotter_bigrams <- function(network){
 
 

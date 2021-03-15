@@ -310,7 +310,8 @@ twitter_desc_conditional_sum_stats <- conditionalPanel(
   tags$h4("Time Series"),
 
   ##### select a value retweets/likes etc.
- selectInput("value", "Select a value to show (multiple possible)",
+  rintrojs::introBox(
+  selectInput("value", "Select a value to show (multiple possible)",
               choices = c(
                 "Sentiment" = "sentiment",
                 "Retweets Weighted Sentiment" = "sentiment_rt",
@@ -322,10 +323,17 @@ twitter_desc_conditional_sum_stats <- conditionalPanel(
               ),
               selected = "sentiment",
               multiple = T),
+  data.step = 5,
+  data.intro = "Here you can choose a metric to analyse. Each metric is the aggreagted value
+  on a daily level. Mutiple selections are possible. As soon
+  as two metrics are selected all time series get scaled to mean 0 and a standard deviation of
+  1 in order to fit on the same scale"
+  ),
 
 
 
   #### select summary statistic
+  rintrojs::introBox(
   shinyWidgets::radioGroupButtons("metric", "Select a statistic to plot",
                choiceNames = c("Mean", "SD", "Median"),
                choiceValues = c("mean", "std", "median"),
@@ -340,6 +348,10 @@ twitter_desc_conditional_sum_stats <- conditionalPanel(
 
 
   shinyWidgets::awesomeCheckbox("num_tweets_box", label = "Show average number of tweets", value = F),
+  data.step = 6,
+  data.intro = "You may choose to see the to depict the means, standard deviations or the medians aggreagted
+  on a daily level"
+  ),
 
  #### style checkbox
  tags$style(HTML('.checkbox-primary input[type="checkbox"]:checked+label::before, .checkbox-primary input[type="radio"]:checked+label::before {
@@ -347,8 +359,12 @@ twitter_desc_conditional_sum_stats <- conditionalPanel(
     border-color: #888888;
 }')),
 
-
-  actionButton("plot_saver_button", "Save the plot")
+rintrojs::introBox(
+  actionButton("plot_saver_button", "Save the plot"),
+  data.step = 7,
+  data.intro = "With this button you can temporarily store a generated plot in a second field. This allows for easier
+  comparison when wanting to compare tweets with different search terms."
+)
 )
 
 
@@ -401,12 +417,18 @@ twitter_tab_desc <- tabPanel( "Descriptives",
 
                               ####### all three
                               ### instrucitons button
-                              actionButton("instrucitons_desc", "Instructions"),
+
+                              conditionalPanel(
+                                condition = "input.tabselected==1",
+                              actionButton("instrucitons_desc", "Instructions")
+                              ),
+
 
                               tags$hr(),
                               tags$h4("Filter Tweets"),
 
                               ###### langauge of tweets selector
+                              rintrojs::introBox(
                               shinyWidgets::radioGroupButtons("lang", "Language of tweets",
                                                               choices = c("English" = "EN",
                                                                           "German" = "DE"),
@@ -417,17 +439,33 @@ twitter_tab_desc <- tabPanel( "Descriptives",
                                                                 no = icon("remove",
                                                                           lib = "glyphicon")),
                                                               size = "sm"),
+                                                              data.step = 1,
+                                                              data.intro = "Here you can set the language of the tweets"
+                                                                  ),
+
+
+
                               ###### choose tweet type (company or unfiltererd)
+                              rintrojs::introBox(
                               selectInput("comp","Choose tweets",
                                              company_terms,
                                              selected = "NoFilter"),
+                              data.step = 2,
+                              data.intro = "Here you can either select company specific tweets or tweets that were randomly scraped
+                              without any search term"
+                              ),
 
                               ####### select date range
+                              rintrojs::introBox(
                               shinyWidgets::airDatepickerInput("dates_desc", "Date range:",
                                                                range = T,
                                                                value = c("2018-11-30", "2021-02-19"),
                                                                maxDate = "2021-02-19", minDate = "2018-11-30",
                                                                clearButton = T, update_on = "close"),
+                              data.step = 3,
+                              data.intro = "Here you can select the date range you would like to analyse. We have data from
+                              2018-11-30 until yesterday"
+                              ),
 
                               ####### reset date range button
                               actionButton("reset_dates_desc", "Reset date range"),
@@ -436,6 +474,7 @@ twitter_tab_desc <- tabPanel( "Descriptives",
 
 
                               ####### filter min rt, likes, long tweets
+                              rintrojs::introBox(
                               shinyWidgets::radioGroupButtons("rt", "Minimum tweets",
                                            choices = c(0, 10, 50, 100, 200),
                                            status = "primary",
@@ -493,6 +532,10 @@ twitter_tab_desc <- tabPanel( "Descriptives",
                                                     content = c("Long Tweets are tweets that contain more
                                                                 than 80 characters"),
                                                     size = "s"),
+                              data.step = 4,
+                              data.intro = "In this section you can apply filters to the tweets. You may choose to only see tweets
+                              with a minimum number of retweets or likes or only tweets that have at least 80 characters"
+                              ),
 
 
 
@@ -754,6 +797,13 @@ ui <- fluidPage(
   shinyjs::useShinyjs(),
   shinyFeedback::useShinyFeedback(),
   rintrojs::introjsUI(),
+
+  #### change color of instrucitons boxes
+ tags$style(HTML(".introjs-tooltip {
+    background-color: #1d465a;}"
+ )),
+
+
   theme = shinythemes::shinytheme("superhero"),
   ### change button colors
   tags$style(HTML('.btn-default {

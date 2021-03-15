@@ -6,7 +6,7 @@ model_xgb <- function(res){
   
   names(res)[2] <- "y"
   
-  slidng_eval_window <- sliding_period(res,index = date,"month",lookback = 4  , assess_stop = 1,step = 1)
+  slidng_eval_window <- sliding_period(res,index = date,"month",lookback = 5  , assess_stop = 1,step = 2)
   
   res$date <- NULL
   
@@ -15,12 +15,12 @@ model_xgb <- function(res){
   
   model_xgboost <- boost_tree(
     mode = "regression",
-    mtry = 20,
+    mtry = 30,
     trees = 200,
-    min_n = 3,
-    tree_depth = 8,
-    learn_rate = 0.01,
-    loss_reduction = 0.01,
+    min_n = 25,
+    tree_depth = 7,
+    learn_rate = 0.02,
+    loss_reduction = 0.0009,
     sample_size = 0.7) %>%
     set_engine(engine = "xgboost", objective = "reg:squarederror")
   

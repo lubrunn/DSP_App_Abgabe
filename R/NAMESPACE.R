@@ -39,5 +39,6 @@
 #' @import forecast
 #' @import timetk
 #' @import xgboost
+#' @import rintrojs
 NULL
 

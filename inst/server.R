@@ -21,10 +21,10 @@ server <- function(input, output, session) {
     validate(need(correct_path() == T, "Please choose the correct path"))
 
 
-      input <- selectizeInput("Stock","Choose Companies:",
-                              c(COMPONENTS_DE()[["Company.Name"]],"DAX" = "GDAXI",
-                                COMPONENTS_US()[["Company.Name"]],"DJI" = "DJI"),
-                              selected = "Bayer ",multiple = TRUE)
+    input <- selectizeInput("Stock","Choose Companies:",
+                            c(COMPONENTS_DE()[["Company.Name"]],"DAX" = "GDAXI",
+                              COMPONENTS_US()[["Company.Name"]],"DJI" = "DJI"),
+                            selected = "Bayer ",multiple = TRUE)
 
 
 
@@ -199,7 +199,7 @@ server <- function(input, output, session) {
         # dax <- missing_date_imputer(dax,"Close.") #transform time series by imputing missing values
         colnames(dax)[2] <- "DAX"  #rename ->   !! is not renamed in final dataset !! -> dont know why
         global_controls <- dplyr::left_join(dax,global_controls,by = c("Date")) #join final
-      }else{
+      }else if (input$corona_measurement_granger!=""){
         global_controls <- CORONA_neu("Germany")[c("date",input$corona_measurement_granger)]
         colnames(global_controls)[1]<-"Dates"
       }
@@ -217,23 +217,133 @@ server <- function(input, output, session) {
         # dow <- missing_date_imputer(dow,"Close.")
         colnames(dji)[2] <- "DJI"
         global_controls <- dplyr::left_join(dji,global_controls,by = c("Date"))
-      }else{
+      }else if (input$corona_measurement_granger!=""){
         global_controls <- CORONA_neu("United States")[c("date",input$corona_measurement_granger)]
         colnames(global_controls)[1]<-"Dates"
       }
+
     }
+
+    if (input$Controls_GRANGER!=""|input$corona_measurement_granger!=""){
     names(global_controls)[1] <- "Dates"
     granger <- left_join(granger1,global_controls,by = c("Dates"))
-    ifelse(input$Controls_GRANGER!="",
-           granger <- granger[c("Dates",input$Granger_outcome,input$Controls_GRANGER)],
-           granger <- granger[c("Dates",input$Granger_outcome,input$corona_measurement_granger)])
+    }else{
+      granger<- granger1
+    }
+
+    if (input$senti_yesno_gra == TRUE){
+      #res <- aggri_select()
+      res <- get_sentiment_granger()
+    } else {
+      #res <- aggri_select()[1]
+      res <- get_sentiment_granger()[1]
+    }
+    res$created_at <- as.Date(res$created_at)
+    granger <- dplyr::left_join(granger,res,by=c("Dates" = "created_at"))
+
+
+    if (input$senti_yesno_gra == TRUE){
+      granger <- granger[c("Dates",input$Granger_outcome,colnames(get_sentiment_granger())[2])]
+    }else if (input$Controls_GRANGER!=""){
+      granger <- granger[c("Dates",input$Granger_outcome,input$Controls_GRANGER)]
+    }else{
+      granger <- granger[c("Dates",input$Granger_outcome,input$corona_measurement_granger)]
+    }
+
+
+
+
+    # ifelse(input$Controls_GRANGER!="",
+    #        granger <- granger[c("Dates",input$Granger_outcome,input$Controls_GRANGER)],
+    #        granger <- granger[c("Dates",input$Granger_outcome,input$corona_measurement_granger)])
 
     granger[is.na(granger)]<-0
     granger
   })
 
+  observeEvent(input$Sentiment_type_gra, {                         #Observe event from input (model choices)
+    req(input$Sentiment_type_gra)
+    updateTabsetPanel(session, "params_gra", selected = input$Sentiment_type_gra)
+  })
+
+  observeEvent(input$industry_sentiment_gra, {                         #Observe event from input (model choices)
+    req(input$industry_sentiment_gra)
+    updateTabsetPanel(session, "industry_tab_gra", selected = input$industry_sentiment_gra)
+  })
 
 
+  ################################################################# sql data granger
+  dates_gra <- reactive({
+    if (length(input$date_granger) > 1){
+      input$date_granger
+    } else {
+      c(input$date_granger, input$date_granger)
+    }
+  })
+
+
+  querry_sentiment_model_gra <- reactive({
+
+    #### check which tweet length
+    if (input$tweet_length_gra == T){
+      tweetLength <- 81
+    } else {
+      tweetLength <- 0
+    }
+
+
+
+    dates <- dates_gra()
+
+
+
+    ###### table name
+    ### get language
+    if (input$sentiment_company_granger == "NoFilter"){
+      test <- glue('select created_at, {input$aggregation_gra} from sum_stats_{tolower(input$language_gra)} where
+    created_at >= "{dates[1]}" and created_at <= "{dates[2]}" and
+    retweets_count = {input$minRetweets_gra} and likes_count = {input$minLikes_gra} and
+    tweet_length = {tweetLength}')
+    } else {
+      comp <- gsub("ö","Ã¶", input$sentiment_company_granger)
+      comp <- gsub("ü", "Ã¼", comp)
+
+    test<-glue('SELECT created_at, {input$aggregation_gra}  FROM sum_stats_companies WHERE
+      created_at >= "{dates[1]}" and created_at <= "{dates[2]}" and
+         retweets_count = {input$minRetweets_gra} and likes_count = {input$minLikes_gra} and
+         tweet_length = {tweetLength} and company  = "{comp}" and
+             language = "{tolower(input$language_gra)}"' )
+    }
+
+
+    test
+
+  })
+
+
+  get_sentiment_granger <- reactive({
+    ###### need correct path
+    validate(need(correct_path() == T, "Please choose the correct path"))
+    ###### need database connection
+    validate(need(database_connector(), "Could not connect to database"))
+    ###### need at least one date selected
+    validate(need(!is.null(input$date_granger), "Please select a date."))
+
+    ####### store database connection
+    con <- database_connector()
+
+
+    ###### querry data from sql
+    df_need <- DBI::dbGetQuery(con,  querry_sentiment_model_gra())
+
+    #### for companies replace umlaute
+    if ("company" %in% names(df_need)){
+      df_need$company <- gsub("Ã¶", "ö", df_need$company)
+      df_need$company <- gsub("Ã¼", "ü", df_need$company)
+    }
+    #### return df
+    df_need
+  })
 
 
 
@@ -262,9 +372,9 @@ server <- function(input, output, session) {
     varobject <- vars::VAR(dickey_fuller()[-1], p = optlags(), type = "const")
     cause <- NULL
     if(input$Controls_GRANGER!=""){
-      ifelse(input$direction_granger == TRUE,cause <- input$Controls_GRANGER,cause <- input$Granger_outcome)
+      ifelse(input$direction_granger == TRUE,cause <- colnames(granger_data())[3],cause <- input$Granger_outcome)
     }else{
-      ifelse(input$direction_granger == TRUE,cause <- input$corona_measurement_granger,cause <- input$Granger_outcome)
+      ifelse(input$direction_granger == TRUE,cause <- colnames(granger_data())[3],cause <- input$Granger_outcome)
     }
     granger <- vars::causality(varobject, cause = cause)
     granger$Granger
@@ -286,10 +396,8 @@ server <- function(input, output, session) {
 
 
   output$second_granger <- dygraphs::renderDygraph({
-    ifelse(input$Controls_GRANGER!="",
-           plotdata <- xts::xts(granger_data()[input$Controls_GRANGER],order.by=granger_data()[["Dates"]]),
-           plotdata <- xts::xts(granger_data()[input$corona_measurement_granger],order.by=granger_data()[["Dates"]])
-    )
+    plotdata <- xts::xts(granger_data()[colnames(granger_data())[3]],order.by=granger_data()[["Dates"]])
+
     dygraphs::dygraph(plotdata)
   })
 
@@ -366,36 +474,37 @@ server <- function(input, output, session) {
         str1 <- paste(htmltools::em(input$Granger_outcome),"of",input$Stock_Granger, "does not granger cause ",htmltools::em(colnames(granger_data())[3]))
       }
     }
+
     htmltools::HTML(paste(str1))
   })
 
   output$info_granger <- renderUI({
     htmltools::HTML(paste(htmltools::h1(htmltools::strong("Granger Causality Analysis"), align="center", style = "font-family: 'Times', serif;
                   font-weight: 30px; font-size: 30px; line-height: 1;"),
-                         htmltools::p("In this section, the user is able to perform a Granger causality test, which is a statistical hypothesis test for determining whether one time series is useful in forecasting another.
+                          htmltools::p("In this section, the user is able to perform a Granger causality test, which is a statistical hypothesis test for determining whether one time series is useful in forecasting another.
                   The term ", htmltools::em("causality"), " in this context means nothing more than predictive causality and should not be mistaken for ",
-                                     htmltools::em("true causality"),". It rather measures the ability of past values of one time series to predict future values of another time series.",htmltools::tags$br(),
-                 "To test the null hypothesis that time series ", htmltools::em("x")," does not Granger cause", htmltools::em("y"), ", one first finds the optimal lagged values of ", htmltools::em("y")," to include in a autoregression of ", htmltools::em("y:")
-                 ,style = "font-weight: 18px; font-size: 18px; line-height: 1;"),
-               withMathJax("$$y_t = \\alpha_0 + \\alpha_1y_{t-1} + \\alpha_2y_{t-1} + ... + \\alpha_my_{t-m} + error_t$$"),
-               htmltools::p("In the next step, lagged values of ", htmltools::em("x"),"are added to the regression: ",style = "font-weight: 18px; font-size: 18px; line-height: 1;"),
-               withMathJax("$$y_t = \\alpha_0 + \\alpha_1y_{t-1} + \\alpha_2y_{t-1} + ... + \\alpha_my_{t-m} + \\beta_1x_{t-1} + \\beta_qx_{t-q} + error_t$$"),
-               htmltools::p("The lagged values of ", htmltools::em("x")," are kept as long as they add explanatory power to the regression according to an F-test.
+                                       htmltools::em("true causality"),". It rather measures the ability of past values of one time series to predict future values of another time series.",htmltools::tags$br(),
+                                       "To test the null hypothesis that time series ", htmltools::em("x")," does not Granger cause", htmltools::em("y"), ", one first finds the optimal lagged values of ", htmltools::em("y")," to include in a autoregression of ", htmltools::em("y:")
+                                       ,style = "font-weight: 18px; font-size: 18px; line-height: 1;"),
+                          withMathJax("$$y_t = \\alpha_0 + \\alpha_1y_{t-1} + \\alpha_2y_{t-1} + ... + \\alpha_my_{t-m} + error_t$$"),
+                          htmltools::p("In the next step, lagged values of ", htmltools::em("x"),"are added to the regression: ",style = "font-weight: 18px; font-size: 18px; line-height: 1;"),
+                          withMathJax("$$y_t = \\alpha_0 + \\alpha_1y_{t-1} + \\alpha_2y_{t-1} + ... + \\alpha_my_{t-m} + \\beta_1x_{t-1} + \\beta_qx_{t-q} + error_t$$"),
+                          htmltools::p("The lagged values of ", htmltools::em("x")," are kept as long as they add explanatory power to the regression according to an F-test.
           The null hypothesis that ", htmltools::em("x")," does not Granger cause", htmltools::em("y"), "is accepted if and only if no lagged values of ", htmltools::em("x")," are included.",style = "font-weight: 18px; font-size: 18px; line-height: 1;"),
-               htmltools::h2(htmltools::strong("Instructions:") ,style = "font-family: 'Times', serif; font-weight: 20px; font-size: 20px; line-height: 1;"),
-               htmltools::p("In order to perform the Granger causality Analysis, built the model using the panel on the left: ",htmltools::tags$br(),
-                           htmltools::div("- select the first variable",htmltools::tags$br(),
-                     "- select the second variable",htmltools::tags$br(),
-                     "- choose the direction of the causality test using the checkbox",htmltools::tags$br(),
-                     "- the tab ",htmltools::em("Visualize"),"contains plots of both series for comparison",
-                     "- the tab ",htmltools::em("Background-steps")," contains all important steps required in the analysis",htmltools::tags$br(),
-                     "- the results can be accessed on the tab ",htmltools::em("Results"), style="margin-left: 1em;font-weight: 18px; font-size: 18px; line-height: 1;"),style = "font-weight: 18px; font-size: 18px; line-height: 1;"),
-               htmltools::h2(htmltools::strong("Analysis steps:") ,style = "font-family: 'Times', serif; font-weight: 20px; font-size: 20px; line-height: 1;"),
-               htmltools::p("The following steps are automatically performed after the user selects two time series: ",htmltools::tags$br(),
-                           htmltools::div("1. The optimal number of lags is calculated",htmltools::tags$br(),
-                     "2. Stationarity is repeatedly tested and the series are differenced until sationarity is achieved",htmltools::tags$br(),
-                     "3. A VAR model is estimated with the optimal number of lags and the (if necessary) transformed series",htmltools::tags$br(),
-                     "4. A granger causality test is performed.",style="margin-left: 1em;font-weight: 18px; font-size: 18px; line-height: 1;"),style = "font-weight: 18px; font-size: 18px; line-height: 1;")))
+                          htmltools::h2(htmltools::strong("Instructions:") ,style = "font-family: 'Times', serif; font-weight: 20px; font-size: 20px; line-height: 1;"),
+                          htmltools::p("In order to perform the Granger causality Analysis, built the model using the panel on the left: ",htmltools::tags$br(),
+                                       htmltools::div("- select the first variable",htmltools::tags$br(),
+                                                      "- select the second variable",htmltools::tags$br(),
+                                                      "- choose the direction of the causality test using the checkbox",htmltools::tags$br(),
+                                                      "- the tab ",htmltools::em("Visualize"),"contains plots of both series for comparison",
+                                                      "- the tab ",htmltools::em("Background-steps")," contains all important steps required in the analysis",htmltools::tags$br(),
+                                                      "- the results can be accessed on the tab ",htmltools::em("Results"), style="margin-left: 1em;font-weight: 18px; font-size: 18px; line-height: 1;"),style = "font-weight: 18px; font-size: 18px; line-height: 1;"),
+                          htmltools::h2(htmltools::strong("Analysis steps:") ,style = "font-family: 'Times', serif; font-weight: 20px; font-size: 20px; line-height: 1;"),
+                          htmltools::p("The following steps are automatically performed after the user selects two time series: ",htmltools::tags$br(),
+                                       htmltools::div("1. The optimal number of lags is calculated",htmltools::tags$br(),
+                                                      "2. Stationarity is repeatedly tested and the series are differenced until sationarity is achieved",htmltools::tags$br(),
+                                                      "3. A VAR model is estimated with the optimal number of lags and the (if necessary) transformed series",htmltools::tags$br(),
+                                                      "4. A granger causality test is performed.",style="margin-left: 1em;font-weight: 18px; font-size: 18px; line-height: 1;"),style = "font-weight: 18px; font-size: 18px; line-height: 1;")))
   })
 
   ################################################################################################### Regression
@@ -421,14 +530,14 @@ server <- function(input, output, session) {
 
                htmltools::h2(htmltools::strong("Instructions:") ,style = "font-family: 'Times', serif; font-weight: 20px; font-size: 20px; line-height: 1;"),
                htmltools::p("In order to perform the regression analysis, built the model using the panel on the left: ",htmltools::tags$br(),
-                           htmltools::div("- select the dependent variable",htmltools::tags$br(),
-                     "- select the control variable(s)",htmltools::tags$br(),
-                     "- choose whether sentiment variable should be included",htmltools::tags$br(),
-                     "- if sentiment is added, switch to the tab ",htmltools::em("Filter sentiment input")," on top of the sidebar and specify the sentiment",htmltools::tags$br(),
-                     "- the tab ",htmltools::em("Summary Statistics")," contains information on the selected variables",htmltools::tags$br(),
-                     "- the results can be accessed on the tab ",htmltools::em("Linear Regression")," and ",htmltools::em("Quantile Regression")," respectively.",htmltools::tags$br(),
-                     "- on the tab ",htmltools::em("Quantile Regression")," specify the desired quantile for which to compute the regression", style="margin-left: 1em;font-weight: 18px; font-size: 18px; line-height: 1;"),
-                 style = "font-weight: 18px; font-size: 18px; line-height: 1;")))
+                            htmltools::div("- select the dependent variable",htmltools::tags$br(),
+                                           "- select the control variable(s)",htmltools::tags$br(),
+                                           "- choose whether sentiment variable should be included",htmltools::tags$br(),
+                                           "- if sentiment is added, switch to the tab ",htmltools::em("Filter sentiment input")," on top of the sidebar and specify the sentiment",htmltools::tags$br(),
+                                           "- the tab ",htmltools::em("Summary Statistics")," contains information on the selected variables",htmltools::tags$br(),
+                                           "- the results can be accessed on the tab ",htmltools::em("Linear Regression")," and ",htmltools::em("Quantile Regression")," respectively.",htmltools::tags$br(),
+                                           "- on the tab ",htmltools::em("Quantile Regression")," specify the desired quantile for which to compute the regression", style="margin-left: 1em;font-weight: 18px; font-size: 18px; line-height: 1;"),
+                            style = "font-weight: 18px; font-size: 18px; line-height: 1;")))
 
   })
 
@@ -470,16 +579,16 @@ server <- function(input, output, session) {
     validate(need(correct_path() == T, "Please choose the correct path"))
     if (input$country_regression == "Germany"){
       data_reg <- dplyr::filter(stockdata_DE(),                                                                               #nur hier nach datum filtern, rest wird draufgemerged
-                         #.data$name %in% (c(COMPONENTS_DE()[["Symbol"]], "GDAXI")[c(COMPONENTS_DE()[["Company.Name"]], "GDAXI") %in% .env$input$Stock_Regression]) &
-                         .data$name %in% .env$input$Stock_Regression &
-                         .data$Dates >= .env$input$date_regression[1] & .data$Dates <= .env$input$date_regression[2])[c("Dates",input$regression_outcome,"name")] #hier später noch CLose flexibel machen
+                                #.data$name %in% (c(COMPONENTS_DE()[["Symbol"]], "GDAXI")[c(COMPONENTS_DE()[["Company.Name"]], "GDAXI") %in% .env$input$Stock_Regression]) &
+                                .data$name %in% .env$input$Stock_Regression &
+                                  .data$Dates >= .env$input$date_regression[1] & .data$Dates <= .env$input$date_regression[2])[c("Dates",input$regression_outcome,"name")] #hier später noch CLose flexibel machen
     } else {
       data_reg <- dplyr::filter(stockdata_US(),                                                                               #nur hier nach datum filtern, rest wird draufgemerged
-                         #.data$name %in% (c(COMPONENTS_US()[["Symbol"]], "DJI")[c(COMPONENTS_US()[["Company.Name"]], "DJI") %in% .env$input$Stock_Regression]) &
-                           .data$name %in% .env$input$Stock_Regression &
-                           .data$Dates >= .env$input$date_regression[1] & .data$Dates <= .env$input$date_regression[2])[c("Dates",input$regression_outcome,"name")] #hier später noch CLose flexibel machen
+                                #.data$name %in% (c(COMPONENTS_US()[["Symbol"]], "DJI")[c(COMPONENTS_US()[["Company.Name"]], "DJI") %in% .env$input$Stock_Regression]) &
+                                .data$name %in% .env$input$Stock_Regression &
+                                  .data$Dates >= .env$input$date_regression[1] & .data$Dates <= .env$input$date_regression[2])[c("Dates",input$regression_outcome,"name")] #hier später noch CLose flexibel machen
 
-      }
+    }
 
     if (input$country_regression == "Germany"){
       global_controls <- global_controls_test_DE()   #load controls
@@ -643,7 +752,6 @@ server <- function(input, output, session) {
 
   #merge sentiment with control+dep vars
   final_regression_df <- reactive ({
-
     if (input$senti_yesno_reg == TRUE){
       #res <- aggri_select()
       res <- get_sentiment_regression()
@@ -651,7 +759,6 @@ server <- function(input, output, session) {
       #res <- aggri_select()[1]
       res <- get_sentiment_regression()[1]
     }
-
 
     res$created_at <- as.Date(res$created_at)
     res_c <- df_selected_controls()
@@ -661,13 +768,14 @@ server <- function(input, output, session) {
   })
 
 
-########################### sql data
+  ########################### sql data
   dates_reg <- reactive({
     if (length(input$date_regression) > 1){
       input$date_regression
     } else {
       c(input$date_regression, input$date_regression)
     }
+
   })
 
 
@@ -685,26 +793,23 @@ server <- function(input, output, session) {
     dates <- dates_reg()
 
 
-
-
     ###### table name
     ### get language
     if (input$sentiment_company_regression == "NoFilter"){
-      glue('select created_at, {input$aggregation} from sum_stats_{tolower(input$language)} where
+      test <- glue('select created_at, {input$aggregation} from sum_stats_{tolower(input$language)} where
     created_at >= "{dates[1]}" and created_at <= "{dates[2]}" and
-    retweets_count = {input$minRetweet} and likes_count = {input$minLikes} and
+    retweets_count = {input$minRetweets} and likes_count = {input$minLikes} and
     tweet_length = {tweetLength}')
     } else {
       comp <- gsub("ö","Ã¶", input$sentiment_company_regression)
       comp <- gsub("ü", "Ã¼", comp)
 
-      glue('SELECT created_at, {input$aggregation}  FROM sum_stats_companies WHERE
+      test <- glue('SELECT created_at, {input$aggregation}  FROM sum_stats_companies WHERE
       created_at >= "{dates[1]}" and created_at <= "{dates[2]}" and
-         retweets_count = {input$minRetweet} and likes_count = {input$minLikes} and
+         retweets_count = {input$minRetweets} and likes_count = {input$minLikes} and
          tweet_length = {tweetLength} and company  = "{comp}" and
              language = "{tolower(input$language)}"' )
     }
-
 
   })
 
@@ -822,31 +927,31 @@ server <- function(input, output, session) {
              Similar to the concept of Granger causality, it can be observed whether a timeseries is useful in forecasting another.
                In a VAR model each variable has an equation including its own lagged values and the lagged values of the other variables.
                For example, a VAR model with 2 variables and 1 lag is of the following form:",style = "font-weight: 18px; font-size: 18px; line-height: 1;"),
-               withMathJax("$$y_{1,t} = \\alpha_{1} +  \\beta_{11}y_{1,t-1} + \\beta_{12}y_{2,t-1}+ \\epsilon_{i,t}$$"),
-               withMathJax("$$y_{2,t} = \\alpha_{2} +  \\beta_{21}y_{1,t-1} + \\beta_{22}y_{2,t-1}+ \\epsilon_{2,t}$$"),
-               htmltools::p("A VAR is able to understand and use the relationships of several variables, allowing better description of dynamic behavior
+                          withMathJax("$$y_{1,t} = \\alpha_{1} +  \\beta_{11}y_{1,t-1} + \\beta_{12}y_{2,t-1}+ \\epsilon_{i,t}$$"),
+                          withMathJax("$$y_{2,t} = \\alpha_{2} +  \\beta_{21}y_{1,t-1} + \\beta_{22}y_{2,t-1}+ \\epsilon_{2,t}$$"),
+                          htmltools::p("A VAR is able to understand and use the relationships of several variables, allowing better description of dynamic behavior
                and better forecasting results. Here, different variable combinations can be assessed and used for forecasting.
                If only one variable is chosen, a univariate autoregressive model (AR) is applied and the variable is explained by its own lags only.",style = "font-weight: 18px; font-size: 18px; line-height: 1;"),
 
-               htmltools::h2(htmltools::strong("Analysis steps:") ,style = "font-family: 'Times', serif; font-weight: 20px; font-size: 20px; line-height: 1;"),
-               htmltools::p("The analysis consists of the following steps, which are performed automatically: ",htmltools::tags$br(),
-                            htmltools::div("1. The optimal number of lags is calculated",htmltools::tags$br(),
-                     "2. Stationarity is repeatedly tested and the series are differenced until sationarity is achieved",htmltools::tags$br(),
-                     "3. A VAR model is estimated with the optimal number of lags and the (if necessary) transformed series",htmltools::tags$br(),
-                     "4. The residuals of the model are tested for serial correlation",htmltools::tags$br(),
-                     "5. The series is forcasted n-steps ahead",style="margin-left: 1em;font-weight: 18px; font-size: 18px; line-height: 1;"),style = "font-weight: 18px; font-size: 18px; line-height: 1;"),
+                          htmltools::h2(htmltools::strong("Analysis steps:") ,style = "font-family: 'Times', serif; font-weight: 20px; font-size: 20px; line-height: 1;"),
+                          htmltools::p("The analysis consists of the following steps, which are performed automatically: ",htmltools::tags$br(),
+                                       htmltools::div("1. The optimal number of lags is calculated",htmltools::tags$br(),
+                                                      "2. Stationarity is repeatedly tested and the series are differenced until sationarity is achieved",htmltools::tags$br(),
+                                                      "3. A VAR model is estimated with the optimal number of lags and the (if necessary) transformed series",htmltools::tags$br(),
+                                                      "4. The residuals of the model are tested for serial correlation",htmltools::tags$br(),
+                                                      "5. The series is forcasted n-steps ahead",style="margin-left: 1em;font-weight: 18px; font-size: 18px; line-height: 1;"),style = "font-weight: 18px; font-size: 18px; line-height: 1;"),
 
 
-               htmltools::h2(htmltools::strong("Instructions:") ,style = "font-family: 'Times', serif; font-weight: 20px; font-size: 20px; line-height: 1;"),
-               htmltools::p("In order to perform the regression analysis, built the model using the panel on the left: ",htmltools::tags$br(),
-                            htmltools::div("- select the dependent variable",htmltools::tags$br(),
-                     "- select the control variables (optional)",htmltools::tags$br(),
-                     "- choose whether sentiment variable should be included",htmltools::tags$br(),
-                     "- if sentiment is added, switch to the tab ",htmltools::em("Filter sentiment input")," on top of the sidebar and specify the sentiment",htmltools::tags$br(),
-                     "- the tab ",htmltools::em("Summary Statistics")," contains information on the selected variables",htmltools::tags$br(),
-                     "- the tab ",htmltools::em("Validity")," performs a robustness check, including performance measurements for the model",htmltools::tags$br(),
-                     "- the tab ",htmltools::em("Actual Forecast"),"displays the results for future-forecasts", style="margin-left: 1em;font-weight: 18px; font-size: 18px; line-height: 1;"),
-                 style = "font-weight: 18px; font-size: 18px; line-height: 1;")))
+                          htmltools::h2(htmltools::strong("Instructions:") ,style = "font-family: 'Times', serif; font-weight: 20px; font-size: 20px; line-height: 1;"),
+                          htmltools::p("In order to perform the regression analysis, built the model using the panel on the left: ",htmltools::tags$br(),
+                                       htmltools::div("- select the dependent variable",htmltools::tags$br(),
+                                                      "- select the control variables (optional)",htmltools::tags$br(),
+                                                      "- choose whether sentiment variable should be included",htmltools::tags$br(),
+                                                      "- if sentiment is added, switch to the tab ",htmltools::em("Filter sentiment input")," on top of the sidebar and specify the sentiment",htmltools::tags$br(),
+                                                      "- the tab ",htmltools::em("Summary Statistics")," contains information on the selected variables",htmltools::tags$br(),
+                                                      "- the tab ",htmltools::em("Validity")," performs a robustness check, including performance measurements for the model",htmltools::tags$br(),
+                                                      "- the tab ",htmltools::em("Actual Forecast"),"displays the results for future-forecasts", style="margin-left: 1em;font-weight: 18px; font-size: 18px; line-height: 1;"),
+                                       style = "font-weight: 18px; font-size: 18px; line-height: 1;")))
   })
   ###################################################### dataset ###############################################################
   ###flexible input for stocks: show either german or us companies
@@ -883,14 +988,14 @@ server <- function(input, output, session) {
     validate(need(correct_path() == T, "Please choose the correct path"))
     if (input$country_regression_var == "Germany"){
       data_reg <- dplyr::filter(stockdata_DE(),                                                                               #nur hier nach datum filtern, rest wird draufgemerged
-                         #.data$name %in% (c(COMPONENTS_DE()[["Symbol"]], "GDAXI")[c(COMPONENTS_DE()[["Company.Name"]], "GDAXI") %in% .env$input$Stock_Regression_var]) &
-                         .data$name %in% .env$input$Stock_Regression_var &
-                           .data$Dates >= .env$input$date_regression_var[1] & .data$Dates <= .env$input$date_regression_var[2])[c("Dates",input$regression_outcome_var,"name")] #hier später noch CLose flexibel machen
+                                #.data$name %in% (c(COMPONENTS_DE()[["Symbol"]], "GDAXI")[c(COMPONENTS_DE()[["Company.Name"]], "GDAXI") %in% .env$input$Stock_Regression_var]) &
+                                .data$name %in% .env$input$Stock_Regression_var &
+                                  .data$Dates >= .env$input$date_regression_var[1] & .data$Dates <= .env$input$date_regression_var[2])[c("Dates",input$regression_outcome_var,"name")] #hier später noch CLose flexibel machen
     } else {
       data_reg <- dplyr::filter(stockdata_US(),                                                                               #nur hier nach datum filtern, rest wird draufgemerged
-                         #.data$name %in% (c(COMPONENTS_US()[["Symbol"]], "DJI")[c(COMPONENTS_US()[["Company.Name"]], "DJI") %in% .env$input$Stock_Regression_var]) &
-                         .data$name %in% .env$input$Stock_Regression_var &
-                         .data$Dates >= .env$input$date_regression_var[1] & .data$Dates <= .env$input$date_regression_var[2])[c("Dates",input$regression_outcome_var,"name")] #hier später noch CLose flexibel machen
+                                #.data$name %in% (c(COMPONENTS_US()[["Symbol"]], "DJI")[c(COMPONENTS_US()[["Company.Name"]], "DJI") %in% .env$input$Stock_Regression_var]) &
+                                .data$name %in% .env$input$Stock_Regression_var &
+                                  .data$Dates >= .env$input$date_regression_var[1] & .data$Dates <= .env$input$date_regression_var[2])[c("Dates",input$regression_outcome_var,"name")] #hier später noch CLose flexibel machen
     }
 
     if (input$country_regression_var == "Germany"){
@@ -958,84 +1063,7 @@ server <- function(input, output, session) {
     updateTabsetPanel(session, "industry_tab", selected = input$industry_sentiment_var)
   })
 
-  dataset_senti_var <- reactive({
-    validate(need(correct_path() == T, "Please choose the correct path"))
-    req(input$Sentiment_type_var)
-    if(input$Sentiment_type_var == "NoFilter"){
 
-      res <- En_NoFilter_0_0_yes()   # still fix as it is not clear yet if sql or csv
-      #res <- eval(parse(text = paste('En', '_NoFilter_',input$minRetweet,'_',
-      #                               input$minminLikes,'_',input$tweet_length,'()', sep='')))
-      #input$language
-    }else{
-      req(input$Stock_reg)
-      ticker <- ticker_dict(input$Stock_reg) # dict for a few stock
-      res <- eval(parse(text = paste(ticker,'()', sep=''))) # example: ADS.DE()
-
-    }
-
-
-  })
-  # filter
-  filtered_df_var <- reactive({
-    validate(need(correct_path() == T, "Please choose the correct path"))
-    req(input$Sentiment_type_var)
-    req(input$minRetweet_stocks1_var)
-    req(input$minRetweet_stocks2_var)
-
-    if(input$Sentiment_type_var == "NoFilter"){
-
-      res <- dataset_senti_var()
-    }else{ # live filtering
-      req(input$industry_sentiment_var)
-      res <- dataset_senti_var()
-      if(input$industry_sentiment_var == "no"){
-        res <- dataset_senti_var()
-        if(input$tweet_length_stock1_var == "yes"){
-
-          res <- res %>% filter((retweets_count > as.numeric(input$minRetweet_stocks1_var)) &
-                                  (tweet_length > 81))}
-        else{
-          res <- res %>% filter((retweets_count > as.numeric(input$minRetweet_stocks1_var)))
-        }
-      }#else{
-      #res <- dataset_senti()
-      #if(input$tweet_length_stock2 == "yes"){
-      # res <- res %>% filter((retweets_count > as.numeric(input$minRetweet_stocks2)) &
-      #                          (tweet_length > 81))
-      #}else{
-      #  res <- res %>% filter(retweets_count > as.numeric(input$minRetweet_stocks2))
-      #}
-      #}
-    }
-  })
-
-  # aggregate dataset to get one sentiment per day
-  aggri_select_var <- reactive({
-
-    if(input$Sentiment_type_var == "NoFilter"){ # NoFilter files already aggregated
-      res <- filtered_df_var()
-      aggregation <- key(input$aggregation_var)  # select aggregation type: Mean, mean weighted by,...
-      res <- res %>% tidyr::gather("id", "aggregation", aggregation)
-      res <- res[c("date","aggregation")]
-    }else{
-      if(input$industry_sentiment_var == "no"){
-        res <- filtered_df_var()
-        res <- aggregate_sentiment(res) # function to aggregate sentiment per day
-        res <- res %>% filter(language == input$language1_var)
-        aggregation <- key(input$aggregation1_var)
-        res <- res %>% tidyr::gather("id", "aggregation", aggregation)
-        res <- res[c("date","aggregation")]
-      }else{
-        res <- get_industry_sentiment(COMPONENTS_DE(),input$industry_var,input$minRetweet_stocks2_var,
-                                      input$tweet_length_stock2_var)      #function to gather all stock in certain industry
-        aggregation <- key(input$aggregation2_var)                          #--> also calculates aggregation inside function
-        res <- res %>% tidyr::gather("id", "aggregation", aggregation)
-        res <- res[c("date","aggregation")]
-      }
-    }
-
-  })
 
   observeEvent(input$reset_regression_var,{
     updateSelectizeInput(session,"Controls_var",selected = "")
@@ -1045,16 +1073,89 @@ server <- function(input, output, session) {
 
   #merge sentiment with control+dep vars
   final_regression_df_var <- reactive ({
-    if (input$senti_yesno == TRUE){
-      res <- aggri_select_var()
+    if (input$senti_yesno_var == TRUE){
+      res <- get_sentiment_var()
     } else {
-      res <- aggri_select_var()[1]
+      res <- get_sentiment_var()[1]
     }
-    res$date <- as.Date(res$date)
+    res$created_at <- as.Date(res$created_at)
     res_c <- df_selected_controls_var()
-    res <- dplyr::left_join(res_c,res, by=c("Dates" = "date"))
+    res <- dplyr::left_join(res_c,res, by=c("Dates" = "created_at"))
     #res <- res[-1]
     res
+  })
+
+  ################################################################# sql data var
+  dates_var <- reactive({
+    if (length(input$date_regression_var) > 1){
+      input$date_regression_var
+    } else {
+      c(input$date_regression_var, input$date_regression_var)
+    }
+  })
+
+
+  querry_sentiment_model_var <- reactive({
+
+    #### check which tweet length
+    if (input$tweet_length_var == T){
+      tweetLength <- 81
+    } else {
+      tweetLength <- 0
+    }
+
+
+
+    dates <- dates_var()
+
+
+
+    ###### table name
+    ### get language
+    if (input$sentiment_company_var == "NoFilter"){
+      test <- glue('select created_at, {input$aggregation_var} from sum_stats_{tolower(input$language_var)} where
+    created_at >= "{dates[1]}" and created_at <= "{dates[2]}" and
+    retweets_count = {input$minRetweets_var} and likes_count = {input$minLikes_var} and
+    tweet_length = {tweetLength}')
+    } else {
+      comp <- gsub("ö","Ã¶", input$sentiment_company_var)
+      comp <- gsub("ü", "Ã¼", comp)
+
+      test<-glue('SELECT created_at, {input$aggregation_var}  FROM sum_stats_companies WHERE
+      created_at >= "{dates[1]}" and created_at <= "{dates[2]}" and
+         retweets_count = {input$minRetweets_var} and likes_count = {input$minLikes_var} and
+         tweet_length = {tweetLength} and company  = "{comp}" and
+             language = "{tolower(input$language_var)}"' )
+    }
+
+
+    test
+
+  })
+
+
+  get_sentiment_var <- reactive({
+    ###### need correct path
+    validate(need(correct_path() == T, "Please choose the correct path"))
+    ###### need database connection
+    validate(need(database_connector(), "Could not connect to database"))
+    ###### need at least one date selected
+    validate(need(!is.null(input$date_regression_var), "Please select a date."))
+
+    ####### store database connection
+    con <- database_connector()
+
+
+    ###### querry data from sql
+    df_need <- DBI::dbGetQuery(con,  querry_sentiment_model_var())
+
+    #### for companies replace umlaute
+    if ("company" %in% names(df_need)){
+      df_need$company <- gsub("Ã¶", "ö", df_need$company)
+      df_need$company <- gsub("Ã¼", "ü", df_need$company)
+    }
+    #### return df
+    df_need
   })
 
   ####################################################Summary statistics #####################################################
@@ -1368,11 +1469,11 @@ server <- function(input, output, session) {
 
   # start introjs when button is pressed with custom options and events
   observeEvent(input$instrucitons_desc,{
-              rintrojs::introjs(session, options = list("nextLabel"="Move on",
-                                               "prevLabel"="Go back",
-                                               "skipLabel"="Skip instructions"))
+    rintrojs::introjs(session, options = list("nextLabel"="Move on",
+                                              "prevLabel"="Go back",
+                                              "skipLabel"="Skip instructions"))
 
-})
+  })
 
 
 
@@ -1399,8 +1500,8 @@ server <- function(input, output, session) {
 
 
   ##### set wd with shinyfiles
- observeEvent(input$directory,{
-   ##### when directory button hasnt been pressed set wd to home directory and tell user
+  observeEvent(input$directory,{
+    ##### when directory button hasnt been pressed set wd to home directory and tell user
     if (is.integer(input$directory)) {
       setwd(volumes)
 
@@ -1418,19 +1519,19 @@ server <- function(input, output, session) {
   })
 
 
- ####### manually entered path
- observeEvent(input$dir_path_man_btn, {
+  ####### manually entered path
+  observeEvent(input$dir_path_man_btn, {
 
-  ### when manual path button is pressed set wd to enterd path
-   setwd(input$dir_path_man)
- })
+    ### when manual path button is pressed set wd to enterd path
+    setwd(input$dir_path_man)
+  })
 
- #### checks if sqlitstudio dir exists, if yes then wd is set correctly
- correct_path <- reactive({
-   input$dir_path_man_btn
-   input$directory
-   dir.exists("SQLiteStudio")
- })
+  #### checks if sqlitstudio dir exists, if yes then wd is set correctly
+  correct_path <- reactive({
+    input$dir_path_man_btn
+    input$directory
+    dir.exists("SQLiteStudio")
+  })
 
   ####### output text as feedback for user whether directory seems corrct
   output$directorypath <- renderText({
@@ -1451,7 +1552,7 @@ server <- function(input, output, session) {
 
 
 
-###### connect to database when path has been set correctly
+  ###### connect to database when path has been set correctly
   database_connector <- function(){
 
 
@@ -1504,43 +1605,43 @@ server <- function(input, output, session) {
     #req(database_connector())
     con <- database_connector()
     if (!is.null(con)){
-    DBI::dbDisconnect(con)
+      DBI::dbDisconnect(con)
     }
   })
 
 
   ###### create reactive long variable for filtering from user input
- long <- reactive({
-   if (input$long == T){
-     long <- 81
-   } else{
-     long <- 0
-   }
-   long
- })
+  long <- reactive({
+    if (input$long == T){
+      long <- 81
+    } else{
+      long <- 0
+    }
+    long
+  })
 
 
 
 
- ################################## date_variable that accounts for single dates
- dates_desc <- reactive({
+  ################################## date_variable that accounts for single dates
+  dates_desc <- reactive({
     ###### need correct path
-   validate(need(correct_path() == T, "Please choose the correct path"))
-   ######## need at least one date
-   validate(need(!is.null(input$dates_desc), "Please select a date."))
+    validate(need(correct_path() == T, "Please choose the correct path"))
+    ######## need at least one date
+    validate(need(!is.null(input$dates_desc), "Please select a date."))
 
     ##### if date range selected, used date range
-   if (length(input$dates_desc) > 1){
-     input$dates_desc
-   } else {
-     ##### if single date selceted, create daterange with same date twice --> for easier computing
-     # otherwise need to control for cases where input is single date vs. list of dates
-     c(input$dates_desc, input$dates_desc)
-   }
- })
+    if (length(input$dates_desc) > 1){
+      input$dates_desc
+    } else {
+      ##### if single date selceted, create daterange with same date twice --> for easier computing
+      # otherwise need to control for cases where input is single date vs. list of dates
+      c(input$dates_desc, input$dates_desc)
+    }
+  })
 
 
- ################################### path finder for histo files
+  ################################### path finder for histo files
   querry_histo <- reactive({
     ##### need correct wd
     validate(need(correct_path() == T, "Please choose the correct path"))
@@ -1566,29 +1667,29 @@ server <- function(input, output, session) {
     value_var <- stringr::str_replace(value_var, "tweet_length", "long")
 
 
-  # for no filter
+    # for no filter
     if (input$comp == "NoFilter"){
-    #### filename for nofilter data
-    glue("histo_{value_var}_{lang}_NoFilter_rt_{input$rt}_li_{input$likes}_lo_{long_name}.csv")
+      #### filename for nofilter data
+      glue("histo_{value_var}_{lang}_NoFilter_rt_{input$rt}_li_{input$likes}_lo_{long_name}.csv")
     } else { #for chosen company
       req(!is.null(input$comp))
       #### filename for companies
       glue("histo_{value_var}_{input$comp}_rt_{input$rt}_li_{input$likes}_lo_{long_name}.csv")
 
     }
-     }) #reactive closed
+  }) #reactive closed
 
 
 
 
   ##################### summary statistics table data and time series data
-    querry_sum_stats_table <- reactive({
-      ##### set up querry string for sql
+  querry_sum_stats_table <- reactive({
+    ##### set up querry string for sql
 
-      #### get tweet_length filter, 81 for long==T, 0 for long==F
-      long <- long()
-      ##### for unfitlered tweets
-      if (input$comp == "NoFilter"){
+    #### get tweet_length filter, 81 for long==T, 0 for long==F
+    long <- long()
+    ##### for unfitlered tweets
+    if (input$comp == "NoFilter"){
       table_name <- glue("sum_stats_{tolower(input$lang)}")
 
       glue('SELECT *  FROM {table_name}  WHERE
@@ -1596,80 +1697,80 @@ server <- function(input, output, session) {
          tweet_length = {long}' )
 
 
-      } else { #if company is chosen
-        ### replace umlaute from input, 1233
+    } else { #if company is chosen
+      ### replace umlaute from input, 1233
 
-        comp <- gsub("ö","Ã¶", input$comp)
-        comp <- gsub("ü", "Ã¼", comp)
+      comp <- gsub("ö","Ã¶", input$comp)
+      comp <- gsub("ü", "Ã¼", comp)
 
-               glue('SELECT *  FROM sum_stats_companies WHERE
+      glue('SELECT *  FROM sum_stats_companies WHERE
          retweets_count = {input$rt} and likes_count = {input$likes} and
          tweet_length = {long} and company  = "{comp}" and
              language = "{tolower(input$lang)}"' )
-      }
-
-
-    })
-
-
-
-    #########################################################################
-    ############################# get data for sum stats table
-    get_data_sum_stats_tables <- reactive({
-      ###### need correct path
-      validate(need(correct_path() == T, "Please choose the correct path"))
-      ###### need database connection
-      validate(need(database_connector(), "Could not connect to database"))
-      ###### need at least one date selected
-      validate(need(!is.null(input$dates_desc), "Please select a date."))
-
-      ####### store database connection
-      con <- database_connector()
-      ##### check if connection is null
-      string_value <- is.null(con)
-      req(!string_value)
-
-      ###### querry data from sql
-      df_need <- DBI::dbGetQuery(con,  querry_sum_stats_table())
-
-      #### for companies replace umlaute
-      if ("company" %in% names(df_need)){
-        df_need$company <- gsub("Ã¶", "ö", df_need$company)
-        df_need$company <- gsub("Ã¼", "ü", df_need$company)
-      }
-      #### return df
-      df_need
-    })
-
-
-     #########################
-    ################################# sum stats table
-    output$sum_stats_table <- function(){
-      ###### use data from sql from previous step
-      df_need <- get_data_sum_stats_tables()
-      ##### create summary stats table with function
-      sum_stats_table_creator(df_need, dates_desc()[1], dates_desc()[2])
     }
 
 
+  })
+
+
+
+  #########################################################################
+  ############################# get data for sum stats table
+  get_data_sum_stats_tables <- reactive({
+    ###### need correct path
+    validate(need(correct_path() == T, "Please choose the correct path"))
+    ###### need database connection
+    validate(need(database_connector(), "Could not connect to database"))
+    ###### need at least one date selected
+    validate(need(!is.null(input$dates_desc), "Please select a date."))
+
+    ####### store database connection
+    con <- database_connector()
+    ##### check if connection is null
+    string_value <- is.null(con)
+    req(!string_value)
+
+    ###### querry data from sql
+    df_need <- DBI::dbGetQuery(con,  querry_sum_stats_table())
+
+    #### for companies replace umlaute
+    if ("company" %in% names(df_need)){
+      df_need$company <- gsub("Ã¶", "ö", df_need$company)
+      df_need$company <- gsub("Ã¼", "ü", df_need$company)
+    }
+    #### return df
+    df_need
+  })
+
+
+  #########################
+  ################################# sum stats table
+  output$sum_stats_table <- function(){
+    ###### use data from sql from previous step
+    df_need <- get_data_sum_stats_tables()
+    ##### create summary stats table with function
+    sum_stats_table_creator(df_need, dates_desc()[1], dates_desc()[2])
+  }
 
 
 
 
 
 
-    ############################################################################
-    ######################### violin plot
-    output$violin_sum <- renderPlot({
-      #validate(need(path_setter()[[3]] == "correct_path", "Please select the correct path"))
-      validate(need(!is.null(input$dates_desc), "Please select a date."))
 
 
-      df <- get_data_sum_stats_tables()
-      violin_plotter(df, input$value, input$metric)
+  ############################################################################
+  ######################### violin plot
+  output$violin_sum <- renderPlot({
+    #validate(need(path_setter()[[3]] == "correct_path", "Please select the correct path"))
+    validate(need(!is.null(input$dates_desc), "Please select a date."))
 
 
-    })
+    df <- get_data_sum_stats_tables()
+    violin_plotter(df, input$value, input$metric)
+
+
+  })
 
 
 
@@ -1677,49 +1778,49 @@ server <- function(input, output, session) {
   ################################################### output time series
 
 
-    ###### title for dygraphs
-    number_tweets_info_desc <- reactive({
-      ##### get data from sql
-      df_need <- get_data_sum_stats_tables()
+  ###### title for dygraphs
+  number_tweets_info_desc <- reactive({
+    ##### get data from sql
+    df_need <- get_data_sum_stats_tables()
 
-      #convert to date
-      df_need$created_at <- as.Date(df_need$created_at)
+    #convert to date
+    df_need$created_at <- as.Date(df_need$created_at)
 
-      ###### filter for dates input from user
-      df_need <- df_need %>%
-        filter(between(created_at, as.Date(dates_desc()[1]), as.Date(dates_desc()[2])))
+    ###### filter for dates input from user
+    df_need <- df_need %>%
+      filter(between(created_at, as.Date(dates_desc()[1]), as.Date(dates_desc()[2])))
 
 
-      ##### for tweet type input get nice company name accroding to named list
-      if (input$comp == "NoFilter"){
-        comp_name <- names(purrr::flatten(company_terms))[purrr::flatten(company_terms) == input$comp]
-      } else {
-        comp_name <- glue("{names(purrr::flatten(company_terms))[purrr::flatten(company_terms) == input$comp]} Tweets")
-      }
+    ##### for tweet type input get nice company name accroding to named list
+    if (input$comp == "NoFilter"){
+      comp_name <- names(purrr::flatten(company_terms))[purrr::flatten(company_terms) == input$comp]
+    } else {
+      comp_name <- glue("{names(purrr::flatten(company_terms))[purrr::flatten(company_terms) == input$comp]} Tweets")
+    }
 
-      num_tweets <- as.integer(round(sum(df_need$N)))
-      num_tweets <- formatC(num_tweets, format="f", big.mark = ",", digits=0)
+    num_tweets <- as.integer(round(sum(df_need$N)))
+    num_tweets <- formatC(num_tweets, format="f", big.mark = ",", digits=0)
 
-      num_tweets_avg <- formatC(round(mean(df_need$N)), format="f", big.mark = ",", digits=0)
+    num_tweets_avg <- formatC(round(mean(df_need$N)), format="f", big.mark = ",", digits=0)
 
-      ##### set up string for header of time series graphs
-      glue("{comp_name} ({num_tweets} tweets total,
+    ##### set up string for header of time series graphs
+    glue("{comp_name} ({num_tweets} tweets total,
            {num_tweets_avg} on average per day)")
-    })
+  })
 
 
-    ###### title for summary statistics
-    output$sum_stats_table_header <- renderText({
-      header <- number_tweets_info_desc()
-      header <- sub( "total.*$", "", header )
-      glue("{header} total)")
-    })
+  ###### title for summary statistics
+  output$sum_stats_table_header <- renderText({
+    header <- number_tweets_info_desc()
+    header <- sub( "total.*$", "", header )
+    glue("{header} total)")
+  })
 
 
 
-    #################################################
-    ############################## time series plot
-    ###################################################
+  #################################################
+  ############################## time series plot
+  ###################################################
   output$sum_stats_plot <- dygraphs::renderDygraph({
 
     #### need at least one inputalue(likes/retweets etc.)
@@ -1781,7 +1882,7 @@ server <- function(input, output, session) {
     if (input$num_tweets_box == F){
       save_plot$plot <- time_series_plotter2(df, input$metric, input$value, num_tweets = F,
                                              input$dates_desc[1], input$dates_desc[2], r,
-                                              date_range = F,
+                                             date_range = F,
                                              input_title = input_title,
                                              group = "twitter_desc")
     } else { ## in case where number of tweets should be included in plot
@@ -1796,7 +1897,7 @@ server <- function(input, output, session) {
 
   ######## time series plot when pressing save plot button
   output$sum_stats_plot2 <-dygraphs::renderDygraph({
-   save_plot$plot
+    save_plot$plot
     # dygraphs::dygraph(don) %>%
     #   dygraphs::dyRangeSelector( input$dates_desc + 1, retainDateWindow = T
     #   )
@@ -1810,11 +1911,11 @@ server <- function(input, output, session) {
   ############################### data retriever for histogram
   data_histo <- reactive({
     #validate(need(path_setter()[[3]] == "correct_path", "Please select the correct path"))
-     validate(need(!is.null(input$dates_desc), "Please select a date."))
+    validate(need(!is.null(input$dates_desc), "Please select a date."))
     validate(need(correct_path() == T, "Please choose the correct path"))
 
 
-     lang <- lang_converter()
+    lang <- lang_converter()
 
 
 
@@ -1846,11 +1947,11 @@ server <- function(input, output, session) {
   output$histo_plot <- plotly::renderPlotly({
     validate(need(!is.null(input$dates_desc), "Please select a date."))
 
-   req(input$histo_value)
+    req(input$histo_value)
 
 
-  histogram_plotter(data_histo(), date_input1 = dates_desc()[1], date_input2 = dates_desc()[2],
-                    input_bins = input$bins, input_log = input$log_scale)
+    histogram_plotter(data_histo(), date_input1 = dates_desc()[1], date_input2 = dates_desc()[2],
+                      input_bins = input$bins, input_log = input$log_scale)
 
   })
 
@@ -1896,10 +1997,10 @@ server <- function(input, output, session) {
   ######################################################
   ########################## Word Frequencies ###########
   #######################################################
- lang_converter <- reactive({
+  lang_converter <- reactive({
 
-  lang <- stringr::str_to_title(input$lang)
- })
+    lang <- stringr::str_to_title(input$lang)
+  })
 
   data_expl <- reactive({
 
@@ -1941,10 +2042,10 @@ server <- function(input, output, session) {
       file_path <- file.path("Twitter/term_freq",folder, subfolder, file_name)
       # read file
       data.table::fread(file_path, select = c("date_variable",
-                                                              "language_variable",
-                                                              "word",
-                                                              "N",
-                                                              "emo"),
+                                              "language_variable",
+                                              "word",
+                                              "N",
+                                              "emo"),
                         colClasses = c("date_variable" = "Date"))
     } else {
       folder <- glue("{lang}_NoFilter")
@@ -1988,10 +2089,10 @@ server <- function(input, output, session) {
       input_word_freq_filter <- input$word_freq_filter
     }
     word_freq_data_wrangler(data_expl(), dates_desc()[1], dates_desc()[2],
-                                                    input$emo, emoji_words,
-                                                    input_word_freq_filter,
-                                                    tolower(input$lang),
-                                                    input$comp)})
+                            input$emo, emoji_words,
+                            input_word_freq_filter,
+                            tolower(input$lang),
+                            input$comp)})
 
   ######################### freq_plot
   output$freq_plot <- plotly::renderPlotly({
@@ -2003,14 +2104,14 @@ server <- function(input, output, session) {
 
 
 
-        df <- df_filterer(word_freq_df() , input$n_freq)
+    df <- df_filterer(word_freq_df() , input$n_freq)
 
-        term_freq_bar_plot(df)
+    term_freq_bar_plot(df)
 
 
-    })
+  })
 
-################## wordcloud
+  ################## wordcloud
   output$cloud <- renderUI({
     wordcloud2::wordcloud2Output("wordcloud", width = (8/12) * 0.925 * input$dimension[1], height = 1000) %>%
       shinycssloaders::withSpinner(type = 5)
@@ -2018,21 +2119,21 @@ server <- function(input, output, session) {
   })
 
   output$wordcloud <- wordcloud2::renderWordcloud2({
-  req(input$plot_type_expl == "Word Cloud")
+    req(input$plot_type_expl == "Word Cloud")
 
 
 
-      df <- df_filterer(word_freq_df(), input$n_freq_wc)
+    df <- df_filterer(word_freq_df(), input$n_freq_wc)
 
 
 
-      word_cloud_plotter(df, input$size_wordcloud)
+    word_cloud_plotter(df, input$size_wordcloud)
 
   })
 
 
 
-####################################### number unique words
+  ####################################### number unique words
   output$number_words <- reactive({
 
     ###### number of total tweets
@@ -2049,7 +2150,7 @@ server <- function(input, output, session) {
     #### number of unqiue words/bigrams
     number_words <-  unique_words(word_freq_df())
 
-   HTML(glue("Number of unique {tolower(input$ngram_sel)}s available for current selection: {number_words} <br>
+    HTML(glue("Number of unique {tolower(input$ngram_sel)}s available for current selection: {number_words} <br>
          Number of tweets for current selection: {number_tweets}"))
 
   })
@@ -2057,7 +2158,7 @@ server <- function(input, output, session) {
 
 
 
-############################## time series bigram plot
+  ############################## time series bigram plot
   # output$word_freq_time_series <- plotly::renderPlotly({
   #   req(length(input$dates_desc) > 1)
   #   df <- word_freq_data_wrangler(data_expl(), dates_desc()[1], dates_desc()[2],
@@ -2070,11 +2171,11 @@ server <- function(input, output, session) {
 
 
 
-###########################################################################
-###########################################################################
-######################### GOING DEEPER ####################################
-###########################################################################
-###########################################################################
+  ###########################################################################
+  ###########################################################################
+  ######################### GOING DEEPER ####################################
+  ###########################################################################
+  ###########################################################################
   # path to markdown files for helpers
   shinyhelper::observe_helpers(withMathJax = TRUE, help_dir = "shiny/helpers")
 
@@ -2085,7 +2186,7 @@ server <- function(input, output, session) {
     if(length(input$dates_net) > 1){
       days_inrange <- difftime(as.Date(input$dates_net[2]) ,as.Date(input$dates_net[1]) , units = c("days"))
       validate(need(days_inrange <= 1,"More than 2 days selected. Please choose a maximum of 2 days."))
-      }
+    }
 
 
     lang <- stringr::str_to_title(input$lang_net)
@@ -2124,24 +2225,24 @@ server <- function(input, output, session) {
   ###### date checker
   ##### validate that a maximum of 2 days have been selected
 
-    output$date_checker_net <- renderText({
+  output$date_checker_net <- renderText({
 
-      if(length(input$dates_net) > 1){
+    if(length(input$dates_net) > 1){
       days_inrange <- difftime(as.Date(input$dates_net[2]) ,as.Date(input$dates_net[1]) , units = c("days"))
       if (days_inrange >= 2){
 
-      validate("More than 2 days selected. Please choose a maximum of 2 days.")
+        validate("More than 2 days selected. Please choose a maximum of 2 days.")
 
       }
-      } else if (is.null(input$dates_net)){
+    } else if (is.null(input$dates_net)){
 
-        validate("Need to select at least one day.")
-      }
-    })
+      validate("Need to select at least one day.")
+    }
+  })
 
-    ############################################################
-    ############################ BUTTON RENDER PLOT ############
-    ############################################################
+  ############################################################
+  ############################ BUTTON RENDER PLOT ############
+  ############################################################
   # if button is clicked compute correlations and plot the plot
   observeEvent(input$button_net,{
     removeUI("#network_plot")
@@ -2206,10 +2307,10 @@ server <- function(input, output, session) {
     waitress$inc(1)
 
 
-   if(is.null(df) | dim(df)[1] == 0){
-     enable("button_net")
-     return()
-   }
+    if(is.null(df) | dim(df)[1] == 0){
+      enable("button_net")
+      return()
+    }
 
     if (initial.ok < input$cancel_net) {
       initial.ok <<- initial.ok + 1
@@ -2219,21 +2320,21 @@ server <- function(input, output, session) {
 
 
 
-      network <- data_filterer_net_react()
+    network <- data_filterer_net_react()
 
 
 
-      if(is.null(network) | dim(network)[1] == 0){
-        enable("button_net")
-        removeUI("#network_plot")
-        return()
-      }
+    if(is.null(network) | dim(network)[1] == 0){
+      enable("button_net")
+      removeUI("#network_plot")
+      return()
+    }
 
-      ##### compute minimum n which is set to 0.05% of the number of tweets for the current dataset
-      min_n <- round(0.001 * dim(network)[1])
+    ##### compute minimum n which is set to 0.05% of the number of tweets for the current dataset
+    min_n <- round(0.001 * dim(network)[1])
 
-      #hostess$set(2 * 10)
-      waitress$inc(1)
+    #hostess$set(2 * 10)
+    waitress$inc(1)
 
 
     if (initial.ok < input$cancel_net) {
@@ -2246,38 +2347,38 @@ server <- function(input, output, session) {
     } else{
       network <- network_unnester_bigrams(network, input$emo_net)
     }
-      validate(need(dim(network)[1] > 0, "No data found for current selection"))
-      if(is.null(network) | dim(network)[1] == 0){
-        enable("button_net")
-        return()
-      }
-      #hostess$set(2 * 10)
-      waitress$inc(1)
+    validate(need(dim(network)[1] > 0, "No data found for current selection"))
+    if(is.null(network) | dim(network)[1] == 0){
+      enable("button_net")
+      return()
+    }
+    #hostess$set(2 * 10)
+    waitress$inc(1)
 
 
-     if (initial.ok < input$cancel_net) {
+    if (initial.ok < input$cancel_net) {
       initial.ok <<- initial.ok + 1
       validate(need(initial.ok == 0, message = "The computation has been aborted."))
     }
 
     if (input$word_type_net == "word_pairs_net"){
       df <- network_word_corr(network, input$n_net,
-                                             input$corr_net, min_n)
+                              input$corr_net, min_n)
     } else {
       df <- network_bigrammer(df, network, input$n_net, input$n_bigrams_net,
                               min_n)
     }
 
-      if(is.null(df) | length(df) == 0){
-        enable("button_net")
-        removeUI("#network_plot")
-        return()
-      }
+    if(is.null(df) | length(df) == 0){
+      enable("button_net")
+      removeUI("#network_plot")
+      return()
+    }
 
 
 
-      # hostess$set(2 * 10)
-      waitress$inc(1)
+    # hostess$set(2 * 10)
+    waitress$inc(1)
 
 
 
@@ -2287,67 +2388,67 @@ server <- function(input, output, session) {
       validate(need(initial.ok == 0, message = "The computation has been aborted."))
     }
 
-      insertUI("#placeholder", "beforeEnd", ui = networkD3::forceNetworkOutput("network_plot", height ="800px"))
+    insertUI("#placeholder", "beforeEnd", ui = networkD3::forceNetworkOutput("network_plot", height ="800px"))
 
 
     # render the network plot
-      if (input$word_type_net == "word_pairs_net"){
-    output$network_plot <- networkD3::renderForceNetwork({
+    if (input$word_type_net == "word_pairs_net"){
+      output$network_plot <- networkD3::renderForceNetwork({
 
 
 
 
 
-      req(input$button_net)
-      #if (is.null(df)) return()
-      validate(need(!is.null(df), message = "No data found for current selection"))
-      if (initial.ok < input$cancel_net) {
-        initial.ok <<- initial.ok + 1
-        validate(need(initial.ok == 0, message = "The computation has been aborted."))
-      }
+        req(input$button_net)
+        #if (is.null(df)) return()
+        validate(need(!is.null(df), message = "No data found for current selection"))
+        if (initial.ok < input$cancel_net) {
+          initial.ok <<- initial.ok + 1
+          validate(need(initial.ok == 0, message = "The computation has been aborted."))
+        }
 
 
-      #hostess$set(2 * 10)
-     # waitress$inc(1)
+        #hostess$set(2 * 10)
+        # waitress$inc(1)
         network_plot_plotter(df)
 
 
 
-    })
-  } else {
+      })
+    } else {
 
 
-    output$network_plot <- networkD3::renderForceNetwork({
-    req(input$button_net)
-    #if (is.null(df)) return()
-    validate(need(!is.null(df), message = "No data found for current selection"))
-    if (initial.ok < input$cancel_net) {
-      initial.ok <<- initial.ok + 1
-      validate(need(initial.ok == 0, message = "The computation has been aborted."))
+      output$network_plot <- networkD3::renderForceNetwork({
+        req(input$button_net)
+        #if (is.null(df)) return()
+        validate(need(!is.null(df), message = "No data found for current selection"))
+        if (initial.ok < input$cancel_net) {
+          initial.ok <<- initial.ok + 1
+          validate(need(initial.ok == 0, message = "The computation has been aborted."))
+        }
+
+        #hostess$set(2 * 10)
+        #waitress$inc(1)
+
+        ###### plot the network plot
+        network_plot_plotter_bigrams(df)
+
+
+
+
+      })
+
+
+
     }
-
-    #hostess$set(2 * 10)
-    #waitress$inc(1)
-
-    ###### plot the network plot
-    network_plot_plotter_bigrams(df)
-
-
-
-
-})
-
-
-
-  }
     ##### when process has run successfully enable render plot button again
-      # and disable cancel button again
+    # and disable cancel button again
     enable("button_net")
     disable("cancel_net")
 
   })
 
-    ########## when button is pressed remove ui element (network plot)
+  ########## when button is pressed remove ui element (network plot)
   observeEvent(input$reset_net,{
 
     removeUI("#network_plot")
@@ -2389,7 +2490,7 @@ server <- function(input, output, session) {
         "function(settings, json) {",
         "$(this.api().table().header()).css({'background-color': '#000', 'color': '#fff'});",
         "}")
-      ), rownames = F
+    ), rownames = F
     ) %>% DT::formatStyle(columns = c(1), width='75px')
   })
 
@@ -2402,7 +2503,7 @@ server <- function(input, output, session) {
   })
 
 
-####### description of network analysis
+  ####### description of network analysis
   output$network_description <- renderUI({
     HTML(network_description_text)
 
@@ -2410,11 +2511,11 @@ server <- function(input, output, session) {
   })
 
 
-#########################################################################
-#########################################################################
-#############################comparison tab #############################
-#########################################################################
-#########################################################################
+  #########################################################################
+  #########################################################################
+  #############################comparison tab #############################
+  #########################################################################
+  #########################################################################
 
 
   #### get stock data for comparison tab
@@ -2427,7 +2528,7 @@ server <- function(input, output, session) {
 
   ###### plot stocks
   output$stocks_comp <- dygraphs::renderDygraph({
-  req(input$stocks_comp)
+    req(input$stocks_comp)
 
     stock_plotter(get_stock_data_comp(), input$stocks_metric_comp, input$stocks_comp, input$roll_stock_comp)
   })
@@ -2548,7 +2649,7 @@ server <- function(input, output, session) {
     ###### plot the data
     time_series_plotter2(df, "mean", input$value_comp, num_tweets = F,
                          min(as.Date(df$created_at)), max(as.Date(df$created_at)), dates = NA, date_range =F,
-                                     title, group = "comp_plots",
+                         title, group = "comp_plots",
                          input_roll = input$roll_twitter_comp,
                          ribbon = F)
   })
@@ -2599,12 +2700,12 @@ server <- function(input, output, session) {
       data_reg <- filter(stockdata_DE(),                                                                               #nur hier nach datum filtern, rest wird draufgemerged
                          #.data$name %in% (c(COMPONENTS_DE()[["Symbol"]], "GDAXI")[c(COMPONENTS_DE()[["Company.Name"]], "GDAXI") %in% .env$input$Stock_Regression_xgb]) &
                          .data$name %in% .env$input$Stock_Regression_xgb &
-                         .data$Dates >= .env$input$date_regression_xgb[1] & .data$Dates <= .env$input$date_regression_xgb[2])[c("Dates",input$regression_outcome_xgb,"name")] #hier später noch CLose flexibel machen
+                           .data$Dates >= .env$input$date_regression_xgb[1] & .data$Dates <= .env$input$date_regression_xgb[2])[c("Dates",input$regression_outcome_xgb,"name")] #hier später noch CLose flexibel machen
     } else {
       data_reg <- filter(stockdata_US(),                                                                               #nur hier nach datum filtern, rest wird draufgemerged
                          #.data$name %in% (c(COMPONENTS_US()[["Symbol"]], "DJI")[c(COMPONENTS_US()[["Company.Name"]], "DJI") %in% .env$input$Stock_Regression_xgb]) &
                          .data$name %in% .env$input$Stock_Regression_xgb &
-                         .data$Dates >= .env$input$date_regression_xgb[1] & .data$Dates <= .env$input$date_regression_xgb[2])[c("Dates",input$regression_outcome_xgb,"name")] #hier später noch CLose flexibel machen
+                           .data$Dates >= .env$input$date_regression_xgb[1] & .data$Dates <= .env$input$date_regression_xgb[2])[c("Dates",input$regression_outcome_xgb,"name")] #hier später noch CLose flexibel machen
     }
 
     if (input$country_regression_xgb == "Germany"){
@@ -3209,7 +3310,7 @@ server <- function(input, output, session) {
 
     preds <- preds %>%
       zoo::zoo(seq(from = as.Date(max(full_df$Dates)) +1,
-              to = as.Date(max(full_df$Dates)) + input$n_ahead2, by = "day"))
+                   to = as.Date(max(full_df$Dates)) + input$n_ahead2, by = "day"))
 
     ts <- full_df %>% pull(Close) %>%
       zoo::zoo(seq(from = as.Date(min(full_df$Dates)), to = as.Date(max(full_df$Dates)), by = "day"))

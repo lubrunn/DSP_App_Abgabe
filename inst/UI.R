@@ -1014,9 +1014,7 @@ ui <- fluidPage(
                         ),
                         tabPanel("VAR-forecasting",
                                  sidebarPanel(
-                                   tabs_custom_var(),
-                                   numericInput("ahead", "choose how many days to forecast", value = 5, min = 1, max = 100),
-                                   selectInput("var_which_plot","Select plot to show:",c("Forecasted period only","Full time series"),selected="Forecasted period only")
+                                   tabs_custom_var()
                                  ),
                                  mainPanel(
                                    tabsetPanel(

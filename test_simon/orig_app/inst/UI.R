@@ -600,7 +600,7 @@ ui <- fluidPage(
                                                       actionButton("pred", "Predict"),
                                                       shinyjs::hidden(p(id = "text2", "Please run the model first")),
                                                       selectInput("forecast_plot_choice","Select plot to show:",
-                                                                  c("Forecasted","Full"),selected="Full")
+                                                                  c("Forecasted","Full","Feature_Importance"),selected="Full")
                                                       
                                                       
                                      ),
@@ -638,9 +638,9 @@ ui <- fluidPage(
                                                                           DT::dataTableOutput("df_xgb_default"))
                                                 ),
                                                 tabPanel("Validity", value = "Validity",
-                                                         verbatimTextOutput("model_xgb"),
+                                                        # verbatimTextOutput("model_xgb"),
                                                          tableOutput("model_fit"),
-                                                         verbatimTextOutput("serial_out_xgb"),
+                                                        tableOutput("serial_out_xgb"),
                                                          dygraphs::dygraphOutput("forecast_xgb"),
                                                          tableOutput("xgb_metrics")
                                             ),

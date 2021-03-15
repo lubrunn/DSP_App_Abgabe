@@ -390,7 +390,7 @@ tabsetPanel(
   tabPanel("Model specifcation",
            radioButtons("country_regression_xgb","Which country?",c("Germany","USA"),selected = "Germany"),
            uiOutput("stock_regression_xgb"),
-           radioButtons("regression_outcome_xgb","Which variable?",c("Adj.Close","Return"),selected = "Return",inline = T),
+           radioButtons("regression_outcome_xgb","Which variable?",c("Adj.Close" = "Close","Return"),selected = "Return",inline = T),
            switchInput("senti_yesno_xgb","Include Sentiment?",onLabel="Yes",offLabel="No"),
            uiOutput("Controls_xgb"),
            actionButton("reset_regression_xgb", "clear selected"),
@@ -430,11 +430,12 @@ tabsetPanel(
            #selectInput("var_1", "Chose variable to add AR and/or MA features", choices = ""),
            uiOutput("add_features"),
            textInput("ma_select", "Select list of moving averages" ,placeholder = "e.g. 10,20,100,..."),
-           textInput("ma_select2", "Select list of moving averages (ema)", placeholder = "e.g. 10,20,100,..."),
+           textInput("ma_select2", "Select list of exponential moving averages", placeholder = "e.g. 10,20,100,..."),
            
            #radioButtons("ma_type","Select a type of moving average", choices = c("mean","exponential")),
            #numericInput("num_1","Chose length of moving average",min=0,value = 2),
            numericInput("num_2","Chose Autoregressive lags for",min=0,value = 1),
+           radioButtons("corona_dummy","1st lockdown dummy",choices = c("yes","no")),
            actionButton("addButton", "Upload"),
            uiOutput("finish_button"),
            actionButton("reset_cus", "Reset")

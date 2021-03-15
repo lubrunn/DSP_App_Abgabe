@@ -2759,85 +2759,85 @@ server <- function(input, output, session) {
   })
 
 
-  dataset_senti_xgb <- reactive({
-    req( correct_path()== T)
-    req(input$Sentiment_type_xgb)
-    if(input$Sentiment_type_xgb == "NoFilter"){
-
-      res <- En_NoFilter_0_0_yes()   # still fix as it is not clear yet if sql or csv
-      #res <- eval(parse(text = paste('En', '_NoFilter_',input$minRetweet,'_',
-      #                               input$minminLikes,'_',input$tweet_length,'()', sep='')))
-      #input$language
-    }else{
-      req(input$Stock_reg)
-      ticker <- ticker_dict(input$Stock_reg) # dict for a few stock
-      res <- eval(parse(text = paste(ticker,'()', sep=''))) # example: ADS.DE()
-
-    }
-
-
-  })
-
-
-  filtered_df_xgb <- reactive({
-    req( correct_path()== T)
-    req(input$Sentiment_type_xgb)
-    req(input$minRetweet_stocks1_xgb)
-    req(input$minRetweet_stocks2_xgb)
-
-    if(input$Sentiment_type_xgb == "NoFilter"){
-
-      res <- dataset_senti_xgb()
-    }else{ # live filtering
-      req(input$industry_sentiment_xgb)
-      res <- dataset_senti_xgb()
-      if(input$industry_sentiment_xgb == "no"){
-        res <- dataset_senti_xgb()
-        if(input$tweet_length_stock1_xgb == "yes"){
-
-          res <- res %>% filter((retweets_count > as.numeric(input$minRetweet_stocks1_xgb)) &
-                                  (tweet_length > 81))}
-        else{
-          res <- res %>% filter((retweets_count > as.numeric(input$minRetweet_stocks1_xgb)))
-        }
-      }#else{
-      #res <- dataset_senti()
-      #if(input$tweet_length_stock2 == "yes"){
-      # res <- res %>% filter((retweets_count > as.numeric(input$minRetweet_stocks2)) &
-      #                          (tweet_length > 81))
-      #}else{
-      #  res <- res %>% filter(retweets_count > as.numeric(input$minRetweet_stocks2))
-      #}
-      #}
-    }
-  })
-
-
-  aggri_select_xgb <- reactive({
-
-    if(input$Sentiment_type_xgb == "NoFilter"){ # NoFilter files already aggregated
-      res <- filtered_df_xgb()
-      aggregation <- key(input$aggregation_xgb)  # select aggregation type: Mean, mean weighted by,...
-      res <- res %>% tidyr::gather("id", "aggregation", aggregation)
-      res <- res[c("date","aggregation")]
-    }else{
-      if(input$industry_sentiment_xgb == "no"){
-        res <- filtered_df_xgb()
-        res <- aggregate_sentiment(res) # function to aggregate sentiment per day
-        res <- res %>% filter(language == input$language1_xgb)
-        aggregation <- key(input$aggregation1_xgb)
-        res <- res %>% tidyr::gather("id", "aggregation", aggregation)
-        res <- res[c("date","aggregation")]
-      }else{
-        res <- get_industry_sentiment(COMPONENTS_DE(),input$industry_xgb,input$minRetweet_stocks2_xgb,
-                                      input$tweet_length_stock2_xgb)      #function to gather all stock in certain industry
-        aggregation <- key(input$aggregation2_xgb)                          #--> also calculates aggregation inside function
-        res <- res %>% tidyr::gather("id", "aggregation", aggregation)
-        res <- res[c("date","aggregation")]
-      }
-    }
-
-  })
+  # dataset_senti_xgb <- reactive({
+  #   req( correct_path()== T)
+  #   req(input$Sentiment_type_xgb)
+  #   if(input$Sentiment_type_xgb == "NoFilter"){
+  #
+  #     res <- En_NoFilter_0_0_yes()   # still fix as it is not clear yet if sql or csv
+  #     #res <- eval(parse(text = paste('En', '_NoFilter_',input$minRetweet,'_',
+  #     #                               input$minminLikes,'_',input$tweet_length,'()', sep='')))
+  #     #input$language
+  #   }else{
+  #     req(input$Stock_reg)
+  #     ticker <- ticker_dict(input$Stock_reg) # dict for a few stock
+  #     res <- eval(parse(text = paste(ticker,'()', sep=''))) # example: ADS.DE()
+  #
+  #   }
+  #
+  #
+  # })
+  #
+  #
+  # filtered_df_xgb <- reactive({
+  #   req( correct_path()== T)
+  #   req(input$Sentiment_type_xgb)
+  #   req(input$minRetweet_stocks1_xgb)
+  #   req(input$minRetweet_stocks2_xgb)
+  #
+  #   if(input$Sentiment_type_xgb == "NoFilter"){
+  #
+  #     res <- dataset_senti_xgb()
+  #   }else{ # live filtering
+  #     req(input$industry_sentiment_xgb)
+  #     res <- dataset_senti_xgb()
+  #     if(input$industry_sentiment_xgb == "no"){
+  #       res <- dataset_senti_xgb()
+  #       if(input$tweet_length_stock1_xgb == "yes"){
+  #
+  #         res <- res %>% filter((retweets_count > as.numeric(input$minRetweet_stocks1_xgb)) &
+  #                                 (tweet_length > 81))}
+  #       else{
+  #         res <- res %>% filter((retweets_count > as.numeric(input$minRetweet_stocks1_xgb)))
+  #       }
+  #     }#else{
+  #     #res <- dataset_senti()
+  #     #if(input$tweet_length_stock2 == "yes"){
+  #     # res <- res %>% filter((retweets_count > as.numeric(input$minRetweet_stocks2)) &
+  #     #                          (tweet_length > 81))
+  #     #}else{
+  #     #  res <- res %>% filter(retweets_count > as.numeric(input$minRetweet_stocks2))
+  #     #}
+  #     #}
+  #   }
+  # })
+  #
+  #
+  # aggri_select_xgb <- reactive({
+  #
+  #   if(input$Sentiment_type_xgb == "NoFilter"){ # NoFilter files already aggregated
+  #     res <- filtered_df_xgb()
+  #     aggregation <- key(input$aggregation_xgb)  # select aggregation type: Mean, mean weighted by,...
+  #     res <- res %>% tidyr::gather("id", "aggregation", aggregation)
+  #     res <- res[c("date","aggregation")]
+  #   }else{
+  #     if(input$industry_sentiment_xgb == "no"){
+  #       res <- filtered_df_xgb()
+  #       res <- aggregate_sentiment(res) # function to aggregate sentiment per day
+  #       res <- res %>% filter(language == input$language1_xgb)
+  #       aggregation <- key(input$aggregation1_xgb)
+  #       res <- res %>% tidyr::gather("id", "aggregation", aggregation)
+  #       res <- res[c("date","aggregation")]
+  #     }else{
+  #       res <- get_industry_sentiment(COMPONENTS_DE(),input$industry_xgb,input$minRetweet_stocks2_xgb,
+  #                                     input$tweet_length_stock2_xgb)      #function to gather all stock in certain industry
+  #       aggregation <- key(input$aggregation2_xgb)                          #--> also calculates aggregation inside function
+  #       res <- res %>% tidyr::gather("id", "aggregation", aggregation)
+  #       res <- res[c("date","aggregation")]
+  #     }
+  #   }
+  #
+  # })
 
 
   observeEvent(input$reset_regression_xgb,{
@@ -2847,21 +2847,95 @@ server <- function(input, output, session) {
   #merge sentiment with control+dep vars
   final_regression_df_xgb <- reactive ({
     if (input$senti_yesno_xgb == TRUE){
-      res <- aggri_select_xgb()
+      res <- get_sentiment_var()
     } else {
-      res <- aggri_select_xgb()[1]
+      res <- get_sentiment_var()[1]
     }
-    res$date <- as.Date(res$date)
+    res$created_at <- as.Date(res$created_at)
     res_c <- df_selected_controls_xgb()
-    res <- left_join(res_c,res, by=c("Dates" = "date"))
+
+    res <- left_join(res_c,res, by=c("Dates" = "created_at"))
     res_corona <- df_selected_corona_xgb()
     res_corona$date <- as.Date(res_corona$date)
     res <- left_join(res,res_corona,by=c("Dates" = "date"))
-
     res
   })
 
 
+  ############################################################################# sql data xgb
+  dates_xgb <- reactive({
+    if (length(input$date_regression_xgb) > 1){
+      input$date_regression_xgb
+    } else {
+      c(input$date_regression_xgb, input$date_regression_xgb)
+    }
+  })
+
+
+  querry_sentiment_model_xgb <- reactive({
+
+    #### check which tweet length
+    if (input$tweet_length_xgb == T){
+      tweetLength <- 81
+    } else {
+      tweetLength <- 0
+    }
+
+
+
+    dates <- dates_xgb()
+
+
+
+    ###### table name
+    ### get language
+    if (input$sentiment_company_xgb == "NoFilter"){
+      test <- glue('select created_at, {input$aggregation_xgb} from sum_stats_{tolower(input$language_xgb)} where
+    created_at >= "{dates[1]}" and created_at <= "{dates[2]}" and
+    retweets_count = {input$minRetweets_xgb} and likes_count = {input$minLikes_xgb} and
+    tweet_length = {tweetLength}')
+    } else {
+      comp <- gsub("ö","Ã¶", input$sentiment_company_xgb)
+      comp <- gsub("ü", "Ã¼", comp)
+
+      test<-glue('SELECT created_at, {input$aggregation_xgb}  FROM sum_stats_companies WHERE
+      created_at >= "{dates[1]}" and created_at <= "{dates[2]}" and
+         retweets_count = {input$minRetweets_xgb} and likes_count = {input$minLikes_xgb} and
+         tweet_length = {tweetLength} and company  = "{comp}" and
+             language = "{tolower(input$language_xgb)}"' )
+    }
+
+    browser()
+    test
+
+  })
+
+
+  get_sentiment_xgb <- reactive({
+    ###### need correct path
+    validate(need(correct_path() == T, "Please choose the correct path"))
+    ###### need database connection
+    validate(need(database_connector(), "Could not connect to database"))
+    ###### need at least one date selected
+    validate(need(!is.null(input$date_regression_xgb), "Please select a date."))
+
+    ####### store database connection
+    con <- database_connector()
+
+
+    ###### querry data from sql
+    df_need <- DBI::dbGetQuery(con,  querry_sentiment_model_xgb())
+
+    #### for companies replace umlaute
+    if ("company" %in% names(df_need)){
+      df_need$company <- gsub("Ã¶", "ö", df_need$company)
+      df_need$company <- gsub("Ã¼", "ü", df_need$company)
+    }
+    #### return df
+    df_need
+  })
+
+#####################################################################################
   df_selected_corona_xgb <- reactive({
     #req(input$Controls_var)
     res <- corona_data_xgb()

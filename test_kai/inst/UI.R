@@ -74,7 +74,7 @@ twitter_main_panel <- function(){
                         tabsetPanel(id = "tabselected",
 
                           ### panel with histograms and summary table
-                          tabPanel("Time Series Sentiment & Other Metrics", value = 1,
+                          tabPanel("Summary Statistics", value = 1,
 
                                    #########################################
                                    ###########################################
@@ -104,6 +104,7 @@ twitter_main_panel <- function(){
 
 
                                    ##### first time series
+                                   tags$br(),
                                    dygraphs::dygraphOutput("sum_stats_plot")%>% shinycssloaders::withSpinner(type = 5),
                                     tags$br(),
 
@@ -169,7 +170,7 @@ twitter_main_panel <- function(){
                         condition = "input.tabselected == 1",
 
                         fluidRow(column(10, offset = 1,
-                                        tags$h4("Summary Statistics"),
+                                        textOutput("sum_stats_table_header"),
                                         tableOutput("sum_stats_table")%>% shinycssloaders::withSpinner(type = 5),
                         )),
 
@@ -214,11 +215,11 @@ twitter_main_panel <- function(){
                       # ),
                      # mainPanel(
                         tabsetPanel(id = "network_analysis",
-                                    tabPanel("Description",
+                                    tabPanel("Description", value = 1,
                                              tags$br(),
                                              htmlOutput("network_description")
                                             ),
-                                    tabPanel("Network Analysis",
+                                    tabPanel("Network Analysis", value = 2,
                       tags$br(),
                       tags$h4("Word Network Analysis", color = "white"),
                       tags$br(),
@@ -309,7 +310,8 @@ twitter_desc_conditional_sum_stats <- conditionalPanel(
   tags$h4("Time Series"),
 
   ##### select a value retweets/likes etc.
- selectInput("value", "Select a value to show (multiple possible)",
+  rintrojs::introBox(
+  selectInput("value", "Select a value to show (multiple possible)",
               choices = c(
                 "Sentiment" = "sentiment",
                 "Retweets Weighted Sentiment" = "sentiment_rt",
@@ -321,10 +323,17 @@ twitter_desc_conditional_sum_stats <- conditionalPanel(
               ),
               selected = "sentiment",
               multiple = T),
+  data.step = 5,
+  data.intro = "Here you can choose a metric to analyse. Each metric is the aggreagted value
+  on a daily level. Mutiple selections are possible. As soon
+  as two metrics are selected all time series get scaled to mean 0 and a standard deviation of
+  1 in order to fit on the same scale"
+  ),
 
 
 
   #### select summary statistic
+  rintrojs::introBox(
   shinyWidgets::radioGroupButtons("metric", "Select a statistic to plot",
                choiceNames = c("Mean", "SD", "Median"),
                choiceValues = c("mean", "std", "median"),
@@ -339,6 +348,10 @@ twitter_desc_conditional_sum_stats <- conditionalPanel(
 
 
   shinyWidgets::awesomeCheckbox("num_tweets_box", label = "Show average number of tweets", value = F),
+  data.step = 6,
+  data.intro = "You may choose to see the to depict the means, standard deviations or the medians aggreagted
+  on a daily level"
+  ),
 
  #### style checkbox
  tags$style(HTML('.checkbox-primary input[type="checkbox"]:checked+label::before, .checkbox-primary input[type="radio"]:checked+label::before {
@@ -346,8 +359,12 @@ twitter_desc_conditional_sum_stats <- conditionalPanel(
     border-color: #888888;
 }')),
 
-
-  actionButton("plot_saver_button", "Save the plot")
+rintrojs::introBox(
+  actionButton("plot_saver_button", "Save the plot"),
+  data.step = 7,
+  data.intro = "With this button you can temporarily store a generated plot in a second field. This allows for easier
+  comparison when wanting to compare tweets with different search terms."
+)
 )
 
 
@@ -367,7 +384,7 @@ histo_tab <- sidebarPanel(
                 "Tweet Length" = "tweet_length"
               ),
               selected = "sentiment"),
-  sliderInput("bins", "Adjust the number of bins for the histogram", min = 5, max = 500, value = 50),
+  sliderInput("bins", "Adjust the number of bins for the histogram", min = 5, max = 100, value = 50),
 
 
   # add switch whether to use logarithmic scale
@@ -400,12 +417,18 @@ twitter_tab_desc <- tabPanel( "Descriptives",
 
                               ####### all three
                               ### instrucitons button
-                              actionButton("instrucitons_desc", "Instructions"),
+
+                              conditionalPanel(
+                                condition = "input.tabselected==1",
+                              actionButton("instrucitons_desc", "Instructions")
+                              ),
+
 
                               tags$hr(),
                               tags$h4("Filter Tweets"),
 
                               ###### langauge of tweets selector
+                              rintrojs::introBox(
                               shinyWidgets::radioGroupButtons("lang", "Language of tweets",
                                                               choices = c("English" = "EN",
                                                                           "German" = "DE"),
@@ -416,17 +439,33 @@ twitter_tab_desc <- tabPanel( "Descriptives",
                                                                 no = icon("remove",
                                                                           lib = "glyphicon")),
                                                               size = "sm"),
+                                                              data.step = 1,
+                                                              data.intro = "Here you can set the language of the tweets"
+                                                                  ),
+
+
+
                               ###### choose tweet type (company or unfiltererd)
+                              rintrojs::introBox(
                               selectInput("comp","Choose tweets",
                                              company_terms,
                                              selected = "NoFilter"),
+                              data.step = 2,
+                              data.intro = "Here you can either select company specific tweets or tweets that were randomly scraped
+                              without any search term"
+                              ),
 
                               ####### select date range
+                              rintrojs::introBox(
                               shinyWidgets::airDatepickerInput("dates_desc", "Date range:",
                                                                range = T,
                                                                value = c("2018-11-30", "2021-02-19"),
                                                                maxDate = "2021-02-19", minDate = "2018-11-30",
                                                                clearButton = T, update_on = "close"),
+                              data.step = 3,
+                              data.intro = "Here you can select the date range you would like to analyse. We have data from
+                              2018-11-30 until yesterday"
+                              ),
 
                               ####### reset date range button
                               actionButton("reset_dates_desc", "Reset date range"),
@@ -435,6 +474,7 @@ twitter_tab_desc <- tabPanel( "Descriptives",
 
 
                               ####### filter min rt, likes, long tweets
+                              rintrojs::introBox(
                               shinyWidgets::radioGroupButtons("rt", "Minimum tweets",
                                            choices = c(0, 10, 50, 100, 200),
                                            status = "primary",
@@ -492,6 +532,10 @@ twitter_tab_desc <- tabPanel( "Descriptives",
                                                     content = c("Long Tweets are tweets that contain more
                                                                 than 80 characters"),
                                                     size = "s"),
+                              data.step = 4,
+                              data.intro = "In this section you can apply filters to the tweets. You may choose to only see tweets
+                              with a minimum number of retweets or likes or only tweets that have at least 80 characters"
+                              ),
 
 
 
@@ -612,7 +656,7 @@ network_sidebar <- shinyWidgets::dropdown(
                       selected = "NoFilter"),
 
           # datepicker
-          shinyWidgets::airDatepickerInput("dates_net", "Select a range of up to 5 days",
+          shinyWidgets::airDatepickerInput("dates_net", "Select a maximum of 2 days",
                                            range = TRUE,
                                            value = "2018-11-30",
                                            maxDate = "2021-02-19", minDate = "2018-11-30",
@@ -641,7 +685,8 @@ network_sidebar <- shinyWidgets::dropdown(
 
 
           ### filter by sentiment
-          sliderInput("sentiment_net", label = h3("Choose a sentiment range"),
+          #shinyWidgets::setSliderColor(c("red"), c(1)),
+          sliderInput("sentiment_net", label = h5("Choose a sentiment range"),
                       min = -1, max = 1, value = c(-1, 1), step = 0.01, dragRange = T),
 
 
@@ -652,59 +697,62 @@ network_sidebar <- shinyWidgets::dropdown(
           textInput("search_term_net", "Only select tweets containing the following:"),
           textInput("username_net", "Only show tweets for usernames containing the following:"),
 
-
-          ####### type of plot bigram/word pairs
-  shinyWidgets::radioGroupButtons("word_type_net",
-                                  "Select the type of word combination you would like to analyse",
-                                  choices = c("Bigram" = "bigrams_net",
-                                   "Word Pairs" = "word_pairs_net"),
-                                  status = "primary",
-                                  checkIcon = list(
-                                    yes = icon("ok",
-                                               lib = "glyphicon"),
-                                    no = icon("remove",
-                                              lib = "glyphicon")),
-                                  size = "xs"),
-
-
-
-          ######## adjusting plot
-          numericInput("n_net", "Minimum number of occurences of a single word in the sample",
-                       min = 50, value = 50),
+      conditionalPanel(
+        condition = "input.network_analysis == 2",
+        ####### type of plot bigram/word pairs
+        shinyWidgets::radioGroupButtons("word_type_net",
+                                        "Select the type of word combination you would like to analyse",
+                                        choices = c("Bigram" = "bigrams_net",
+                                                    "Word Pairs" = "word_pairs_net"),
+                                        status = "primary",
+                                        checkIcon = list(
+                                          yes = icon("ok",
+                                                     lib = "glyphicon"),
+                                          no = icon("remove",
+                                                    lib = "glyphicon")),
+                                        size = "xs"),
 
 
-          ### panel in case of word pairs to compute word correlations
-          conditionalPanel(
-            condition = "input.word_type_net == 'word_pairs_net'",
-            numericInput("corr_net", "Minimum word correlation of word pairs", value = 0.15, min = 0.15, max = 1,
-                         step = 0.01)
 
-          ),
+        ######## adjusting plot
+        numericInput("n_net", "Minimum number of occurences of a single word in the sample",
+                     min = 50, value = 50),
 
 
-          ### panel for minium number of time bigrams arise
-          conditionalPanel(
-            condition = "input.word_type_net == 'bigrams_net'",
-            numericInput("n_bigrams_net", "Minimum number of occurences of a Bigram in the selected sample",
-                         min = 50, value = 50)
-          ),
+        ### panel in case of word pairs to compute word correlations
+        conditionalPanel(
+          condition = "input.word_type_net == 'word_pairs_net'",
+          numericInput("corr_net", "Minimum word correlation of word pairs", value = 0.15, min = 0.15, max = 1,
+                       step = 0.01)
+
+        ),
 
 
-          actionButton("button_net", "Render Plot") %>%
+        ### panel for minium number of time bigrams arise
+        conditionalPanel(
+          condition = "input.word_type_net == 'bigrams_net'",
+          numericInput("n_bigrams_net", "Minimum number of occurences of a Bigram in the selected sample",
+                       min = 50, value = 50)
+        ),
+
+
+        actionButton("button_net", "Render Plot") %>%
           shinyhelper::helper(type = "markdown",
-                   title = "Inline Help",
-                   content = "network_plot_button",
-                   buttonLabel = "Got it!",
-                   easyClose = FALSE,
-                   fade = TRUE,
-                   size = "s"),
+                              title = "Inline Help",
+                              content = "network_plot_button",
+                              buttonLabel = "Got it!",
+                              easyClose = FALSE,
+                              fade = TRUE,
+                              size = "s"),
 
-          #### removing plot
-          actionButton("reset_net", "Remove Plot"),
+        #### removing plot
+        actionButton("reset_net", "Remove Network"),
 
 
-          ### canceling computation
-          shinyjs::disabled(actionButton("cancel_net", "Cancel Rendering"))
+        ### canceling computation
+        shinyjs::disabled(actionButton("cancel_net", "Cancel Rendering"))
+
+      )
 
           )
 #)
@@ -728,6 +776,9 @@ network_sidebar <- shinyWidgets::dropdown(
 
 Sys.setlocale("LC_TIME", "English")
 ui <- fluidPage(
+
+
+
   #### this gets the dimension of the current window --> helps adjusting width and height of plots that
   # dont do it automatically
   tags$head(tags$script('
@@ -745,6 +796,14 @@ ui <- fluidPage(
                         ')),
   shinyjs::useShinyjs(),
   shinyFeedback::useShinyFeedback(),
+  rintrojs::introjsUI(),
+
+  #### change color of instrucitons boxes
+ tags$style(HTML(".introjs-tooltip {
+    background-color: #1d465a;}"
+ )),
+
+
   theme = shinythemes::shinytheme("superhero"),
   ### change button colors
   tags$style(HTML('.btn-default {
@@ -757,50 +816,14 @@ ui <- fluidPage(
 
              dir_setter_panel(),
              twitter_main_panel(),
-             tabPanel("Sentiment"),
-             # tabPanel("Stocks",
-             #          sidebarPanel(
-             #            radioButtons("country_stocks","Which country?",c("Germany","USA"),selected = "Germany"),
-             #            #selectize_Stocks(COMPONENTS_DE()),
-             #            uiOutput("stock_choice"),
-             #            #selectizeInput("stock_choice", choices = "Platzhalter"),
-             #            radioButtons("stock_outcome","Which variable?",c("Open","High","Low","Close","Adj.Close","Volume","Return"),selected = "Close"),
-             #            actionButton("reset", "clear selected"),
-             #            checkboxInput("hovering","Enable hover",value = FALSE),
-             #            sliderinput_dates()
-             #          ),
-             #          mainPanel(
-             #            plot_stocks_DE(),
-             #            hover_info_DE()
-             #          ),#close MainPanel
-             # ),#close tabPanel stock
-             # tabPanel("Corona",
-             #          sidebarPanel(
-             #            selectize_corona(),
-             #            checkboxGroupInput("CoronaCountry","Country",c("Germany","United States"),selected = "Germany"),
-             #            sliderinput_dates_corona(),
-             #            checkboxInput("hovering_corona","Enable hover",value = FALSE)
-             #          ),
-             #          mainPanel(
-             #            plot_corona(),
-             #            hover_info_corona()
-             #          )
-             # ),#close tabPanel Corona
 
-
-
-
-
-
-
-
-             tabPanel("Comparison",
-                      sidebarPanel(
-
-
-
+              tabPanel("Comparison",
+                       tags$br(),
+                       tags$br(),
+                       tags$br(),
+                      fluidRow(column(4,
                         ######## stocks
-                        tags$h4("Stocks"),
+                        wellPanel(tags$h4("Stocks"),
 
                         #selectize_Stocks(COMPONENTS_DE()),
                         selectInput("stocks_comp", "Select a company or index",
@@ -819,42 +842,37 @@ ui <- fluidPage(
 
                        # actionButton("reset", "clear selected"),
                         shinyWidgets::materialSwitch(inputId = "roll_stock_comp", label = "7 day smoothing?", value = F)
-                       ),
-                      mainPanel(
+                       )),
+                      column(8,
                         dygraphs::dygraphOutput("stocks_comp")
-                      ),
+                      )),
 
 
+                      tags$br(),
+                      tags$br(),
+                      tags$br(),
+                    ######## covid
+                      fluidRow(column(4,
 
-
-
-
-
-                        ######## covid
-                      sidebarPanel(
-                        tags$h4("COVID-19"),
-
-
-
-
+                      wellPanel(tags$h4("COVID-19"),
                         selectize_corona(),
                         selectInput("CoronaCountry","Country",c("Germany","USA" = "United States"),selected = "United States",
                                     multiple = T),
                         shinyWidgets::materialSwitch(inputId = "roll_covid_comp", label = "7 day smoothing?", value = F)
-                        ),
+                        )),
 
-                      mainPanel(
+                      column(8,
                         dygraphs::dygraphOutput("covid_comp")
-                      ),
+                      )),
 
-                      sidebarPanel(
+
+                    tags$br(),
+                    tags$br(),
+                    tags$br(),
+
+                      fluidRow(column(4,
                         ####### twitter
-                        tags$h4("Twitter"),
-
-
-
-
-
+                    wellPanel(tags$h4("Twitter"),
 
                         tags$hr(),
                         tags$h4("Filter Tweets"),
@@ -932,20 +950,11 @@ ui <- fluidPage(
                                   multiple = T),
                       shinyWidgets::materialSwitch(inputId = "roll_twitter_comp", label = "7 day smoothing?", value = F)
 
-                      ),
+                      )),
 
-
-
-
-
-
-
-                      mainPanel(
-
-
+                      column(8,
                         dygraphs::dygraphOutput("twitter_comp")
-
-                      )
+                      ))
              ),#close tabPanel Corona
 
 
@@ -1005,9 +1014,7 @@ ui <- fluidPage(
                         ),
                         tabPanel("VAR-forecasting",
                                  sidebarPanel(
-                                   tabs_custom_var(),
-                                   numericInput("ahead", "choose how many days to forecast", value = 5, min = 1, max = 100),
-                                   selectInput("var_which_plot","Select plot to show:",c("Forecasted period only","Full time series"),selected="Forecasted period only")
+                                   tabs_custom_var()
                                  ),
                                  mainPanel(
                                    tabsetPanel(

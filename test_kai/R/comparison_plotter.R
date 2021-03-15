@@ -3,14 +3,22 @@
 stock_plotter <- function(df, input_metric, input_comp, input_roll){
 
 
-
-
+    ### replace missing values in dow
+ #
 ####### filter out relevant variable and companies
     df <- df %>% select(Dates, input_metric, name) %>%
-      filter(name != "DOW" &
+      filter(
           grepl(paste(input_comp, collapse = "|"), name))
     ## convert to wide format for dygraph
     df <- df %>% pivot_wider(names_from = name, values_from = input_metric)
+
+    ### replace missing values in dow with first value they had (went public on 01/04/2019)
+    if ("DOW" %in% names(df)){
+      df[is.na(df[,"DOW"]), "DOW"] <- df[df$Dates == "2019-03-20", "DOW"]
+    }
+
+
+
     ##### one df for values, one for dates
     df_values <- df %>% select(-Dates)
     df_dates <- as.Date(df$Dates)
@@ -20,10 +28,11 @@ stock_plotter <- function(df, input_metric, input_comp, input_roll){
     ### plot
     dygraphs::dygraph(don,
                       ylab = input_metric,
-                      group = "comp_plots") %>%
-      dygraphs::dySeries(label = input_metric,) %>%
-      {if (!grepl("return", input_metric)) dygraphs::dyRebase(.,value = 100) else . } %>%
-      dygraphs::dyOptions(axisLineWidth = 2) %>%
+                      group = "comp_plots",
+                      main = glue::glue("{input_metric}")) %>%
+      {if (length(input_comp) == 1) dygraphs::dySeries(.,label = input_metric) else .} %>%
+      {if (length(input_comp) > 1 & input_metric == "Adj.Close") dygraphs::dyRebase(.,value = 100) else . } %>%
+      dygraphs::dyOptions(axisLineWidth = 2, drawGrid = FALSE) %>%
       dygraphs::dyLegend() %>%
       dygraphs::dyShading(from = min(df_dates), to = max(df_dates), color = "white") %>%
       {if (input_roll == T) dygraphs::dyRoller(., rollPeriod = 7, showRoller = F) else .}
@@ -57,9 +66,10 @@ covid_plotter <- function(df, selected_metric, input_country, input_roll = F){
 
   dygraphs::dygraph(don,
                     ylab = selected_metric,
-                    group = "comp_plots") %>%
-   {if (length(input_country) > 1)dygraphs::dySeries(.) else dygraphs::dySeries(.,label = input_country)}  %>%
-    dygraphs::dyOptions(axisLineWidth = 2) %>%
+                    group = "comp_plots",
+                    main = glue::glue("COVID-19 numbers")) %>%
+   {if (length(input_country) > 1) dygraphs::dySeries(.) else dygraphs::dySeries(.,label = input_country)}  %>%
+    dygraphs::dyOptions(axisLineWidth = 2, drawGrid = FALSE) %>%
     dygraphs::dyLegend() %>%
     dygraphs::dyShading(from = min(df$date), to = max(df$date), color = "white") %>%
     {if (input_roll == T) dygraphs::dyRoller(., rollPeriod = 7, showRoller = F) else .}

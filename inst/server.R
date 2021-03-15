@@ -1761,16 +1761,16 @@ server <- function(input, output, session) {
 
   ############################################################################
   ######################### violin plot
-  output$violin_sum <- renderPlot({
-    #validate(need(path_setter()[[3]] == "correct_path", "Please select the correct path"))
-    validate(need(!is.null(input$dates_desc), "Please select a date."))
-
-
-    df <- get_data_sum_stats_tables()
-    violin_plotter(df, input$value, input$metric)
-
-
-  })
+  # output$violin_sum <- renderPlot({
+  #   #validate(need(path_setter()[[3]] == "correct_path", "Please select the correct path"))
+  #   validate(need(!is.null(input$dates_desc), "Please select a date."))
+  #
+  #
+  #   df <- get_data_sum_stats_tables()
+  #   violin_plotter(df, input$value, input$metric)
+  #
+  #
+  # })
 
 
 
@@ -1813,7 +1813,7 @@ server <- function(input, output, session) {
   output$sum_stats_table_header <- renderText({
     header <- number_tweets_info_desc()
     header <- sub( "total.*$", "", header )
-    glue("{header} total)")
+    glue("Summary Statistics for {header} total)")
   })
 
 

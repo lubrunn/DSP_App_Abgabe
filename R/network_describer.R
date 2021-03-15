@@ -1,3 +1,7 @@
+##### in this file we create the description of the network plot
+
+
+
 network_description_text <- "<div style='background-color:#344a5f; padding: 20px'>
 
 <head>

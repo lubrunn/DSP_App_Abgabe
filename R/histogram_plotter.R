@@ -19,6 +19,10 @@ histogram_plotter <- function(df, date_input1, date_input2, input_bins, input_lo
            list(sum_n = sum(N)),
            by = c(input_metric)]
 
+  if (dim(df)[1] == 0){
+    return()
+  }
+
   # take log if asked
   if (input_log == T){
   df[, metric := log(get(input_metric) + 1)]

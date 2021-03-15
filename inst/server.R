@@ -2086,7 +2086,7 @@ server <- function(input, output, session) {
 ###########################################################################
 ###########################################################################
   # path to markdown files for helpers
-  shinyhelper::observe_helpers(help_dir = "shiny/helpers")
+  shinyhelper::observe_helpers(withMathJax = TRUE, help_dir = "shiny/helpers")
 
 
   ###### network plot
@@ -2128,15 +2128,15 @@ server <- function(input, output, session) {
 
 
   ###### date checker
-  ##### validate that a maximum of 5 days have been selected
+  ##### validate that a maximum of 2 days have been selected
 
     output$date_checker_net <- renderText({
 
       if(length(input$dates_net) > 1){
       days_inrange <- difftime(as.Date(input$dates_net[2]) ,as.Date(input$dates_net[1]) , units = c("days"))
-      if (days_inrange > 4){
+      if (days_inrange > 2){
 
-      validate("More than 5 days selected. Please choose fewer days.")
+      validate("More than 2 days selected. Please choose a maximum of 2 days.")
 
       }
       } else if (is.null(input$dates_net)){
@@ -2159,7 +2159,7 @@ server <- function(input, output, session) {
 
 
 
-
+browser()
 
 
     ##### disable render plot button so no mutliple firing possible
@@ -2236,7 +2236,7 @@ server <- function(input, output, session) {
       }
 
       ##### compute minimum n which is set to 0.05% of the number of tweets for the current dataset
-      min_n <- round(0.0005 * dim(network)[1])
+      min_n <- round(0.001 * dim(network)[1])
 
       #hostess$set(2 * 10)
       waitress$inc(1)
@@ -2564,7 +2564,7 @@ server <- function(input, output, session) {
   ########################   XGboost    #########################################
   ###############################################################################
   ###flexible input for stocks: show either german or us companies
-  observe_helpers(withMathJax = TRUE, help_dir = "helpers")
+  #observe_helpers(withMathJax = TRUE, help_dir = "helpers")
 
 
   output$stock_regression_xgb <- renderUI({

@@ -29,12 +29,15 @@ However, you may search more precisely for tweets containing specific words or f
 Once started, the computation cannot be started again until the word network
 has been fully computed. But you can cancel the running process in case you want to change parameters without waiting for the current
 computation to be done. The networks can appear
-overcrowed if low threshold filters (minimum number of occurences / minimum correlatioin) are chosen which may lead to lag.
-If this happens we recommend removing the network through the 'Remove Network' button. One way downsize an overcrowded network is to increas
-the threshold filters (minimum occurences / minimum correlation). All filters can be accessed the dropdown menu in the upper left corner.
+overcrowed if low threshold filters (minimum number of occurences / minimum correlatioin) are chosen which may lead to lag. Hence, we only
+show a maximum of 2000 unique word combinations in a network plot. The thresholds for minimum number of occurences are set to 10 while the minimum
+correlation is set to 0.15. When choosing lower values the filters will default to the aforementioned values.
+If the plot still becomes too overcrowded we firstly recommend removing the network through the 'Remove Network' button in order to avoid lag.
+Then the bigram networks tend be less overcrowded in general. One can then also increase the minimum thresholds until the plot becomes cleaerer.
+All filters can be accessed the dropdown menu in the upper left corner.
 <br/>
 <br/>
-Below the network plot you can find the raw tweets for you current filter selection. Note that the table updated immediately when changing inputs and
+Below the network plot you can already take a look at the raw tweets for you current filter selection. Note that the table updated immediately when changing inputs and
 not only after presssing the button. This may be a good total to see the number of available tweets for a specific filter selection.
 
 

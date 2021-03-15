@@ -41,8 +41,6 @@ stock_plotter <- function(df, input_metric, input_comp, input_roll){
       {if (length(input_comp) > 1 & input_metric == "Adj.Close") dygraphs::dyRebase(.,value = 100) else . } %>%
       dygraphs::dyOptions(axisLineWidth = 2, drawGrid = FALSE) %>%
       dygraphs::dyLegend() %>%
-    # {if (input_metric == "Return") dyLimit(.,0,
-    #                                        strokePattern = "solid", color = "grey") else .}   %>% ##horizontal line at 0
       dygraphs::dyShading(from = min(df_dates), to = max(df_dates), color = "white") %>%
       {if (input_roll == T) dygraphs::dyRoller(., rollPeriod = 7, showRoller = F) else .} #### smoothing
 

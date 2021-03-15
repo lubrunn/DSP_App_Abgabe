@@ -1,5 +1,10 @@
+#### here are the plot creations for covid and stocks from the comparison tabs
 
 
+
+### this function plots the stock data according to user input
+#'@export
+#'@rdname comparison_plotter
 stock_plotter <- function(df, input_metric, input_comp, input_roll){
 
 
@@ -30,12 +35,14 @@ stock_plotter <- function(df, input_metric, input_comp, input_roll){
                       ylab = input_metric,
                       group = "comp_plots",
                       main = glue::glue("{input_metric}")) %>%
+      ### when 1 cimmpany selceted change label to company name
       {if (length(input_comp) == 1) dygraphs::dySeries(.,label = input_metric) else .} %>%
+      #### when mutiple comapnies slecte and adj. close selcted scael the data
       {if (length(input_comp) > 1 & input_metric == "Adj.Close") dygraphs::dyRebase(.,value = 100) else . } %>%
       dygraphs::dyOptions(axisLineWidth = 2, drawGrid = FALSE) %>%
       dygraphs::dyLegend() %>%
       dygraphs::dyShading(from = min(df_dates), to = max(df_dates), color = "white") %>%
-      {if (input_roll == T) dygraphs::dyRoller(., rollPeriod = 7, showRoller = F) else .}
+      {if (input_roll == T) dygraphs::dyRoller(., rollPeriod = 7, showRoller = F) else .} #### smoothing
 
 
 
@@ -44,8 +51,9 @@ stock_plotter <- function(df, input_metric, input_comp, input_roll){
 
 
 
-
-
+###### this function plots the covid data according to user input
+#'@export
+#'@rdname comparison_plotter
 covid_plotter <- function(df, selected_metric, input_country, input_roll = F){
 
   ## select relevant variables
@@ -63,15 +71,17 @@ covid_plotter <- function(df, selected_metric, input_country, input_roll = F){
   ##### format selected metrics so it looks nicer
   selected_metric <- gsub("_", " ", selected_metric) %>% stringr::str_to_title()
 
-
+  ###### set up dygraph
   dygraphs::dygraph(don,
                     ylab = selected_metric,
                     group = "comp_plots",
                     main = glue::glue("COVID-19 numbers")) %>%
+    #### when mutiple countries selected change label shown on hover
    {if (length(input_country) > 1) dygraphs::dySeries(.) else dygraphs::dySeries(.,label = input_country)}  %>%
     dygraphs::dyOptions(axisLineWidth = 2, drawGrid = FALSE) %>%
     dygraphs::dyLegend() %>%
     dygraphs::dyShading(from = min(df$date), to = max(df$date), color = "white") %>%
+    #### when smoothin selected show moving averages
     {if (input_roll == T) dygraphs::dyRoller(., rollPeriod = 7, showRoller = F) else .}
 
 

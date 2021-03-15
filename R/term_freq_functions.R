@@ -1,3 +1,8 @@
+
+##### here are all function for the word frequency tab
+
+
+
 ##### additional emoji filter words (most emoji words were
 # already marked in preprocess)
 emoji_words <- c(
@@ -20,6 +25,7 @@ emoji_words <- c(
 
 ################################################################
 ####################### function for preprocessing
+#### takes df and filters accroding to user
 #'@export
 #'@rdname term_freq_computers
 word_freq_data_wrangler <- function(df, input_date1, input_date2,
@@ -47,7 +53,7 @@ if (length(strsplit(input_comp, " ")[[1]]) > 1){
   input_comp <- corpus::stem_snowball(input_comp, algorithm = tolower(input_lang))
 }
 
-
+### fitler for correct date
 df <-  df %>%
   filter(between(date, as.Date(input_date1), as.Date(input_date2)) &
                    language == tolower(input_lang))  %>%
@@ -108,9 +114,12 @@ word_cloud_plotter <- function(df, input_size = 1){
 
 # term freq bar plot
 term_freq_bar_plot <- function(df){
+  ### remove scientifc notation
   options(scipen=999)
 
+  #### show values in thousands
 df$n <- df$n / 1000
+### create plot
 p <-   df %>%
 
     ggplot(aes(reorder(x = word, n), y = n, label = word)) +
@@ -134,7 +143,7 @@ plotly::ggplotly(p,
 #'@rdname term_freq_computers
 word_filter_time_series_plotter <- function(df){
 
-
+## create plot
 p <- df %>%
    group_by(date) %>%
     summarise(n = sum(N)) %>%

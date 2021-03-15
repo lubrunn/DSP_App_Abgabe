@@ -1,3 +1,6 @@
+
+### here is the function that computes the histograms
+
 #'@export
 #'@rdname histogram_plotter
 #'

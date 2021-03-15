@@ -24,7 +24,7 @@ emoji_words <- c(
 ### filter out rows that are same but with switches item1 and item2
 
 
-df <- fread("C:/Users/lukas/OneDrive - UT Cloud/Data/Twitter/cleaned_sentiment/En_NoFilter/En_NoFilter_2021-02-19.csv")
+df <- fread("C:/Users/lukas/OneDrive - UT Cloud/Data/Twitter/cleaned_sentiment/En_NoFilter/En_NoFilter_2018-11-30.csv")
 
 input_n_all <- 50
 
@@ -32,26 +32,29 @@ input_rt = 0
 input_likes = 0
 input_length = 0
 
-input_search_term <- NULL
+input_search_term <- "trump"
 input_username <- NULL
 
-input_n_subset <- 50
+input_n_subset <- 20
 
-input_min_corr <- 0.15
+input_min_corr <- 0.1
 
-input_emo = T
+input_emo = F
 
 # unneest the words
 network_df <-  df %>%
+  # if list provided to specify tweets to look at then extract only those tweets
+  { if (!is.null(input_search_term)) filter(., grepl(paste(input_search_term, collapse="|"), text)) else . } %>%
+  { if (is.null(input_username)) filter(., grepl(paste(input_username, collapse="|"), username)) else . } %>%
   select(doc_id, text, created_at) %>%
   tidytext::unnest_tokens(word, text) %>%
   left_join(subset(df, select = c(doc_id, text, retweets_count, likes_count,
                                   tweet_length, username, sentiment))) %>%
 
-  # filter out uncommon words
-  group_by(word) %>%
-  filter(n() >= input_n_all) %>%
-  ungroup() %>%
+  # # filter out uncommon words
+  # group_by(word) %>%
+  # filter(n() >= input_n_all) %>%
+  # ungroup() %>%
 
   # filter out according to user
   filter(
@@ -59,9 +62,7 @@ network_df <-  df %>%
       likes_count >= input_likes &
       tweet_length >= input_length
   ) %>%
-  # if list provided to specify tweets to look at then extract only those tweets
-  { if (!is.null(input_search_term)) filter(., grepl(paste(input_search_term, collapse="|"), text)) else . } %>%
-  { if (is.null(input_username)) filter(., grepl(paste(input_username, collapse="|"), username)) else . } %>%
+
   # count number of words
   group_by(word) %>%
   filter(n() >= input_n_subset) %>%
@@ -81,7 +82,7 @@ network_df <-  df %>%
 
 network_df <- network_df[!duplicated(t(apply(network_df,1,sort))),]
 
-
+network_df <- head(network_df, 2000)
 
 network <- network_df %>% # optional
   igraph::graph_from_data_frame(directed = FALSE)
@@ -133,7 +134,7 @@ networkD3::forceNetwork(
   NodeID = 'name',
   Group = 'Group',
   opacity = 0.8,
-  Value = 'value',
+  #Value = 'value',
   #Nodesize = 'Degree',
   Nodesize = "size", # size of nodes, is column name or column number of network.D3$nodes df
   radiusCalculation = networkD3::JS("Math.sqrt(d.nodesize)+2"), # radius of nodes (not sure whats difference to nodesize but has different effect)

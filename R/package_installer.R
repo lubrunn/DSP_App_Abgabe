@@ -60,5 +60,6 @@
 # if (!require("forecast")) install.packages("forecast")
 # if (!require("timetk")) install.packages("timetk")
 # if (!require("xgboost")) install.packages("xgboost")
+# if (!require("rintrojs")) install.packages("rintrojs")
 #
 #

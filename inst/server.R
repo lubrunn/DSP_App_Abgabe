@@ -1720,9 +1720,22 @@ server <- function(input, output, session) {
         comp_name <- glue("{names(purrr::flatten(company_terms))[purrr::flatten(company_terms) == input$comp]} Tweets")
       }
 
+      num_tweets <- as.integer(round(sum(df_need$N)))
+      num_tweets <- formatC(num_tweets, format="f", big.mark = ",", digits=0)
+
+      num_tweets_avg <- formatC(round(mean(df_need$N)), format="f", big.mark = ",", digits=0)
+
       ##### set up string for header of time series graphs
-      glue("{comp_name} ({round(sum(df_need$N))} tweets total,
-           {round(mean(df_need$N))} on average per day)")
+      glue("{comp_name} ({num_tweets} tweets total,
+           {num_tweets_avg} on average per day)")
+    })
+
+
+    ###### title for summary statistics
+    output$sum_stats_table_header <- renderText({
+      header <- number_tweets_info_desc()
+      header <- sub( "total.*$", "", header )
+      glue("{header} total)")
     })
 
 
@@ -2092,6 +2105,10 @@ server <- function(input, output, session) {
   ###### network plot
 
   data_getter_net_react <- reactive({
+    if(length(input$dates_net) > 1){
+      days_inrange <- difftime(as.Date(input$dates_net[2]) ,as.Date(input$dates_net[1]) , units = c("days"))
+      validate(need(days_inrange <= 1,"More than 2 days selected. Please choose a maximum of 2 days."))
+      }
 
 
     lang <- stringr::str_to_title(input$lang_net)
@@ -2134,7 +2151,7 @@ server <- function(input, output, session) {
 
       if(length(input$dates_net) > 1){
       days_inrange <- difftime(as.Date(input$dates_net[2]) ,as.Date(input$dates_net[1]) , units = c("days"))
-      if (days_inrange > 2){
+      if (days_inrange >= 2){
 
       validate("More than 2 days selected. Please choose a maximum of 2 days.")
 
@@ -2159,7 +2176,7 @@ server <- function(input, output, session) {
 
 
 
-browser()
+
 
 
     ##### disable render plot button so no mutliple firing possible

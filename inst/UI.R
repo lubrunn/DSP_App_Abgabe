@@ -1060,7 +1060,7 @@ ui <- fluidPage(
                                    conditionalPanel(condition="input.tabs == 'Summary statistics'",
                                                     tabs_custom_xgb()),
                                    conditionalPanel(condition="input.tabs == 'AR & MA structure'",
-                                                    radioButtons("lag_tabs","How do you want to proceed?",choices = c("default","custom"),
+                                                    radioButtons("lag_tabs","How do you want to generate your dataset?",choices = c("default","custom"),
                                                                  selected = "default")  %>% shinyhelper::helper(type = "markdown",
                                                                                                                 title = "Inline Help",
                                                                                                                 content = "default_lag_selection",
@@ -1095,7 +1095,9 @@ ui <- fluidPage(
                                                                                                                    fade = TRUE,
                                                                                                                    size = "s"),
                                                     actionButton("run", "Run Model"),
+                                                    shinyjs::hidden(p(id = "text1", "Processing...")),
                                                     actionButton("pred", "Predict"),
+                                                    shinyjs::hidden(p(id = "text2", "Please run the model first")),
                                                     selectInput("forecast_plot_choice","Select plot to show:",
                                                                 c("Forecasted","Full"),selected="Full")
 
@@ -1110,15 +1112,18 @@ ui <- fluidPage(
                                                     radioButtons("ftpye2","Select covariates for forecast",choices = c("no_features","past_features","forecasted_features"),
                                                                  selected = "forecasted_features"),
                                                     actionButton("run2", "Run Model on the full dataset"),
-                                                    actionButton("pred2", "Predict"))
+                                                    shinyjs::hidden(p(id = "text1_act", "Processing...")),
+                                                    actionButton("pred2", "Predict")),
+                                                    shinyjs::hidden(p(id = "text2_act", "Please run the model first")),
+
 
                                  ),
                                  mainPanel(
                                    tabsetPanel(type = "tabs", id = "tabs",
                                                tabPanel("Summary statistics",value="Summary statistics",
                                                         tableOutput("xgb_summary"),
-                                                        tableOutput("correlation_xgb")
-                                                        # plotOutput("correlation_plot")
+                                                        plotOutput("correlation_xgb")
+
                                                ),
                                                tabPanel("AR & MA structure", value = "AR & MA structure",
                                                         conditionalPanel(
@@ -1128,21 +1133,25 @@ ui <- fluidPage(
                                                           condition = "input.correlation_type == 'PACF'  && input.lag_tabs == 'custom'",
                                                           plotOutput("pacf_plot_xgb")),
                                                         conditionalPanel("input.lag_tabs == 'custom'",
+                                                                         textOutput("error_text"),
                                                                          DT::dataTableOutput("tableCustom")),
                                                         conditionalPanel("input.lag_tabs == 'default'",
                                                                          DT::dataTableOutput("df_xgb_default"))
                                                ),
                                                tabPanel("Validity", value = "Validity",
-                                                        verbatimTextOutput("model_xgb"),
-                                                        tableOutput("model_fit"),
-                                                        verbatimTextOutput("serial_out_xgb"),
-                                                        dygraphs::dygraphOutput("forecast_xgb"),
+                                                        #verbatimTextOutput("model_xgb"),
+                                                        tableOutput("model_fit")%>% shinycssloaders::withSpinner(type = 5),
+                                                        tableOutput("serial_out_xgb"),
+                                                        htmlOutput("test_text_xgb"),
+                                                        dygraphs::dygraphOutput("forecast_xgb")%>% shinycssloaders::withSpinner(type = 5),
                                                         tableOutput("xgb_metrics")
                                                ),
                                                tabPanel("Actual forecast", value = "Actual forecast",
-                                                        verbatimTextOutput("model_xgb2"),
-                                                        verbatimTextOutput("serial_out_xgb_for"),
+                                                        tableOutput("model_fit_act")%>% shinycssloaders::withSpinner(type = 5),
+                                                        tableOutput("serial_out_xgb_for"),
+                                                        htmlOutput("test_text_xgb"),
                                                         dygraphs::dygraphOutput("plot_1_xgb_actual")
+
                                                )
                                    )
                                  )

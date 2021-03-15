@@ -40,5 +40,7 @@
 #' @import timetk
 #' @import xgboost
 #' @import rintrojs
+#' @import stringr
+#' @import TTR
 NULL
 

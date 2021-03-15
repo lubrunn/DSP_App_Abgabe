@@ -11,6 +11,11 @@ time_series_plotter2 <- function(df, filter_type, selected_metrics, num_tweets, 
   ### filter dates
   df <- df %>% filter(between(created_at, as.Date(input_dates1), as.Date(input_dates2)))
 
+  ### in case there is not data for the selected dates
+  if(dim(df)[1] ==0){
+    return(NULL)
+  }
+
   # replace tweet length with length
   selected_metrics_new <-   stringr::str_replace(selected_metrics, "tweet_length", "length")
   if(!is.null(selected_metrics)){

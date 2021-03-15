@@ -24,7 +24,7 @@ not at all compared to appearing alone. It helps indentifying word combinations 
 of occurences. For more information you may visit <a href='https://www.tidytextmining.com/ngrams.html'>Tidytextmining</a> .
 <br/>
 <br/>
-Note that the computation of the word network may take some time, hence, we only allow for the analysis of a maximum of 5 days.
+Note that the computation of the word network may take some time, hence, we only allow for the analysis of a maximum of 2 days.
 However, you may search more precisely for tweets containing specific words or for tweets from specific users.
 Once started, the computation cannot be started again until the word network
 has been fully computed. But you can cancel the running process in case you want to change parameters without waiting for the current

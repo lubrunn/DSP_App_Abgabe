@@ -65,7 +65,14 @@ df <-  df %>%
   {if (search_term != "") filter(.,grepl(search_term, word)) else .} %>% # only keep what contain search term
   select(-emo)
 
-return(df)
+#### acount for empty df
+if (dim(df)[1] == 0){
+  return()
+} else {
+  return(df)
+}
+
+
 }
 
 ###### compute total number of unique words/bigrams

@@ -833,20 +833,22 @@ ui <- fluidPage(
                                           }')),
   #shinythemes::themeSelector(),
   #titlePanel("Sentiment_Covid_App"),
-  navbarPage("APP",
+  navbarPage("DSP",
 
              dir_setter_panel(),
              twitter_main_panel(),
 
              tabPanel("Comparison",
-                      tags$br(),
-                      tags$br(),
+
                       tags$br(),
                       fluidRow(column(4,
                                       ######## stocks
-                                      wellPanel(tags$h4("Stocks"),
-
-                                                #selectize_Stocks(COMPONENTS_DE()),
+                                      wellPanel(
+                                                div(style="display: inline-block;",tags$h4("Stocks")),
+                                                div(style="display: inline-block;vertical-align:top; width: 15px;",HTML("<br>")),
+                                                actionButton("instructions_comp", "Instructions"),
+                                                tags$hr(),
+                                                rintrojs::introBox(
                                                 selectInput("stocks_comp", "Select a company or index",
                                                             company_terms_stock, multiple = T,
                                                             selected = "AAPL"),
@@ -860,6 +862,10 @@ ui <- fluidPage(
                                                                                   no = icon("remove",
                                                                                             lib = "glyphicon")),
                                                                                 size = "s"),
+                                                data.step = 1,
+                                                data.intro = "Here you may select the stock or index you would like to analyse. You can choose to either
+                                                display the adjusted closing price of a specific day or the return."
+                                                ),
 
                                                 # actionButton("reset", "clear selected"),
                                                 shinyWidgets::materialSwitch(inputId = "roll_stock_comp", label = "7 day smoothing?", value = F)

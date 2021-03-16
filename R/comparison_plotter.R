@@ -15,7 +15,7 @@ stock_plotter <- function(df, input_metric, input_comp, input_roll){
       filter(
           grepl(paste(input_comp, collapse = "|"), name))
     ## convert to wide format for dygraph
-    df <- df %>% pivot_wider(names_from = name, values_from = input_metric)
+    df <- df %>% tidyr::pivot_wider(names_from = name, values_from = input_metric)
 
     ### replace missing values in dow with first value they had (went public on 01/04/2019)
     if ("DOW" %in% names(df)){
@@ -75,7 +75,7 @@ covid_plotter <- function(df, selected_metric, input_country, input_roll = F){
   dygraphs::dygraph(don,
                     ylab = selected_metric,
                     group = "comp_plots",
-                    main = glue::glue("COVID-19 numbers")) %>%
+                    main = glue::glue("Control Variable")) %>%
     #### when mutiple countries selected change label shown on hover
    {if (length(input_country) > 1) dygraphs::dySeries(.) else dygraphs::dySeries(.,label = input_country)}  %>%
     dygraphs::dyOptions(axisLineWidth = 2) %>%
@@ -89,6 +89,33 @@ covid_plotter <- function(df, selected_metric, input_country, input_roll = F){
   }
 
 
+#'@rdname comparison_plotter
+##### other controls plot
+controls_plotter  <- function(df, input_controls_comp, input_ControlCountry, input_roll){
+
+### put values into seperate df
+  df_values <- df %>% select(-Date)
+
+
+  ## convert to time series
+  don <- xts::xts(df_values, as.Date(df$Date))
+
+  ### plot
+  dygraphs::dygraph(don,
+                    ylab = input_controls_comp,
+                    group = "comp_plots",
+                    main = glue::glue("Control Variable")) %>%
+    #### when mutiple countries selected change label shown on hover
+    {if (length(input_ControlCountry) > 1) dygraphs::dySeries(.) else dygraphs::dySeries(.,label = input_ControlCountry)}  %>%
+    dygraphs::dyOptions(axisLineWidth = 2) %>%
+    dygraphs::dyLegend() %>%
+    dygraphs::dyShading(from = min(df$Date), to = max(df$Date), color = "white") %>%
+    #### when smoothin selected show moving averages
+    {if (input_roll == T) dygraphs::dyRoller(., rollPeriod = 7, showRoller = F) else .}
+
+
+
+}
 
 
 

@@ -428,7 +428,7 @@ histo_output_tab <- mainPanel(
     shinycssloaders::withSpinner(type = 5)
 )
 
-date_avail <- as.character(Sys.Date() - lubridate::days(1))
+
 
 #### sidebar layout for descriptives
 twitter_tab_desc <- tabPanel( "Descriptives",
@@ -478,8 +478,8 @@ twitter_tab_desc <- tabPanel( "Descriptives",
                               rintrojs::introBox(
                               shinyWidgets::airDatepickerInput("dates_desc", "Date range:",
                                                                range = T,
-                                                               value = c("2018-11-30", date_avail),
-                                                               maxDate = date_avail, minDate = "2018-11-30",
+                                                               value = c("2018-11-30", "2021-02-19"),
+                                                               maxDate = "2021-02-19", minDate = "2018-11-30",
                                                                clearButton = T, update_on = "close"),
                               data.step = 3,
                               data.intro = "Here you can select the date range you would like to analyse. We have data from
@@ -678,7 +678,7 @@ network_sidebar <- shinyWidgets::dropdown(
           shinyWidgets::airDatepickerInput("dates_net", "Select a maximum of 2 days",
                                            range = TRUE,
                                            value = "2018-11-30",
-                                           maxDate = date_avail, minDate = "2018-11-30",
+                                           maxDate = "2021-02-19", minDate = "2018-11-30",
                                            clearButton = T, update_on = "close",
                                            multiple = 5),
           textOutput("date_checker_net"),
@@ -831,7 +831,7 @@ ui <- fluidPage(
                                           }')),
   #shinythemes::themeSelector(),
   #titlePanel("Sentiment_Covid_App"),
-  navbarPage("DSP",
+  navbarPage("APP",
 
              dir_setter_panel(),
              twitter_main_panel(),
@@ -867,9 +867,26 @@ ui <- fluidPage(
                       )),
 
 
+                      tags$br(),
+                      tags$br(),
+                      tags$br(),
+                    ######## covid
+                      fluidRow(column(4,
+
+                      wellPanel(tags$h4("COVID-19"),
+                        selectize_corona(),
+                        selectInput("CoronaCountry","Country",c("Germany","USA" = "United States"),selected = "United States",
+                                    multiple = T),
+                        shinyWidgets::materialSwitch(inputId = "roll_covid_comp", label = "7 day smoothing?", value = F)
+                        )),
+
+                      column(8,
+                        dygraphs::dygraphOutput("covid_comp")
+                      )),
 
 
-
+                    tags$br(),
+                    tags$br(),
                     tags$br(),
 
                       fluidRow(column(4,
@@ -956,23 +973,7 @@ ui <- fluidPage(
 
                       column(8,
                         dygraphs::dygraphOutput("twitter_comp")
-                      )),
-                    tags$br(),
-                    tags$br(),
-                    tags$br(),
-                    ######## covid
-                    fluidRow(column(4,
-
-                                    wellPanel(tags$h4("COVID-19"),
-                                              selectize_corona(),
-                                              selectInput("CoronaCountry","Country",c("Germany","USA" = "United States"),selected = "United States",
-                                                          multiple = T),
-                                              shinyWidgets::materialSwitch(inputId = "roll_covid_comp", label = "7 day smoothing?", value = F)
-                                    )),
-
-                             column(8,
-                                    dygraphs::dygraphOutput("covid_comp")
-                             ))
+                      ))
              ),#close tabPanel Corona
 
 

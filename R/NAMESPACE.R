@@ -40,5 +40,6 @@
 #' @import timetk
 #' @import xgboost
 #' @import rintrojs
+#' @import cicerone
 NULL
 

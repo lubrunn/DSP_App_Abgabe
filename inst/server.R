@@ -126,12 +126,12 @@ server <- function(input, output, session) {
   output$Stock_Granger <- renderUI({
     validate(need(correct_path() == T, "Please choose the correct path"))
     if (input$country_granger == "Germany"){
-      input <- selectizeInput("Stock_Granger","Choose dependent variable:",
+      input <- selectizeInput("Stock_Granger","Choose company or Index:",
                               #c(COMPONENTS_DE()[["Company.Name"]],"GDAXI"),
                               company_terms_stock_ger,
                               selected = "DAX",multiple = FALSE)
     } else {
-      input <- selectizeInput("Stock_Granger","Choose dependent variable:",
+      input <- selectizeInput("Stock_Granger","Choose company or Index:",
                               #c(COMPONENTS_US()[["Company.Name"]],"DJI"),
                               company_terms_stock_us,
                               selected = "Dow Jones Industrial",multiple = FALSE)
@@ -143,11 +143,20 @@ server <- function(input, output, session) {
   output$ControlsGranger <- renderUI({
     if (input$country_granger == "Germany"){
       input <- selectizeInput("Controls_GRANGER","Choose control variables:",
-                              c(colnames(global_controls_test_DE())[-1],"DAX"),selected = "VIX",multiple = FALSE)
+                              c("Google-Trends Coronavirus"="coronavirus",
+                                "VIX"="VIX",
+                                "Financial Distress Index"="OFR.FSI",
+                                "Economic Uncertainty Index"="WLEMUINDXD",
+                                "DAX"="DAX"),selected = "VIX",multiple = FALSE)
+                              #c(colnames(global_controls_test_DE())[-1],"DAX"),selected = "VIX",multiple = FALSE)
       #c(colnames(res[3:length(res)])),multiple = TRUE
     }else{
       input <- selectizeInput("Controls_GRANGER","Choose control variables:",
-                              c(colnames(global_controls_test_US())[-1],"DJI"),selected = "VIX",multiple = FALSE)
+                              c("Google-Trends Coronavirus"="coronavirus",
+                                "VIX"="VIX",
+                                "Financial Distress Index"="OFR.FSI",
+                                "Economic Uncertainty Index"="WLEMUINDXD",
+                                "DJI"="DJI"),selected = "VIX",multiple = FALSE)
     }
   })
 
@@ -173,6 +182,7 @@ server <- function(input, output, session) {
 
   granger_data <- reactive({
     validate(need(correct_path() == T, "Please choose the correct path"))
+    validate(need(input$senti_yesno_gra==TRUE | input$corona_measurement_granger != ""|input$Controls_GRANGER!="", "Choose the second variable!"))
     req(input$Stock_Granger)
     if (input$country_granger == "Germany"){
       granger1 <- dplyr::filter(stockdata_DE(),
@@ -253,12 +263,14 @@ server <- function(input, output, session) {
 
 
 
+
     # ifelse(input$Controls_GRANGER!="",
     #        granger <- granger[c("Dates",input$Granger_outcome,input$Controls_GRANGER)],
     #        granger <- granger[c("Dates",input$Granger_outcome,input$corona_measurement_granger)])
 
     granger[is.na(granger)]<-0
     granger
+
   })
 
   observeEvent(input$Sentiment_type_gra, {                         #Observe event from input (model choices)
@@ -390,27 +402,37 @@ server <- function(input, output, session) {
   # })
 
   output$stocks_granger <- dygraphs::renderDygraph({
+
     plotdata <- xts::xts(granger_data()[input$Granger_outcome],order.by=granger_data()[["Dates"]])
-    dygraphs::dygraph(plotdata)
+    dygraphs::dygraph(plotdata,
+                      ylab = colnames(granger_data()[2]),
+                      main = glue::glue("Plot of the first variable"))
   })
+
 
 
   output$second_granger <- dygraphs::renderDygraph({
+
     plotdata <- xts::xts(granger_data()[colnames(granger_data())[3]],order.by=granger_data()[["Dates"]])
 
-    dygraphs::dygraph(plotdata)
+    dygraphs::dygraph(plotdata,
+                      ylab = colnames(granger_data()[3]),
+                      main = glue::glue("Plot of the second variable"))
   })
 
   output$grangertext1 <- renderUI({
+
     str1 <- paste("The optimal lag order for the VAR model using the Akaike information criterium (AIC)  is ",optlags()," lags.")
     htmltools::HTML(paste(str1))
   })
 
   output$optimallags <- renderPrint({
+
     vars::VARselect(granger_data()[-1],lag.max = 7, type = "const")
   })
 
   output$grangertext2 <- renderUI({
+
     if (nrow(dickey_fuller()) != nrow(granger_data())){
       str2 <- paste("The Dickey Fuller test found one of the timeseries to be non-stationary:")
     }else{
@@ -422,14 +444,17 @@ server <- function(input, output, session) {
 
   #first variable
   output$dickey_fuller <- renderPrint({
+
     tseries::adf.test(granger_data()[[2]],k=optlags())
   })
   #second variable
   output$dickey_fuller_second <- renderPrint({
+
     tseries::adf.test(granger_data()[[3]],k=optlags())
   })
 
   output$grangertext3 <- renderUI({
+
     req(nrow(dickey_fuller()) != nrow(granger_data()))
     str3 <- paste("Differencing the series ",nrow(granger_data()) - nrow(dickey_fuller()),"times achieved stationarity:")
   })
@@ -437,11 +462,13 @@ server <- function(input, output, session) {
 
   #first variable after differencing
   output$dickey_fuller_diff <- renderPrint({
+
     req(nrow(dickey_fuller()) != nrow(granger_data()))
     tseries::adf.test(dickey_fuller()[[2]],k=optlags())
   })
   #second variable after differencing
   output$dickey_fuller_second_diff <- renderPrint({
+
     req(nrow(dickey_fuller()) != nrow(granger_data()))
     tseries::adf.test(dickey_fuller()[[3]],k=optlags())
   })
@@ -461,6 +488,7 @@ server <- function(input, output, session) {
   # })
 
   output$granger_satz <- renderUI({
+
     if(input$direction_granger == TRUE){
       if (granger_result()["p.value"] < 0.1){
         str1 <- paste(htmltools::em(colnames(granger_data())[3]), " granger causes ",htmltools::em(input$Granger_outcome),"of",input$Stock_Granger)
@@ -548,12 +576,12 @@ server <- function(input, output, session) {
   output$stock_regression <- renderUI({
     validate(need(correct_path() == T, "Please choose the correct path"))
     if (input$country_regression == "Germany"){
-      input <- selectizeInput("Stock_Regression","Choose dependent variable:",
+      input <- selectizeInput("Stock_Regression","Choose company or Index:",
                               #c(COMPONENTS_DE()[["Company.Name"]],"GDAXI"),
                               company_terms_stock_ger,
                               selected = "DAX",multiple = FALSE)
     } else {
-      input <- selectizeInput("Stock_Regression","Choose dependent variable:",
+      input <- selectizeInput("Stock_Regression","Choose company or Index:",
                               #c(COMPONENTS_US()[["Company.Name"]],"DJI"),
                               company_terms_stock_us,
                               selected = "Dow Jones Industrial",multiple = FALSE)
@@ -565,12 +593,20 @@ server <- function(input, output, session) {
     #res$name <- NULL
     validate(need(correct_path() == T, "Please choose the correct path"))
     if (input$country_regression == "Germany"){
-      input <- selectizeInput("Controls","Choose control variables:",
-                              c(colnames(global_controls_test_DE())[-1],"DAX"),multiple = TRUE)
+      input <- selectizeInput("Controls","Control variables:",
+                              c("Google-Trends Coronavirus"="coronavirus",
+                                "VIX"="VIX",
+                                "Financial Distress Index"="OFR.FSI",
+                                "Economic Uncertainty Index"="WLEMUINDXD",
+                                "DAX"="DAX"),selected = "VIX",multiple = FALSE)
       #c(colnames(res[3:length(res)])),multiple = TRUE
     }else{
-      input <- selectizeInput("Controls","Choose control variables:",
-                              c(colnames(global_controls_test_US())[-1],"DJI"),multiple = TRUE)
+      input <- selectizeInput("Controls","Control variables:",
+                              c("Google-Trends Coronavirus"="coronavirus",
+                                "VIX"="VIX",
+                                "Financial Distress Index"="OFR.FSI",
+                                "Economic Uncertainty Index"="WLEMUINDXD",
+                                "DJI"="DJI"),selected = "VIX",multiple = FALSE)
     }
 
   })
@@ -958,12 +994,12 @@ server <- function(input, output, session) {
   output$stock_regression_var <- renderUI({
     validate(need(correct_path() == T, "Please choose the correct path"))
     if (input$country_regression_var == "Germany"){
-      input <- selectizeInput("Stock_Regression_var","Choose dependent variable:",
+      input <- selectizeInput("Stock_Regression_var","Choose company or Index:",
                               #c(COMPONENTS_DE()[["Company.Name"]],"GDAXI"),
                               company_terms_stock_ger,
                               selected = "DAX",multiple = FALSE)
     } else {
-      input <- selectizeInput("Stock_Regression_var","Choose dependent variable:",
+      input <- selectizeInput("Stock_Regression_var","Choose company or Index:",
                               #c(COMPONENTS_US()[["Company.Name"]],"DJI"),
                               company_terms_stock_us,
                               selected = "Dow Jones Industrial",multiple = FALSE)
@@ -974,12 +1010,20 @@ server <- function(input, output, session) {
   output$Controls_var <- renderUI({
     validate(need(correct_path() == T, "Please choose the correct path"))
     if (input$country_regression_var == "Germany"){
-      input <- selectizeInput("Controls_var","Choose control variables:",
-                              c("",colnames(global_controls_test_DE())[-1],"DAX"),selected = "",multiple = TRUE)
+      input <- selectizeInput("Controls_var","Control variables:",
+                              c("Google-Trends Coronavirus"="coronavirus",
+                                "VIX"="VIX",
+                                "Financial Distress Index"="OFR.FSI",
+                                "Economic Uncertainty Index"="WLEMUINDXD",
+                                "DAX"="DAX"),selected = "VIX",multiple = FALSE)
       #c(colnames(res[3:length(res)])),multiple = TRUE
     }else{
-      input <- selectizeInput("Controls_var","Choose control variables:",
-                              c("",colnames(global_controls_test_US())[-1],"DJI"),selected = "", multiple = TRUE)
+      input <- selectizeInput("Controls_var","Control variables:",
+                              c("Google-Trends Coronavirus"="coronavirus",
+                                "VIX"="VIX",
+                                "Financial Distress Index"="OFR.FSI",
+                                "Economic Uncertainty Index"="WLEMUINDXD",
+                                "DJI"="DJI"),selected = "VIX",multiple = FALSE)
     }
 
   })
@@ -1287,7 +1331,7 @@ server <- function(input, output, session) {
       plot <- xts::xts(plot[c("forecast","actual")],order.by=plot[["a"]])
 
       dygraphs::dygraph(plot) %>%
-        dyEvent(final_regression_df_var()$Dates[(nrow(forecast_data())+1)], "Start of prediction", labelLoc = "bottom")
+        dyEvent(final_regression_df_var()$Dates[(nrow(forecast_data()))], "Start of prediction", labelLoc = "bottom")
 
     }
 
@@ -1410,13 +1454,23 @@ server <- function(input, output, session) {
   #forecast
   forecast_var_real <- reactive({
     fcast <- stats::predict(var_model_real(), n.ahead = input$ahead)
-    if (ncol(forecast_data_real()) == 1) {
-      x <- fcast$pred[1:input$ahead]
-      x <- cumsum(x) + forecast_data_real()[nrow(forecast_data_real()),1]
-    }else {
-      x <- fcast$fcst[[1]]
-      x <- x[,1]
-      x <- cumsum(x) + forecast_data_real()[nrow(forecast_data_real()),1]
+    if(nrow(stationary())!=nrow(forecast_data())){
+      if (ncol(forecast_data_real()) == 1) {
+        x <- fcast$pred[1:input$ahead]
+        x <- cumsum(x) + forecast_data_real()[nrow(forecast_data_real()),1]
+      }else {
+        x <- fcast$fcst[[1]]
+        x <- x[,1]
+        x <- cumsum(x) + forecast_data_real()[nrow(forecast_data_real()),1]
+      }
+    }else{
+      if (ncol(forecast_data_real()) == 1) {
+        x <- fcast$pred[1:input$ahead]
+      }else {
+        x <- fcast$fcst[[1]]
+        x <- x[,1]
+      }
+
     }
     x
   })
@@ -2935,12 +2989,12 @@ server <- function(input, output, session) {
   output$stock_regression_xgb <- renderUI({
     req( correct_path()== T)
     if (input$country_regression_xgb == "Germany"){
-      input <- selectizeInput("Stock_Regression_xgb","Choose dependent variable:",
+      input <- selectizeInput("Stock_Regression_xgb","Choose company or Index:",
                               #c(COMPONENTS_DE()[["Company.Name"]],"GDAXI"),
                               company_terms_stock_ger,
                               selected = "DAX",multiple = FALSE)
     } else {
-      input <- selectizeInput("Stock_Regression_xgb","Choose dependent variable:",
+      input <- selectizeInput("Stock_Regression_xgb","Choose company or Index:",
                               #c(COMPONENTS_US()[["Company.Name"]],"DJI"),
                               company_terms_stock_us,
                               selected = "Dow Jones Industrial",multiple = FALSE)
@@ -2953,12 +3007,20 @@ server <- function(input, output, session) {
     #res$name <- NULL
     req( correct_path()== T)
     if (input$country_regression_xgb == "Germany"){
-      input <- selectizeInput("Controls_xgb","Choose control variables:",
-                              c(colnames(global_controls_test_DE())[-1],"DAX"),multiple = TRUE)
+      input <- selectizeInput("Controls_xgb","Control variables:",
+                              c("Google-Trends Coronavirus"="coronavirus",
+                                "VIX"="VIX",
+                                "Financial Distress Index"="OFR.FSI",
+                                "Economic Uncertainty Index"="WLEMUINDXD",
+                                "DAX"="DAX"),selected = "VIX",multiple = FALSE)
       #c(colnames(res[3:length(res)])),multiple = TRUE
     }else{
-      input <- selectizeInput("Controls_xgb","Choose control variables:",
-                              c(colnames(global_controls_test_US())[-1],"DJI"),multiple = TRUE)
+      input <- selectizeInput("Controls_xgb","Control variables:",
+                              c("Google-Trends Coronavirus"="coronavirus",
+                                "VIX"="VIX",
+                                "Financial Distress Index"="OFR.FSI",
+                                "Economic Uncertainty Index"="WLEMUINDXD",
+                                "DJI"="DJI"),selected = "VIX",multiple = FALSE)
     }
 
   })
@@ -3211,28 +3273,33 @@ server <- function(input, output, session) {
     ###### clean input df
     res <- res %>% dplyr::select(-X,-location)
     ###### extract column based on input
-    res <- res[c("date",input$corona_xgb)]
+    ifelse(input$corona_measurement_xgb=="",res <- res[c("date")],res <- res[c("date",input$corona_measurement_xgb)])
+    #res <- res[c("date",input$corona_measurement_xgb)]
+
     res
   })
 
   corona_data_xgb <- reactive({
     ##### require database
     req( correct_path()== T)
-    req(input$country_corona_xgb)
+    req(input$country_regression_xgb)
     ##### call function: extract corona file for specific country
-    CORONA_xgb(input$country_corona_xgb)
+    test <- input$country_regression_xgb
+    ifelse(test=="USA",test <- "United States",test <- test)
+    #CORONA_xgb(input$country_regression_xgb)
+    CORONA_xgb(test)
   })
 
 
-  output$corona_vars_xgb <- renderUI({
-    req( correct_path()== T)
-    res <- corona_data_xgb()
-    #### delete redundant columns
-    res <- res %>% dplyr::select(-X,-location,-date)
-    input <- selectizeInput("corona_xgb","Choose a corona related variable:",
-                            names(res),multiple = TRUE)
-
-  })
+  # output$corona_vars_xgb <- renderUI({
+  #   req( correct_path()== T)
+  #   res <- corona_data_xgb()
+  #   #### delete redundant columns
+  #   res <- res %>% dplyr::select(-X,-location,-date)
+  #   input <- selectizeInput("corona_xgb","Choose a corona related variable:",
+  #                           names(res),multiple = TRUE)
+  #
+  # })
 
   observeEvent(input$reset_corona_xgb,{
     #### reset selection of corona dropdown

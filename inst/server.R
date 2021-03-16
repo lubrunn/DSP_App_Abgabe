@@ -173,6 +173,7 @@ server <- function(input, output, session) {
 
   granger_data <- reactive({
     validate(need(correct_path() == T, "Please choose the correct path"))
+    validate(need(input$senti_yesno_gra==TRUE | input$corona_measurement_granger != ""|input$Controls_GRANGER!="", "Choose the second variable!"))
     req(input$Stock_Granger)
     if (input$country_granger == "Germany"){
       granger1 <- dplyr::filter(stockdata_DE(),
@@ -253,12 +254,14 @@ server <- function(input, output, session) {
 
 
 
+
     # ifelse(input$Controls_GRANGER!="",
     #        granger <- granger[c("Dates",input$Granger_outcome,input$Controls_GRANGER)],
     #        granger <- granger[c("Dates",input$Granger_outcome,input$corona_measurement_granger)])
 
     granger[is.na(granger)]<-0
     granger
+
   })
 
   observeEvent(input$Sentiment_type_gra, {                         #Observe event from input (model choices)
@@ -390,27 +393,32 @@ server <- function(input, output, session) {
   # })
 
   output$stocks_granger <- dygraphs::renderDygraph({
+
     plotdata <- xts::xts(granger_data()[input$Granger_outcome],order.by=granger_data()[["Dates"]])
     dygraphs::dygraph(plotdata)
   })
 
 
   output$second_granger <- dygraphs::renderDygraph({
+
     plotdata <- xts::xts(granger_data()[colnames(granger_data())[3]],order.by=granger_data()[["Dates"]])
 
     dygraphs::dygraph(plotdata)
   })
 
   output$grangertext1 <- renderUI({
+
     str1 <- paste("The optimal lag order for the VAR model using the Akaike information criterium (AIC)  is ",optlags()," lags.")
     htmltools::HTML(paste(str1))
   })
 
   output$optimallags <- renderPrint({
+
     vars::VARselect(granger_data()[-1],lag.max = 7, type = "const")
   })
 
   output$grangertext2 <- renderUI({
+
     if (nrow(dickey_fuller()) != nrow(granger_data())){
       str2 <- paste("The Dickey Fuller test found one of the timeseries to be non-stationary:")
     }else{
@@ -422,14 +430,17 @@ server <- function(input, output, session) {
 
   #first variable
   output$dickey_fuller <- renderPrint({
+
     tseries::adf.test(granger_data()[[2]],k=optlags())
   })
   #second variable
   output$dickey_fuller_second <- renderPrint({
+
     tseries::adf.test(granger_data()[[3]],k=optlags())
   })
 
   output$grangertext3 <- renderUI({
+
     req(nrow(dickey_fuller()) != nrow(granger_data()))
     str3 <- paste("Differencing the series ",nrow(granger_data()) - nrow(dickey_fuller()),"times achieved stationarity:")
   })
@@ -437,11 +448,13 @@ server <- function(input, output, session) {
 
   #first variable after differencing
   output$dickey_fuller_diff <- renderPrint({
+
     req(nrow(dickey_fuller()) != nrow(granger_data()))
     tseries::adf.test(dickey_fuller()[[2]],k=optlags())
   })
   #second variable after differencing
   output$dickey_fuller_second_diff <- renderPrint({
+
     req(nrow(dickey_fuller()) != nrow(granger_data()))
     tseries::adf.test(dickey_fuller()[[3]],k=optlags())
   })
@@ -461,6 +474,7 @@ server <- function(input, output, session) {
   # })
 
   output$granger_satz <- renderUI({
+
     if(input$direction_granger == TRUE){
       if (granger_result()["p.value"] < 0.1){
         str1 <- paste(htmltools::em(colnames(granger_data())[3]), " granger causes ",htmltools::em(input$Granger_outcome),"of",input$Stock_Granger)
@@ -1410,13 +1424,23 @@ server <- function(input, output, session) {
   #forecast
   forecast_var_real <- reactive({
     fcast <- stats::predict(var_model_real(), n.ahead = input$ahead)
-    if (ncol(forecast_data_real()) == 1) {
-      x <- fcast$pred[1:input$ahead]
-      x <- cumsum(x) + forecast_data_real()[nrow(forecast_data_real()),1]
-    }else {
-      x <- fcast$fcst[[1]]
-      x <- x[,1]
-      x <- cumsum(x) + forecast_data_real()[nrow(forecast_data_real()),1]
+    if(nrow(stationary())!=nrow(forecast_data())){
+      if (ncol(forecast_data_real()) == 1) {
+        x <- fcast$pred[1:input$ahead]
+        x <- cumsum(x) + forecast_data_real()[nrow(forecast_data_real()),1]
+      }else {
+        x <- fcast$fcst[[1]]
+        x <- x[,1]
+        x <- cumsum(x) + forecast_data_real()[nrow(forecast_data_real()),1]
+      }
+    }else{
+      if (ncol(forecast_data_real()) == 1) {
+        x <- fcast$pred[1:input$ahead]
+      }else {
+        x <- fcast$fcst[[1]]
+        x <- x[,1]
+      }
+
     }
     x
   })

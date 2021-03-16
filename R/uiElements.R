@@ -47,15 +47,18 @@ selectize_corona <- function() {
                  c(
                    "New Cases per Million" = "new_cases_per_million",
                    "New Deaths per Million" = "new_deaths_per_million",
-                   "Reproduction Rate" = "reproduction_rate",
-                   "ICU Patients per Million" = "icu_patients_per_million",
-                   "Hospital Patients per Million" = "hosp_patients_per_million",
-                   "Weekly ICU Admissions per Million" = "weekly_icu_admissions_per_million",
-                   "Weekly Hospital Admissions per Million" = "weekly_hosp_admissions_per_million"
+                   "Reproduction Rate" = "reproduction_rate"
                  ),
                  multiple = FALSE,
                  selected = "total_deaths")
 }
+
+
+
+
+
+
+
 # sliderinput for dates
 #' @export
 #' @rdname uiElements
@@ -879,4 +882,19 @@ custom_lag_tab <- function(){
   )
 
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

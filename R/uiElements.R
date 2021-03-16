@@ -215,7 +215,10 @@ tabs_custom_gra <- function(){
   tabsetPanel(
     id = "regression_tabs_gra",
     tabPanel("Model specifcation",
-             radioButtons("country_granger","Which country?",c("Germany","USA"),selected = "Germany"),
+             radioButtons("country_granger","Which country?",c("Germany","USA"),selected = "Germany")%>% shinyhelper::helper(type = "inline",
+                                                                                                                             title = "",
+                                                                                                                             content = c("Select country for the company selection. Only refers to the first variable."),
+                                                                                                                             size = "s"),
              uiOutput("Stock_Granger"),
              radioButtons("Granger_outcome","Which variable?",c("Open","High","Low","Close","Adj.Close","Volume","Return"),selected = "Close"),
              switchInput("senti_yesno_gra","Include Sentiment?",onLabel="Yes",offLabel="No"),
@@ -226,7 +229,10 @@ tabs_custom_gra <- function(){
                          min = as.Date("2020-01-02"),
                          max = as.Date("2021-02-12"),
                          step = 1,timeFormat = "%F"),
-             checkboxInput("direction_granger","Second variable causes first?",value = TRUE)
+             checkboxInput("direction_granger","Second variable causes first?",value = TRUE)%>% shinyhelper::helper(type = "inline",
+                                                                                                                    title = "",
+                                                                                                                    content = c("Select the direction of causation. If checked, the second variable granger causes the first one."),
+                                                                                                                    size = "s")
 
 
 
@@ -400,7 +406,10 @@ tabs_custom <- function(){
   tabsetPanel(
     id = "regression_tabs",
     tabPanel("Model specifcation",
-             radioButtons("country_regression","Which country?",c("Germany","USA"),selected = "Germany"),
+             radioButtons("country_regression","Which country?",c("Germany","USA"),selected = "Germany")%>% shinyhelper::helper(type = "inline",
+                                                                                                                                title = "",
+                                                                                                                                content = c("Select country for the company selection. Only refers to the dependent variable."),
+                                                                                                                                size = "s"),
              uiOutput("stock_regression"),
              radioButtons("regression_outcome","Which variable?",c("Open","High","Low","Close","Adj.Close","Volume","Return"),selected = "Close"),
              switchInput("senti_yesno_reg","Include Sentiment?",onLabel="Yes",offLabel="No"),
@@ -559,7 +568,10 @@ tabs_custom_var <- function(){
   tabsetPanel(
     id = "regression_tabs_var",
     tabPanel("Model specifcation",
-             radioButtons("country_regression_var","Which country?",c("Germany","USA"),selected = "Germany"),
+             radioButtons("country_regression_var","Which country?",c("Germany","USA"),selected = "Germany")%>% shinyhelper::helper(type = "inline",
+                                                                                                                                    title = "",
+                                                                                                                                    content = c("Select country for the company selection. Only refers to the dependent variable."),
+                                                                                                                                    size = "s"),
              uiOutput("stock_regression_var"),
              radioButtons("regression_outcome_var","Which variable?",c("Open","High","Low","Close","Adj.Close","Volume","Return"),selected = "Close"),
              switchInput("senti_yesno_var","Include Sentiment?",onLabel="Yes",offLabel="No"),
@@ -572,7 +584,9 @@ tabs_custom_var <- function(){
                          max = as.Date("2021-02-12"),
                          step = 1,timeFormat = "%F"),
              numericInput("ahead", "choose how many days to forecast", value = 5, min = 1, max = 100),
-             selectInput("var_which_plot","Select plot to show:",c("Forecasted period only","Full time series"),selected="Forecasted period only")
+             conditionalPanel(
+               condition = "input.vartabs==1",
+               selectInput("var_which_plot","Select plot to show:",c("Forecasted period only","Full time series"),selected="Forecasted period only"))
 
 
 

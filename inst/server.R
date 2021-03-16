@@ -1653,14 +1653,16 @@ server <- function(input, output, session) {
     )$
     step(
       "covid_comp_instr",
-      "COVID-19",
-      "Here you can select different COVID-19 related metrics for Germany and the US (can plot both simultaneously). Again you may choose
+      "Control variables",
+      "Here you can select different COVID-19 related metrics or other financial control variables
+      for Germany and the US (can plot both simultaneously). Again you may choose
       to depict a 7-day moving average."
     )$
     step(
       "covid_plot_comp_instr",
-      "COVID-19 Plot",
-      "Here the plot with the COVID-19 data is shown. Again, you can zoom in and out of the plot."
+      "Control Variables Plot",
+      "Here the plot for the control variables is shown. Note that COVID-19 data is only available starting in
+      March 2020. Again, you can zoom in and out of the plot."
     )
 
 
@@ -2023,6 +2025,10 @@ server <- function(input, output, session) {
       df_need$company <- gsub("Ã¶", "ö", df_need$company)
       df_need$company <- gsub("Ã¼", "ü", df_need$company)
     }
+
+    #### drop duplicates
+    df_need <- unique(df_need)
+
     #### return df
     df_need
   })
@@ -2883,15 +2889,92 @@ server <- function(input, output, session) {
   })
 
 
-  output$covid_comp <- dygraphs::renderDygraph({
-    req(!is.null(input$CoronaCountry))
+
+  ##### get control variables
+  df_controls_comp <- reactive({
+
+
+    ## validity checks
+    req(!is.null(input$ControlCountry))
     validate(need(correct_path() == T, "Please choose the correct path"))
 
 
-    df <- data.table::fread("Corona/owid.csv")
+    #### only load data when control is slected (and not covid)
+    if (input$controls_comp %in% c("coronavirus","OFR.FSI",
+                                   "VIX", "WLEMUINDXD")) {
 
 
-    covid_plotter(df, input$corona_measurement, input$CoronaCountry, input$roll_covid_comp)
+      if (length(input$ControlCountry) == 2) {
+
+
+        ### load both dfs and join them to one
+        df1 <- data.table::fread("Twitter/sentiment/Model/controls_DE.csv") %>%
+          select(Date, input$controls_comp)
+        names(df1) <- c("Date", "Germany")
+
+
+
+
+
+        df2 <- data.table::fread("Twitter/sentiment/Model/controls_US.csv") %>%
+          select(Date, input$controls_comp)
+        names(df2) <- c("Date", "USA")
+
+
+        ## join dfs
+        df <- df1 %>% dplyr::inner_join(df2)
+
+
+
+      } else if (input$ControlCountry == "Germany"){
+          lang <- "DE"
+
+          df <- data.table::fread(glue("Twitter/sentiment/Model/controls_{lang}.csv")) %>%
+            select(Date, input$controls_comp)
+
+        } else if (input$ControlCountry == "United States") {
+          lang <- "US"
+
+          df <- data.table::fread(glue("Twitter/sentiment/Model/controls_{lang}.csv")) %>%
+            select(Date, input$controls_comp)
+
+        }
+
+
+
+
+
+
+    } else {
+      df <- data.table::fread("Corona/owid.csv")
+    }
+    ### make sure df not empty
+    req(!is.null(df) & dim(df)[1] > 0)
+
+    df
+
+
+  })
+
+
+  ###### plot controls
+  output$covid_comp <- dygraphs::renderDygraph({
+
+
+    if (input$controls_comp %in% c("coronavirus","OFR.FSI",
+                                   "VIX", "WLEMUINDXD")) {
+
+
+      controls_plotter(df_controls_comp(), input$controls_comp, input$ControlCountry, input$roll_control_comp)
+
+    } else {
+
+      covid_plotter(df_controls_comp(), input$controls_comp, input$ControlCountry, input$roll_control_comp)
+    }
+
+
+
+
 
 
 

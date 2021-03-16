@@ -1129,7 +1129,7 @@ ui <- fluidPage(
                                    tabs_custom_var()
                                  ),
                                  mainPanel(
-                                   tabsetPanel(
+                                   tabsetPanel(id = "vartabs",
                                      tabPanel("Information VAR",
                                               htmlOutput("info_var"),
                                               withMathJax()),
@@ -1141,7 +1141,7 @@ ui <- fluidPage(
                                               dygraphs::dygraphOutput("plot_forecast"),
                                               tableOutput("var_metrics"),
                                               verbatimTextOutput("serial_test"),
-                                              htmlOutput("var"),
+                                              htmlOutput("var"),value=1,
                                      ),
                                      tabPanel("Actual Forecast",
                                               dygraphs::dygraphOutput("plot_forecast_real"),

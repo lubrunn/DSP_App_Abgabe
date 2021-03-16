@@ -57,7 +57,7 @@ twitter_main_panel <- function(){
   navbarMenu("Twitter",
 
              ###### tab panel for descriptive
-             tabPanel("Descriptives Main",
+             tabPanel("Descriptives",
                       # sidebar panel for descriptive
                       #twitter_desc_panel(),
                       sidebarPanel(
@@ -153,29 +153,18 @@ twitter_main_panel <- function(){
                                        uiOutput("cloud"),
                                        #wordcloud2::wordcloud2Output('wordcloud', height = "1000px", width = "auto")
                                      ))
-                                  # tags$hr(),
-                                  # tags$br(),
-                                  # tags$br(),
-                                  # tags$br(),
-                                  # tags$br(),
-                                  # tags$br(),
-                                  # tags$hr(),
-                                  # conditionalPanel(
-                                  #   condition = "input.ngram_sel == 'Bigram'",
-                                  #   tags$h4("Number of Bigrams containing the choosen word (if no word selected shows all tweets in current selection)"),
-                                  # plotly::plotlyOutput("word_freq_time_series") %>% shinycssloaders::withSpinner(type = 5)
-                                  # )
+
 
 
                                    )
                                     )),
-                      ##### histogram
 
-                      tags$hr(),
+
+tags$hr(),
                       conditionalPanel(
 
                         condition = "input.tabselected == 1",
-                        tags$hr(),
+                        ##### summary stats table
                         fluidRow(column(10, offset = 1,
                                         tags$hr(),
                                         div(id = "sum_stats_table_instr",
@@ -193,17 +182,8 @@ twitter_main_panel <- function(){
 
                         )),
 
-                        #########################################
-                        ###########################################
-#
-#                         ##### violin plot
-#                       fluidRow(column(10, offset = 1,
-#                                       tags$h4("Distrubtion of aggregated tweets"),
-#                                       plotOutput("violin_sum")%>% shinycssloaders::withSpinner(type = 5))),
-#                         tags$br(),
-#                       tags$hr(),
-                        #########################################
-                        ###########################################
+                        #### histogram
+                        tags$br(),
                       tags$hr(),
 
                       tags$br(),

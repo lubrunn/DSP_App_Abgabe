@@ -2413,14 +2413,22 @@ server <- function(input, output, session) {
 
 
     lang <- stringr::str_to_title(input$lang_net)
-    network_plot_datagetter(lang, input$dates_net[1], input$dates_net[2], input$comp_net)
+    df <- network_plot_datagetter(lang, input$dates_net[1], input$dates_net[2], input$comp_net)
+
+
+
+    df
   })
 
   data_filterer_net_react <- reactive({
     df <- data_getter_net_react()
-    network_plot_filterer(df, input$rt, input$likes_net, input$long_net,
+    if (dim(df)[1] > 0){
+    df <- network_plot_filterer(df, input$rt, input$likes_net, input$long_net,
                           input$sentiment_net, input$search_term_net,
                           input$username_net, input$lang_net)
+    }
+    df
+
   })
 
 
@@ -2486,6 +2494,8 @@ server <- function(input, output, session) {
     shinyjs::enable("cancel_net")
 
 
+
+
     #### start waitress for progress bar
     waitress <- waiter::Waitress$new("nav", max = 4,  theme = "overlay")
     #Automatically close it when done
@@ -2531,7 +2541,9 @@ server <- function(input, output, session) {
 
 
     if(is.null(df) | dim(df)[1] == 0){
+      showNotification("Tweets not available for this date yet", type = "error")
       enable("button_net")
+      removeUI("#network_plot")
       return()
     }
 
@@ -2548,6 +2560,7 @@ server <- function(input, output, session) {
 
 
     if(is.null(network) | dim(network)[1] == 0){
+      showNotification("No tweets found", type = "error")
       enable("button_net")
       removeUI("#network_plot")
       return()
@@ -2666,8 +2679,11 @@ server <- function(input, output, session) {
     }
     ##### when process has run successfully enable render plot button again
     # and disable cancel button again
-    enable("button_net")
-    disable("cancel_net")
+    shinyjs::enable("button_net")
+    shinyjs::disable("cancel_net")
+
+    ### enable remove plot button
+    shinyjs::enable("reset_net")
 
   })
 

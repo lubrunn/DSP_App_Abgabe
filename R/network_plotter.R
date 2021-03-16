@@ -39,13 +39,31 @@ network_plot_datagetter <- function(input_lang, input_date1, input_date2, input_
    all_files <- list.files(path_source)[grepl(".csv", list.files(path_source)) &
                                           grepl(paste(date_list, collapse = "|"), list.files(path_source))]
 
-
+  if (is_empty(all_files)){
+    df <- data.frame("doc_id" = character(), "text" = character(),
+                           "username" = character(), "language" = character(),
+                           "retweets_count" = integer(), "likes_count" = integer(),
+                           "twet_length" = integer(), "created_at" = lubridate::Date(),
+                           "sentiment" = double(), "tweet" = character())
+    return(df)
+  } else {
   # read in all the files
    for (file in all_files){
 
+      #### onyl if read if file acutally exists
+     if (file.exists(file.path(path_source, file))) {
      df <- data.table::fread(file.path(path_source, file),
                              encoding = 'UTF-8',
                              colClasses = c("doc_id" = "character"))
+     } else {
+       ## else give back empty df
+       df <- data.frame("doc_id" = character(), "text" = character(),
+                        "username" = character(), "language" = character(),
+                        "retweets_count" = integer(), "likes_count" = integer(),
+                        "twet_length" = integer(), "created_at" = lubridate::Date(),
+                        "sentiment" = double(), "tweet" = character())
+     }
+   }
 
    # if its the first file set it up as df_all
    if (is.null(df)){

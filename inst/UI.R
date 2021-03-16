@@ -260,27 +260,12 @@ twitter_main_panel <- function(){
                       ),
                       tags$br(),
                       tags$br(),
-                     # ),
 
-                      ###### datatable
-                     tags$br(),
-                     tags$br(),
-                     tags$br(),
-                     tags$br(),
-                     tags$br(),
-                     tags$br(),
-                     tags$br(),
-                     tags$br(),
-                     tags$br(),
-                     tags$br(),
-                     tags$br(),
-                     tags$br(),
-                     tags$br()
-                     )),
 
                       fluidRow(column(12,
 
                                       tags$br(),
+                                      tags$h4("Tweet data for current selection"),
                                       tags$style(HTML("
                     .dataTables_wrapper .dataTables_length, .dataTables_wrapper .dataTables_filter, .dataTables_wrapper .dataTables_info, .dataTables_wrapper .dataTables_processing, .dataTables_wrapper .dataTables_paginate, .dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {
                     color: #ffffff;
@@ -312,10 +297,14 @@ twitter_main_panel <- function(){
 
 
                                       )),
-                                      DT::dataTableOutput("raw_tweets_net")
-                                      )
+                   DT::dataTableOutput("raw_tweets_net")
+                      )
 
-                               )
+                      )
+
+
+
+                     ))
 
                      )
 
@@ -788,8 +777,10 @@ div(id = "tweet_net_instr",  tags$h4("Tweet controls"),
                                                     lib = "glyphicon")),
                                         size = "xs"),
 
-
-
+      ##### advanced settings toggle
+      shinyWidgets::materialSwitch("adv_settings_net", "Advanced Settings", value = F),
+      conditionalPanel(
+        condition = "input.adv_settings_net == true",
         ######## adjusting plot
         numericInput("n_net", "Minimum number of occurences of a single word in the sample",
                      min = 50, value = 50),
@@ -809,17 +800,19 @@ div(id = "tweet_net_instr",  tags$h4("Tweet controls"),
           condition = "input.word_type_net == 'bigrams_net'",
           numericInput("n_bigrams_net", "Minimum number of occurences of a Bigram in the selected sample",
                        min = 50, value = 50)
-        ),
+        )
+      ),
 
 
-        actionButton("button_net", "Render Plot") %>%
-          shinyhelper::helper(type = "markdown",
-                              title = "Inline Help",
-                              content = "network_plot_button",
-                              buttonLabel = "Got it!",
-                              easyClose = FALSE,
-                              fade = TRUE,
-                              size = "s"),
+
+        actionButton("button_net", "Render Plot"),
+          # shinyhelper::helper(type = "markdown",
+          #                     title = "Inline Help",
+          #                     content = "network_plot_button",
+          #                     buttonLabel = "Got it!",
+          #                     easyClose = FALSE,
+          #                     fade = TRUE,
+          #                     size = "s"),
 
         #### removing plot
         shinyjs::disabled(actionButton("reset_net", "Remove Network")),

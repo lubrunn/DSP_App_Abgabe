@@ -8,7 +8,15 @@ sum_stats_table_creator <- function(df_need, input_date1, input_date2){
 
 
 df_need <-   df_need %>%
-  filter(between(as.Date(created_at), as.Date(input_date1), as.Date(input_date2))) %>%  ### filter for date range
+  filter(between(as.Date(created_at), as.Date(input_date1), as.Date(input_date2))) ### filter for date range
+
+### account for empty df after filtering
+if(dim(df_need)[1] == 0){
+  return()
+}
+
+
+df_need <- df_need %>%
   select(!contains("sentiment_")) %>% #### get correct names that are needed, get everyhing without sentiment
   select(starts_with(c("mean","median", "std"))) %>% ### get means, median, stf and take there averages
   summarise_all(mean) %>%

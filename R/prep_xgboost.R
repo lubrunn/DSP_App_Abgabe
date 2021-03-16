@@ -332,14 +332,6 @@ split_data_eval <- function(sample,n_ahead3){
   return(out)
 }
 
-#' @export
-#' @rdname xgboost_prep
-corona_dummy <- function(res){
-  names(res)[1] <- "date"
-  res$date <- as.Date(res$date,origin = "1970-01-01")
-  res$corona_shock_dummy <- 0
-  res$corona_shock_dummy[(res$date >= "2020-02-10") & (res$date <= "2020-05-25")] <- 1
-  return(res)
-}
+
 
 

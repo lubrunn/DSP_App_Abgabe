@@ -6,21 +6,21 @@ model_xgb <- function(res){
 
   names(res)[2] <- "y"
 
-  slidng_eval_window <- rsample::sliding_period(res,index = date,"month",lookback = 5  , assess_stop = 1,step = 2)
+  slidng_eval_window <- rsample::sliding_period(res,index = date,"month",lookback = 4  , assess_stop = 1,step = 1)
 
   res$date <- NULL
 
   preprocessing_recipe <-
     recipes::recipe(y ~ ., data = res) %>% recipes::prep()
 
-  model_xgboost <-  parsnip::boost_tree(
+  model_xgboost <- parsnip::boost_tree(
     mode = "regression",
-    mtry = 30,
+    mtry = 20,
     trees = 200,
-    min_n = 25,
-    tree_depth = 7,
-    learn_rate = 0.02,
-    loss_reduction = 0.0009,
+    min_n = 3,
+    tree_depth = 8,
+    learn_rate = 0.01,
+    loss_reduction = 0.01,
     sample_size = 0.7) %>%
     parsnip::set_engine(engine = "xgboost", objective = "reg:squarederror")
 
@@ -31,12 +31,12 @@ model_xgb <- function(res){
 
 
   single_fits <-
-    xgboost_wf %>%
+       xgboost_wf %>%
     tune::fit_resamples(slidng_eval_window)
 
-  l_metrics <- tune::collect_metrics(single_fits)
+  l_metrics <- collect_metrics(single_fits)
 
-  df_metrics <- single_fits %>% dplyr::select(id, .metrics) %>%  unnest(.metrics) %>% group_by(.metric)
+  df_metrics <- single_fits %>% dplyr::select(id, .metrics) %>%  tidyr::unnest(.metrics) %>% group_by(.metric)
 
 
   xgboost_best_params <- single_fits %>%
@@ -49,9 +49,9 @@ model_xgb <- function(res){
 
   model <- xgboost_model_final %>%
     parsnip::fit(
-      formula = y ~ .,
-      data    = train_processed
-    )
+                      formula = y ~ .,
+                      data    = train_processed
+                    )
   return_list <- list(xgboost_model_final,df_metrics,l_metrics)
   return(return_list)
 
@@ -74,7 +74,7 @@ model_xgb_custom <- function(res,mtry,trees,min_n,tree_depth,learn_rate,loss_red
     recipes::recipe(y ~ ., data = res) %>% recipes::prep()
 
 
-  model_xgboost <-  parsnip::boost_tree(
+  model_xgboost <- parsnip::boost_tree(
     mode = "regression",
     mtry = mtry,
     trees = trees,
@@ -94,9 +94,9 @@ model_xgb_custom <- function(res,mtry,trees,min_n,tree_depth,learn_rate,loss_red
     xgboost_wf %>%
     tune::fit_resamples(slidng_eval_window)
 
-  l_metrics <- tune::collect_metrics(single_fits)
+  l_metrics <- collect_metrics(single_fits)
 
-  df_metrics <- single_fits %>% dplyr::select(id, .metrics) %>%  unnest(.metrics) %>% group_by(.metric)
+  df_metrics <- single_fits %>% dplyr::select(id, .metrics) %>%  tidyr::unnest(.metrics) %>% group_by(.metric)
 
 
   xgboost_best_params <- single_fits %>%

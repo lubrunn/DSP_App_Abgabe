@@ -1593,12 +1593,12 @@ server <- function(input, output, session) {
     #### when reset button is pressed, reset date range to entire date range available
     shinyWidgets::updateAirDateInput(session, "dates_desc",
                                      clear = T,
-                                     value = c("2018-11-30", date_avail))
-    
+                                     value = c("2018-11-30", "2021-02-19"))
+
   })
-  
-  
-  
+
+
+
   ######## disconnect from database after exit
   cancel.onSessionEnded <- session$onSessionEnded(function() {
     #validate(need(correct_path() == T, "Please choose the correct path"))
@@ -1608,8 +1608,8 @@ server <- function(input, output, session) {
       DBI::dbDisconnect(con)
     }
   })
-  
-  
+
+
   ###### create reactive long variable for filtering from user input
   long <- reactive({
     if (input$long == T){
@@ -1619,17 +1619,17 @@ server <- function(input, output, session) {
     }
     long
   })
-  
-  
-  
-  
+
+
+
+
   ################################## date_variable that accounts for single dates
   dates_desc <- reactive({
     ###### need correct path
     validate(need(correct_path() == T, "Please choose the correct path"))
     ######## need at least one date
     validate(need(!is.null(input$dates_desc), "Please select a date."))
-    
+
     ##### if date range selected, used date range
     if (length(input$dates_desc) > 1){
       input$dates_desc
@@ -1639,16 +1639,16 @@ server <- function(input, output, session) {
       c(input$dates_desc, input$dates_desc)
     }
   })
-  
-  
+
+
   ################################### path finder for histo files
   querry_histo <- reactive({
     ##### need correct wd
     validate(need(correct_path() == T, "Please choose the correct path"))
     ##### need at least one date selected
     validate(need(!is.null(input$dates_desc), "Please select a date."))
-    
-    
+
+
     #### convert long input to name addon in file
     if (input$long == T){
       long_name <- "long_only"
@@ -1657,16 +1657,16 @@ server <- function(input, output, session) {
     }
     #### get langauge addon
     lang <- lang_converter()
-    
-    
+
+
     ### account for case where sentiment is selected
-    
+
     # replace sentiment with senti because refernced with senti in file
     value_var <- stringr::str_replace(input$histo_value,"sentiment", "senti")
     # replace tweet_length with long becuase refernced with long in file
     value_var <- stringr::str_replace(value_var, "tweet_length", "long")
-    
-    
+
+
     # for no filter
     if (input$comp == "NoFilter"){
       #### filename for nofilter data
@@ -1675,45 +1675,45 @@ server <- function(input, output, session) {
       req(!is.null(input$comp))
       #### filename for companies
       glue("histo_{value_var}_{input$comp}_rt_{input$rt}_li_{input$likes}_lo_{long_name}.csv")
-      
+
     }
   }) #reactive closed
-  
-  
-  
-  
+
+
+
+
   ##################### summary statistics table data and time series data
   querry_sum_stats_table <- reactive({
     ##### set up querry string for sql
-    
+
     #### get tweet_length filter, 81 for long==T, 0 for long==F
     long <- long()
     ##### for unfitlered tweets
     if (input$comp == "NoFilter"){
       table_name <- glue("sum_stats_{tolower(input$lang)}")
-      
+
       glue('SELECT *  FROM {table_name}  WHERE
          retweets_count = {input$rt} and likes_count = {input$likes} and
          tweet_length = {long}' )
-      
-      
+
+
     } else { #if company is chosen
       ### replace umlaute from input, 1233
-      
+
       comp <- gsub("ö","Ã¶", input$comp)
       comp <- gsub("ü", "Ã¼", comp)
-      
+
       glue('SELECT *  FROM sum_stats_companies WHERE
          retweets_count = {input$rt} and likes_count = {input$likes} and
          tweet_length = {long} and company  = "{comp}" and
              language = "{tolower(input$lang)}"' )
     }
-    
-    
+
+
   })
-  
-  
-  
+
+
+
   #########################################################################
   ############################# get data for sum stats table
   get_data_sum_stats_tables <- reactive({
@@ -1723,18 +1723,16 @@ server <- function(input, output, session) {
     validate(need(database_connector(), "Could not connect to database"))
     ###### need at least one date selected
     validate(need(!is.null(input$dates_desc), "Please select a date."))
-    
+
     ####### store database connection
     con <- database_connector()
     ##### check if connection is null
     string_value <- is.null(con)
     req(!string_value)
-    
+
     ###### querry data from sql
     df_need <- DBI::dbGetQuery(con,  querry_sum_stats_table())
-    
-    #### account for case where there is no data available for filters
-    validate(need(dim(df_need)[1] > 0, "No data available for current selection" ))
+
     #### for companies replace umlaute
     if ("company" %in% names(df_need)){
       df_need$company <- gsub("Ã¶", "ö", df_need$company)
@@ -1743,118 +1741,127 @@ server <- function(input, output, session) {
     #### return df
     df_need
   })
-  
-  
+
+
   #########################
   ################################# sum stats table
   output$sum_stats_table <- function(){
     ###### use data from sql from previous step
     df_need <- get_data_sum_stats_tables()
     ##### create summary stats table with function
-    df_need <- sum_stats_table_creator(df_need, dates_desc()[1], dates_desc()[2])
-    
-    ### need to have data
-    validate(need(dim(df_need)[1] > 0, "No data available for current selection" ))
+    sum_stats_table_creator(df_need, dates_desc()[1], dates_desc()[2])
   }
-  
-  
-  
+
+
+
+
+
+
+
+
+  ############################################################################
+  ######################### violin plot
+  # output$violin_sum <- renderPlot({
+  #   #validate(need(path_setter()[[3]] == "correct_path", "Please select the correct path"))
+  #   validate(need(!is.null(input$dates_desc), "Please select a date."))
+  #
+  #
+  #   df <- get_data_sum_stats_tables()
+  #   violin_plotter(df, input$value, input$metric)
+  #
+  #
+  # })
+
+
+
   ##################################
   ################################################### output time series
-  
-  
+
+
   ###### title for dygraphs
   number_tweets_info_desc <- reactive({
     ##### get data from sql
     df_need <- get_data_sum_stats_tables()
-    
+
     #convert to date
     df_need$created_at <- as.Date(df_need$created_at)
-    
+
     ###### filter for dates input from user
     df_need <- df_need %>%
       filter(between(created_at, as.Date(dates_desc()[1]), as.Date(dates_desc()[2])))
-    ### need to have data
-    validate(need(dim(df_need)[1] > 0, "No data available for current selection" ))
-    
+
+
     ##### for tweet type input get nice company name accroding to named list
     if (input$comp == "NoFilter"){
       comp_name <- names(purrr::flatten(company_terms))[purrr::flatten(company_terms) == input$comp]
     } else {
       comp_name <- glue("{names(purrr::flatten(company_terms))[purrr::flatten(company_terms) == input$comp]} Tweets")
     }
-    
+
     num_tweets <- as.integer(round(sum(df_need$N)))
     num_tweets <- formatC(num_tweets, format="f", big.mark = ",", digits=0)
-    
+
     num_tweets_avg <- formatC(round(mean(df_need$N)), format="f", big.mark = ",", digits=0)
-    
+
     ##### set up string for header of time series graphs
     glue("{comp_name} ({num_tweets} tweets total,
            {num_tweets_avg} on average per day)")
   })
-  
-  
+
+
   ###### title for summary statistics
   output$sum_stats_table_header <- renderText({
     header <- number_tweets_info_desc()
     header <- sub( "total.*$", "", header )
     glue("Summary Statistics for {header} total)")
   })
-  
-  
-  
+
+
+
   #################################################
   ############################## time series plot
   ###################################################
   output$sum_stats_plot <- dygraphs::renderDygraph({
-    
+
     #### need at least one inputalue(likes/retweets etc.)
     req(!is.null(input$value) | input$num_tweets_box == T)
-    
+
     ###### need at least two days selected for time series plot
     validate(need(length(input$dates_desc) != 1, "Cannot plot time series for single day"))
-    
+
     ##### need date input to not be null
     validate(need(!is.null(input$dates_desc), "Please select a date."))
-    
+
     ##### header for plots
     input_title <- number_tweets_info_desc()
-    
+
     ### get data for plots
     df <- get_data_sum_stats_tables()
-    
-    
+
+
     #### when number of tweets should not be plotted
     if (input$num_tweets_box == F){
-      p <- time_series_plotter2(df, input$metric, input$value, num_tweets = F,
-                                input$dates_desc[1], input$dates_desc[2],
-                                input_title = input_title,
-                                group = "twitter_desc")
-      ### need to have data
-      validate(need(!is.null(p), "No data available for current selection" ))
-      p
+      time_series_plotter2(df, input$metric, input$value, num_tweets = F,
+                           input$dates_desc[1], input$dates_desc[2],
+                           input_title = input_title,
+                           group = "twitter_desc")
     } else { ##### when number of tweets should be plotted
-      
-      p <- time_series_plotter2(df, input$metric, input$value, num_tweets = T,
-                                input$dates_desc[1], input$dates_desc[2],
-                                input_title = input_title,
-                                group = "twitter_desc")
-      
-      ### need to have data
-      validate(need(!is.null(p), "No data available for current selection" ))
-      p
+
+      time_series_plotter2(df, input$metric, input$value, num_tweets = T,
+                           input$dates_desc[1], input$dates_desc[2],
+                           input_title = input_title,
+                           group = "twitter_desc")
     }
-    
+
   })
-  
-  
-  
+
+
+
   #####################################################################
   ################ for second time series plot from saving plot button
   ##################################
   save_plot <- reactiveValues(data = NULL)
-  
+
   ##### if button is clicked store time series plot in serperate part
   observeEvent(input$plot_saver_button, {
     #### date input cannot be null
@@ -1863,14 +1870,14 @@ server <- function(input, output, session) {
     req(!is.null(input$value) | input$num_tweets_box == T)
     ####### need at least dates selceted for time series plot
     validate(need(length(input$dates_desc) > 1, "Cannot plot time series for single day"))
-    
+
     ##### get plot header
     input_title <- number_tweets_info_desc()
-    
+
     # get df
     df <- get_data_sum_stats_tables()
-    
-    
+
+
     ###### in case where number of tweets should not be included in plot
     if (input$num_tweets_box == F){
       save_plot$plot <- time_series_plotter2(df, input$metric, input$value, num_tweets = F,
@@ -1885,37 +1892,34 @@ server <- function(input, output, session) {
                                              input_title = input_title,
                                              group = "twitter_desc")
     }
-    
+
   })
-  
+
   ######## time series plot when pressing save plot button
   output$sum_stats_plot2 <-dygraphs::renderDygraph({
-    ### need to have data
-    req(!is.null(save_plot$plot))
-    
     save_plot$plot
     # dygraphs::dygraph(don) %>%
     #   dygraphs::dyRangeSelector( input$dates_desc + 1, retainDateWindow = T
     #   )
   })
-  
-  
-  
-  
-  
+
+
+
+
+
   ##############################################################################
   ############################### data retriever for histogram
   data_histo <- reactive({
     #validate(need(path_setter()[[3]] == "correct_path", "Please select the correct path"))
     validate(need(!is.null(input$dates_desc), "Please select a date."))
     validate(need(correct_path() == T, "Please choose the correct path"))
-    
-    
+
+
     lang <- lang_converter()
-    
-    
-    
-    
+
+
+
+
     # for case no company selected
     if (input$comp == "NoFilter"){
       file_path <- file.path(glue("Twitter/plot_data/{lang}_NoFilter/{querry_histo()}"))
@@ -1925,47 +1929,36 @@ server <- function(input, output, session) {
       req(exists)
       df_need <- data.table::fread(file_path,
                                    select = 1:3)
-      
-      ### need to have data
-      validate(need(dim(df_need)[1] > 0, "No data available for current selection" ))
-      
+
       df_need
     } else { #for case of choosen company
       file_path <- file.path(glue("Twitter/plot_data/Companies/{input$comp}/{querry_histo()}"))
       df_need <- data.table::fread(file_path,
                                    select = 1:3)
-      ### need to have data
-      validate(need(dim(df_need)[1] > 0, "No data available for current selection" ))
       df_need
-      
+
     }
   })
-  
-  
-  
+
+
+
   ###########################################################
   ######################################## histogram output
   output$histo_plot <- plotly::renderPlotly({
     validate(need(!is.null(input$dates_desc), "Please select a date."))
-    
+
     req(input$histo_value)
-    
-    ### get plot
-    p <- histogram_plotter(data_histo(), date_input1 = dates_desc()[1], date_input2 = dates_desc()[2],
-                           input_bins = input$bins, input_log = input$log_scale)
-    
-    #### check if data in plot
-    validate(need(!is.null(p), "No data available for current selection" ))
-    
-    # plot the plot
-    p
-    
+
+
+    histogram_plotter(data_histo(), date_input1 = dates_desc()[1], date_input2 = dates_desc()[2],
+                      input_bins = input$bins, input_log = input$log_scale)
+
   })
-  
-  
+
+
   ##################### disable log scale option for sentiment because as negative values
   observeEvent(input$histo_value, {
-    
+
     if (grepl("sentiment",input$histo_value)) {
       shinyWidgets::updateSwitchInput(session = session,
                                       "log_scale",
@@ -1977,14 +1970,14 @@ server <- function(input, output, session) {
                                       disabled = F)
     }
   })
-  
-  
-  
+
+
+
   ####################### histogram title
   output$histo_plot_info <- renderText({
-    
+
     selected_value <- input$value[1]
-    
+
     selected_value <- stringr::str_replace(selected_value, "sentiment_rt", "Retweets weighted Sentiment")
     selected_value <- stringr::str_replace(selected_value, "sentiment_likes", "Likes weighted Sentiment")
     selected_value <- stringr::str_replace(selected_value, "sentiment_length", "Tweet Length weighted Sentiment")
@@ -1992,29 +1985,29 @@ server <- function(input, output, session) {
     selected_value <- stringr::str_replace(selected_value, "rt", "Retweets")
     selected_value <- stringr::str_replace(selected_value, "tweet_length", "Tweet Length")
     selected_value <- stringr::str_replace(selected_value, "sentiment", "Sentiment")
-    
-    
+
+
     glue("Distribution of {selected_value} for indivdual tweets")
-    
+
   })
-  
-  
-  
-  
+
+
+
+
   ######################################################
   ########################## Word Frequencies ###########
   #######################################################
   lang_converter <- reactive({
-    
+
     lang <- stringr::str_to_title(input$lang)
   })
-  
+
   data_expl <- reactive({
-    
+
     lang <- lang_converter()
-    
-    
-    
+
+
+
     if (input$long == T){
       long <- "long_only"
       tweet_length_filter <- 81
@@ -2022,18 +2015,18 @@ server <- function(input, output, session) {
       long <- "all"
       tweet_length_filter <- 0
     }
-    
+
     validate(need(correct_path() == T, "Please choose the correct path"))
-    
+
     # if (correct_path == "correct_path"){
     #   Sys.sleep(0.2)
     # } else{
     #   return()
     # }
-    
+
     # go into specified folder and load dataframe
-    
-    
+
+
     if (input$ngram_sel == "Unigram"){
       subfolder <- "uni_appended"
       add_on <- "uni"
@@ -2041,114 +2034,108 @@ server <- function(input, output, session) {
       subfolder <- "bi_appended"
       add_on <- "bi"
     }
-    
-    browser()
+
+
     if (input$comp != "NoFilter") {
       folder <- file.path("Companies")
       file_name <- glue("term_freq_{input$comp}_all_rt_{input$rt}_li_{input$likes}_lo_{long}.csv")
       file_path <- file.path("Twitter/term_freq",folder, subfolder, file_name)
       # read file
-      dt <- data.table::fread(file_path, select = c("date_variable",
-                                                    "language_variable",
-                                                    "word",
-                                                    "N",
-                                                    "emo"),
-                              colClasses = c("date_variable" = "Date"))
-      
-      #### check if data in dt
-      validate(need(dim(dt)[1] > 0, "No data available for current selection"))
-      
-      ### return dt
-      dt
+      data.table::fread(file_path, select = c("date_variable",
+                                              "language_variable",
+                                              "word",
+                                              "N",
+                                              "emo"),
+                        colClasses = c("date_variable" = "Date"))
     } else {
       folder <- glue("{lang}_NoFilter")
       file_name <- glue("{add_on}_{lang}_NoFilter_rt_{input$rt}_li_{input$likes}_lo_{long}.csv")
       file_path <- file.path("Twitter/term_freq",folder, subfolder, file_name)
       # read file
-      dt <- data.table::fread(file_path, select = c("date",
-                                                    "language",
-                                                    "word",
-                                                    "N",
-                                                    "emo"),
-                              colClasses = c("date" = "Date"))
-      
-      #### check if data in dt
-      validate(need(dim(dt)[1] > 0, "No data available for current selection"))
-      
-      
-      ## return dt
-      dt
+      data.table::fread(file_path, select = c("date",
+                                              "language",
+                                              "word",
+                                              "N",
+                                              "emo"),
+                        colClasses = c("date" = "Date"))
     }
-    
+
+
+
+
+
+
+    #%>%
+    # filter(between(date_variable, input$dates[1], input$dates[2]))
+
+
+
+
+
+
+
+
   })
-  
-  
-  
+
+
+
   word_freq_df <- reactive({
     #validate(need(path_setter()[[3]] == "correct_path", "Please select the correct path"))
     validate(need(!is.null(input$dates_desc), "Please select a date."))
-    
+
     if (input$ngram_sel == "Unigram"){
       input_word_freq_filter <- ""
     } else {
       input_word_freq_filter <- input$word_freq_filter
     }
-    df <- word_freq_data_wrangler(data_expl(), dates_desc()[1], dates_desc()[2],
-                                  input$emo, emoji_words,
-                                  input_word_freq_filter,
-                                  tolower(input$lang),
-                                  input$comp)
-    
-    
-    #### account for empty df
-    validate(need(!is.null(df), "No data available for current selection"))
-  })
-  
-  
-  
-  
+    word_freq_data_wrangler(data_expl(), dates_desc()[1], dates_desc()[2],
+                            input$emo, emoji_words,
+                            input_word_freq_filter,
+                            tolower(input$lang),
+                            input$comp)})
+
   ######################### freq_plot
   output$freq_plot <- plotly::renderPlotly({
     # dynamically change height of plot
     #height = function() input$n * 30 + 400,
-    
-    
-    
-    
-    
-    
+
+
+
+
+
+
     df <- df_filterer(word_freq_df() , input$n_freq)
-    
+
     term_freq_bar_plot(df)
-    
-    
+
+
   })
-  
+
   ################## wordcloud
   output$cloud <- renderUI({
     wordcloud2::wordcloud2Output("wordcloud", width = (8/12) * 0.925 * input$dimension[1], height = 1000) %>%
       shinycssloaders::withSpinner(type = 5)
-    
+
   })
-  
+
   output$wordcloud <- wordcloud2::renderWordcloud2({
     req(input$plot_type_expl == "Word Cloud")
-    
-    
-    
+
+
+
     df <- df_filterer(word_freq_df(), input$n_freq_wc)
-    
-    
-    
+
+
+
     word_cloud_plotter(df, input$size_wordcloud)
-    
+
   })
-  
-  
-  
+
+
+
   ####################################### number unique words
   output$number_words <- reactive({
-    
+
     ###### number of total tweets
     df_need <- get_data_sum_stats_tables()
     #convert to date
@@ -2158,19 +2145,19 @@ server <- function(input, output, session) {
       filter(between(created_at, as.Date(dates_desc()[1]), as.Date(dates_desc()[2])))
     # get number of total tweets
     number_tweets <- round(sum(df_need$N))
-    
-    
+
+
     #### number of unqiue words/bigrams
     number_words <-  unique_words(word_freq_df())
-    
+
     HTML(glue("Number of unique {tolower(input$ngram_sel)}s available for current selection: {number_words} <br>
          Number of tweets for current selection: {number_tweets}"))
-    
+
   })
-  
-  
-  
-  
+
+
+
+
   ############################## time series bigram plot
   # output$word_freq_time_series <- plotly::renderPlotly({
   #   req(length(input$dates_desc) > 1)
@@ -2181,9 +2168,9 @@ server <- function(input, output, session) {
   #
   #    word_filter_time_series_plotter(df)
   # })
-  
-  
-  
+
+
+
   ###########################################################################
   ###########################################################################
   ######################### GOING DEEPER ####################################
@@ -2191,68 +2178,68 @@ server <- function(input, output, session) {
   ###########################################################################
   # path to markdown files for helpers
   shinyhelper::observe_helpers(withMathJax = TRUE, help_dir = "shiny/helpers")
-  
-  
+
+
   ###### network plot
-  
+
   data_getter_net_react <- reactive({
     if(length(input$dates_net) > 1){
       days_inrange <- difftime(as.Date(input$dates_net[2]) ,as.Date(input$dates_net[1]) , units = c("days"))
       validate(need(days_inrange <= 1,"More than 2 days selected. Please choose a maximum of 2 days."))
     }
-    
-    
+
+
     lang <- stringr::str_to_title(input$lang_net)
     network_plot_datagetter(lang, input$dates_net[1], input$dates_net[2], input$comp_net)
   })
-  
+
   data_filterer_net_react <- reactive({
     df <- data_getter_net_react()
     network_plot_filterer(df, input$rt, input$likes_net, input$long_net,
                           input$sentiment_net, input$search_term_net,
                           input$username_net, input$lang_net)
   })
-  
-  
+
+
   observe({
-    
+
     ######### disable render plot button if incorrect path, no date or too many dates selected
     if (length(input$dates_net) > 1){
       if (difftime(as.Date(input$dates_net[2]) ,
-                   as.Date(input$dates_net[1]) , units = c("days")) > 1) {
+                   as.Date(input$dates_net[1]) , units = c("days")) > 4) {
         removeUI("#network_plot")
         shinyjs::disable("button_net")
       } else {
         shinyjs::enable("button_net")
       }
     } else if (correct_path() == F | is.null(input$dates_net)){
-      
+
       removeUI("#network_plot")
       shinyjs::disable("button_net")
     } else {
       shinyjs::enable("button_net")
     }
   })
-  
-  
+
+
   ###### date checker
   ##### validate that a maximum of 2 days have been selected
-  
+
   output$date_checker_net <- renderText({
-    
+
     if(length(input$dates_net) > 1){
       days_inrange <- difftime(as.Date(input$dates_net[2]) ,as.Date(input$dates_net[1]) , units = c("days"))
       if (days_inrange >= 2){
-        
+
         validate("More than 2 days selected. Please choose a maximum of 2 days.")
-        
+
       }
     } else if (is.null(input$dates_net)){
-      
+
       validate("Need to select at least one day.")
     }
   })
-  
+
   ############################################################
   ############################ BUTTON RENDER PLOT ############
   ############################################################
@@ -2261,100 +2248,100 @@ server <- function(input, output, session) {
     removeUI("#network_plot")
     ##### need correct path
     validate(need(correct_path() == T, "Please choose the correct path"))
-    
+
     ###### need at least one date selected
     validate(need(!is.null(input$dates_net), "Please select a date."))
-    
-    
-    
-    
-    
-    
+
+
+
+
+
+
     ##### disable render plot button so no mutliple firing possible
     shinyjs::disable("button_net")
     ### enable the cancel computation button only during rendering
     shinyjs::enable("cancel_net")
-    
-    
+
+
     #### start waitress for progress bar
     waitress <- waiter::Waitress$new("nav", max = 4,  theme = "overlay")
     #Automatically close it when done
     on.exit(waitress$close())
-    
+
     waitress$notify()
-    
+
     ### progress bar elements
     #hostess <- waiter::Hostess$new("load")
-    
-    
-    
-    
+
+
+
+
     ################################
-    
-    
-    
-    
-    
-    
+
+
+
+
+
+
     initial.ok <- input$cancel_net
-    
-    
+
+
     shinyjs::showElement(id = "loading")
     # disable the button after computation started so no new computation can
     # be startedd
-    
-    
-    
-    
-    
+
+
+
+
+
     if (initial.ok < input$cancel_net) {
       initial.ok <<- initial.ok + 1
       validate(need(initial.ok == 0, message = "The computation has been aborted."))
     }
-    
+
     ### read all files for the dates
-    
+
     df <- data_getter_net_react()
-    
+
     #hostess$set(2 * 10)
     waitress$inc(1)
-    
-    
+
+
     if(is.null(df) | dim(df)[1] == 0){
       enable("button_net")
       return()
     }
-    
+
     if (initial.ok < input$cancel_net) {
       initial.ok <<- initial.ok + 1
       validate(need(initial.ok == 0, message = "The computation has been aborted."))
     }
-    
-    
-    
-    
+
+
+
+
     network <- data_filterer_net_react()
-    
-    
-    
+
+
+
     if(is.null(network) | dim(network)[1] == 0){
       enable("button_net")
       removeUI("#network_plot")
       return()
     }
-    
+
     ##### compute minimum n which is set to 0.05% of the number of tweets for the current dataset
     min_n <- round(0.001 * dim(network)[1])
-    
+
     #hostess$set(2 * 10)
     waitress$inc(1)
-    
-    
+
+
     if (initial.ok < input$cancel_net) {
       initial.ok <<- initial.ok + 1
       validate(need(initial.ok == 0, message = "The computation has been aborted."))
     }
-    
+
     if (input$word_type_net == "word_pairs_net"){
       network <- network_unnester(network, df, input$emo_net)
     } else{
@@ -2367,13 +2354,13 @@ server <- function(input, output, session) {
     }
     #hostess$set(2 * 10)
     waitress$inc(1)
-    
-    
+
+
     if (initial.ok < input$cancel_net) {
       initial.ok <<- initial.ok + 1
       validate(need(initial.ok == 0, message = "The computation has been aborted."))
     }
-    
+
     if (input$word_type_net == "word_pairs_net"){
       df <- network_word_corr(network, input$n_net,
                               input$corr_net, min_n)
@@ -2381,37 +2368,37 @@ server <- function(input, output, session) {
       df <- network_bigrammer(df, network, input$n_net, input$n_bigrams_net,
                               min_n)
     }
-    
+
     if(is.null(df) | length(df) == 0){
       enable("button_net")
       removeUI("#network_plot")
       return()
     }
-    
-    
-    
+
+
+
     # hostess$set(2 * 10)
     waitress$inc(1)
-    
-    
-    
-    
+
+
+
+
     if (initial.ok < input$cancel_net) {
       initial.ok <<- initial.ok + 1
       validate(need(initial.ok == 0, message = "The computation has been aborted."))
     }
-    
+
     insertUI("#placeholder", "beforeEnd", ui = networkD3::forceNetworkOutput("network_plot", height ="800px"))
-    
-    
+
+
     # render the network plot
     if (input$word_type_net == "word_pairs_net"){
       output$network_plot <- networkD3::renderForceNetwork({
-        
-        
-        
-        
-        
+
+
+
+
+
         req(input$button_net)
         #if (is.null(df)) return()
         validate(need(!is.null(df), message = "No data found for current selection"))
@@ -2419,18 +2406,18 @@ server <- function(input, output, session) {
           initial.ok <<- initial.ok + 1
           validate(need(initial.ok == 0, message = "The computation has been aborted."))
         }
-        
-        
+
+
         #hostess$set(2 * 10)
         # waitress$inc(1)
         network_plot_plotter(df)
-        
-        
-        
+
+
+
       })
     } else {
-      
-      
+
+
       output$network_plot <- networkD3::renderForceNetwork({
         req(input$button_net)
         #if (is.null(df)) return()
@@ -2439,64 +2426,64 @@ server <- function(input, output, session) {
           initial.ok <<- initial.ok + 1
           validate(need(initial.ok == 0, message = "The computation has been aborted."))
         }
-        
+
         #hostess$set(2 * 10)
         #waitress$inc(1)
-        
+
         ###### plot the network plot
         network_plot_plotter_bigrams(df)
-        
-        
-        
-        
+
+
+
+
       })
-      
-      
-      
+
+
+
     }
     ##### when process has run successfully enable render plot button again
     # and disable cancel button again
     enable("button_net")
     disable("cancel_net")
-    
+
   })
-  
+
   ########## when button is pressed remove ui element (network plot)
   observeEvent(input$reset_net,{
-    
+
     removeUI("#network_plot")
   })
-  
+
   # observeEvent(input$button_net, {
   #
   #
   # })
   # ##
-  
+
   ######## message for aborting process
   observeEvent(input$cancel_net, {
     ### when button is pressed show error and abort process
     showNotification("Computation has been aborted", type = "error")
   })
-  
-  
-  
-  
+
+
+
+
   output$raw_tweets_net <- DT::renderDataTable({
-    
+
     ##### only work when correct path is choosen
     validate(need(correct_path() == T, "Please choose the correct path"))
-    
+
     #### need at least one date selected
     validate(need(!is.null(input$dates_net), "Please select a date."))
-    
+
     #### get filtered data
     dt <- data_filterer_net_react()
-    
+
     # change to nicer names
     dt <- dt[, c("created_at", "tweet", "text", "username","sentiment", "retweets_count", "likes_count")]
     names(dt) <- c("Date", "Orig.Tweet", "CleanTweet", "Username","Sentiment", "Retweets", "Likes")
-    
+
     ### set up shiny datatable with custom style
     DT::datatable(dt, options = list(
       initComplete = JS(
@@ -2506,117 +2493,117 @@ server <- function(input, output, session) {
     ), rownames = F
     ) %>% DT::formatStyle(columns = c(1), width='75px')
   })
-  
-  
+
+
   ##### number tweets info network
   output$number_tweets_net <- renderText({
     req(correct_path() == T)
     req(!is.null(input$dates_net))
     glue("Found {dim(data_filterer_net_react())[1]} tweets for current selection")
   })
-  
-  
+
+
   ####### description of network analysis
   output$network_description <- renderUI({
     HTML(network_description_text)
-    
-    
+
+
   })
-  
-  
+
+
   #########################################################################
   #########################################################################
   #############################comparison tab #############################
   #########################################################################
   #########################################################################
-  
-  
+
+
   #### get stock data for comparison tab
   get_stock_data_comp <- reactive({
     validate(need(correct_path() == T, "Please choose the correct path"))
-    
+
     data.table::fread("Yahoo/Full/all_full.csv")
   })
-  
-  
+
+
   ###### plot stocks
   output$stocks_comp <- dygraphs::renderDygraph({
     req(input$stocks_comp)
-    
+
     stock_plotter(get_stock_data_comp(), input$stocks_metric_comp, input$stocks_comp, input$roll_stock_comp)
   })
-  
-  
+
+
   output$covid_comp <- dygraphs::renderDygraph({
     req(!is.null(input$CoronaCountry))
     validate(need(correct_path() == T, "Please choose the correct path"))
-    
-    
+
+
     df <- data.table::fread("Corona/owid.csv")
-    
-    
+
+
     covid_plotter(df, input$corona_measurement, input$CoronaCountry, input$roll_covid_comp)
-    
-    
-    
+
+
+
   })
-  
-  
-  
+
+
+
   ######### get data for twitter time series
   get_querry_twitter_comparison <- reactive({
-    
+
     ##### set up querry string for sql
-    
+
     #### get tweet_length filter, 81 for long==T, 0 for long==F
     if (input$long_comp == T){
       long <- 81
     } else{
       long <- 0
     }
-    
-    
-    
+
+
+
     ##### for unfitlered tweets
     if (input$twitter_comp_comp == "NoFilter"){
       table_name <- glue("sum_stats_{tolower(input$lang_comp)}")
-      
+
       glue('SELECT *  FROM {table_name}  WHERE
          retweets_count = {input$rt_comp} and likes_count = {input$likes_comp} and
          tweet_length = {long}' )
-      
-      
+
+
     } else { #if company is chosen
       ### replace umlaute from input, 1233
-      
+
       comp <- gsub("ö","Ã¶", input$twitter_comp_comp)
       comp <- gsub("ü", "Ã¼", comp)
-      
+
       glue('SELECT *  FROM sum_stats_companies WHERE
          retweets_count = {input$rt} and likes_count = {input$likes_comp} and
          tweet_length = {long} and company  = "{comp}" and
              language = "{tolower(input$lang_comp)}"' )
     }
-    
-    
+
+
   })
-  
-  
+
+
   get_twitter_comp_data <- reactive({
     ###### need correct path
     validate(need(correct_path() == T, "Please choose the correct path"))
     ###### need database connection
     validate(need(database_connector(), "Could not connect to database"))
     ###### need at least one date selected
-    
-    
+
+
     ####### store database connection
     con <- database_connector()
-    
-    
+
+
     ###### querry data from sql
     df <- DBI::dbGetQuery(con,  get_querry_twitter_comparison())
-    
+
     #### for companies replace umlaute
     if ("company" %in% names(df)){
       df$company <- gsub("Ã¶", "ö", df$company)
@@ -2625,39 +2612,39 @@ server <- function(input, output, session) {
     #### return df
     df
   })
-  
-  
-  
+
+
+
   ####### get header for plot
   ###### title for dygraphs
   get_header_twitter_comp <- reactive({
     ##### get data from sql
     df_need <- get_twitter_comp_data ()
-    
+
     #convert to date
     df_need$created_at <- as.Date(df_need$created_at)
-    
+
     ##### for tweet type input get nice company name according to named list
     if (input$twitter_comp_comp == "NoFilter"){
       comp_name <- names(purrr::flatten(company_terms))[purrr::flatten(company_terms) == input$twitter_comp_comp]
     } else {
       comp_name <- glue("{names(purrr::flatten(company_terms))[purrr::flatten(company_terms) == input$twitter_comp_comp]} Tweets")
     }
-    
+
     ##### set up string for header of time series graphs
     glue("{comp_name} ({round(sum(df_need$N))} tweets total,
            {round(mean(df_need$N))} on average per day)")
   })
-  
-  
-  
+
+
+
   ######## twitter plot
   output$twitter_comp <- dygraphs::renderDygraph({
     ##### get df
     df <- get_twitter_comp_data()
-    
+
     #### set up header of plot
-    
+
     title = get_header_twitter_comp()
     ###### plot the data
     time_series_plotter2(df, "mean", input$value_comp, num_tweets = F,
@@ -2666,8 +2653,8 @@ server <- function(input, output, session) {
                          input_roll = input$roll_twitter_comp,
                          ribbon = F)
   })
-  
-  
+
+
   ###############################################################################
   ########################   XGboost    #########################################
   ###############################################################################

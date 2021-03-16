@@ -3194,7 +3194,7 @@ server <- function(input, output, session) {
 
 
   output$corona_vars_xgb <- renderUI({
-    req(path_setter()[[3]][1] == "correct_path")
+    req( correct_path()== T)
     res <- corona_data_xgb()
     #### delete redundant columns
     res <- res %>% dplyr::select(-X,-location,-date)

@@ -1674,6 +1674,37 @@ server <- function(input, output, session) {
       "Here you can look for tweets containing a certain word or tweets from specific users. Note that in both cases the search is not case sensitive and search
       terms will be stemmed to fit the cleaned tweet data. You can not only look for exact matches in usernames but also partial. For example you may search
       for all tweets from users that have the word trump in their usernames."
+    )$
+    step(
+      "net_type_instr",
+      "Word Combinations",
+      "Here you can either select to analyse bigrams or word pairs."
+    )$
+    step(
+      "adv_settings_net_instr",
+      "Adv. Settings",
+      "Toggling this button allows you to access the advanced settings. Here you can adjust the minimum thresholds of word occruences and correlations."
+    )$
+    step(
+      "buttons_net_instr",
+      "Buttons",
+      "As the network analysis takes some time we want you to actively ask for the computation. You may cancel the process (takes a few seconds) or remove the
+      already computed network."
+    )$
+    step(
+      "num_tweets_info_net_instr",
+      "Info",
+      "Here you get information about the number of available tweets for your current selection. This updates in realtime."
+    )$
+    step(
+      "placeholder",
+      "Network plot",
+      "Here the network will appear once it has been computed after the button has been pressed"
+    )$
+    step(
+      "data_table_instr",
+      "Data",
+      "Here you can take a look at the tweets contained in the network. This also updates in realtime."
     )
 
 

@@ -123,5 +123,6 @@ selected_metrics_converter <- function(selected_metrics){
 }
 
 
-
+### yesteraday as last available date
+date_avail <- as.character(Sys.Date() - lubridate::days(1))
 

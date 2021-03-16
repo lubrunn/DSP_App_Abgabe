@@ -39,7 +39,7 @@ stock_plotter <- function(df, input_metric, input_comp, input_roll){
       {if (length(input_comp) == 1) dygraphs::dySeries(.,label = input_metric) else .} %>%
       #### when mutiple comapnies slecte and adj. close selcted scael the data
       {if (length(input_comp) > 1 & input_metric == "Adj.Close") dygraphs::dyRebase(.,value = 100) else . } %>%
-      dygraphs::dyOptions(axisLineWidth = 2, drawGrid = FALSE) %>%
+      dygraphs::dyOptions(axisLineWidth = 2) %>%
       dygraphs::dyLegend() %>%
       dygraphs::dyShading(from = min(df_dates), to = max(df_dates), color = "white") %>%
       {if (input_roll == T) dygraphs::dyRoller(., rollPeriod = 7, showRoller = F) else .} #### smoothing
@@ -78,7 +78,7 @@ covid_plotter <- function(df, selected_metric, input_country, input_roll = F){
                     main = glue::glue("COVID-19 numbers")) %>%
     #### when mutiple countries selected change label shown on hover
    {if (length(input_country) > 1) dygraphs::dySeries(.) else dygraphs::dySeries(.,label = input_country)}  %>%
-    dygraphs::dyOptions(axisLineWidth = 2, drawGrid = FALSE) %>%
+    dygraphs::dyOptions(axisLineWidth = 2) %>%
     dygraphs::dyLegend() %>%
     dygraphs::dyShading(from = min(df$date), to = max(df$date), color = "white") %>%
     #### when smoothin selected show moving averages

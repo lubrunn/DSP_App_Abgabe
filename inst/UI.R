@@ -478,8 +478,8 @@ twitter_tab_desc <- tabPanel( "Descriptives",
                               rintrojs::introBox(
                               shinyWidgets::airDatepickerInput("dates_desc", "Date range:",
                                                                range = T,
-                                                               value = c("2018-11-30", "2021-02-19"),
-                                                               maxDate = "2021-02-19", minDate = "2018-11-30",
+                                                               value = c("2018-11-30", date_avail),
+                                                               maxDate = date_avail, minDate = "2018-11-30",
                                                                clearButton = T, update_on = "close"),
                               data.step = 3,
                               data.intro = "Here you can select the date range you would like to analyse. We have data from
@@ -678,7 +678,7 @@ network_sidebar <- shinyWidgets::dropdown(
           shinyWidgets::airDatepickerInput("dates_net", "Select a maximum of 2 days",
                                            range = TRUE,
                                            value = "2018-11-30",
-                                           maxDate = "2021-02-19", minDate = "2018-11-30",
+                                           maxDate = date_avail, minDate = "2018-11-30",
                                            clearButton = T, update_on = "close",
                                            multiple = 5),
           textOutput("date_checker_net"),
@@ -793,6 +793,8 @@ network_sidebar <- shinyWidgets::dropdown(
 
 
 
+
+
 Sys.setlocale("LC_TIME", "English")
 ui <- fluidPage(
 
@@ -836,144 +838,143 @@ ui <- fluidPage(
              dir_setter_panel(),
              twitter_main_panel(),
 
-              tabPanel("Comparison",
-                       tags$br(),
-                       tags$br(),
-                       tags$br(),
-                      fluidRow(column(4,
-                        ######## stocks
-                        wellPanel(tags$h4("Stocks"),
-
-                        #selectize_Stocks(COMPONENTS_DE()),
-                        selectInput("stocks_comp", "Select a company or index",
-                                    company_terms_stock, multiple = T,
-                                    selected = "AAPL"),
-                        #selectizeInput("stock_choice", choices = "Platzhalter"),
-                        shinyWidgets::radioGroupButtons("stocks_metric_comp","Which variable?",c("Return","Adj.Close" = "Adj.Close"),
-                                     selected = "Return",
-                                     status = "primary",
-                                     checkIcon = list(
-                                       yes = icon("ok",
-                                                  lib = "glyphicon"),
-                                       no = icon("remove",
-                                                 lib = "glyphicon")),
-                                     size = "s"),
-
-                       # actionButton("reset", "clear selected"),
-                        shinyWidgets::materialSwitch(inputId = "roll_stock_comp", label = "7 day smoothing?", value = F)
-                       )),
-                      column(8,
-                        dygraphs::dygraphOutput("stocks_comp")
-                      )),
-
-
+             tabPanel("Comparison",
                       tags$br(),
                       tags$br(),
                       tags$br(),
-                    ######## covid
                       fluidRow(column(4,
+                                      ######## stocks
+                                      wellPanel(tags$h4("Stocks"),
 
-                      wellPanel(tags$h4("COVID-19"),
-                        selectize_corona(),
-                        selectInput("CoronaCountry","Country",c("Germany","USA" = "United States"),selected = "United States",
-                                    multiple = T),
-                        shinyWidgets::materialSwitch(inputId = "roll_covid_comp", label = "7 day smoothing?", value = F)
-                        )),
+                                                #selectize_Stocks(COMPONENTS_DE()),
+                                                selectInput("stocks_comp", "Select a company or index",
+                                                            company_terms_stock, multiple = T,
+                                                            selected = "AAPL"),
+                                                #selectizeInput("stock_choice", choices = "Platzhalter"),
+                                                shinyWidgets::radioGroupButtons("stocks_metric_comp","Which variable?",c("Return","Adj.Close" = "Adj.Close"),
+                                                                                selected = "Return",
+                                                                                status = "primary",
+                                                                                checkIcon = list(
+                                                                                  yes = icon("ok",
+                                                                                             lib = "glyphicon"),
+                                                                                  no = icon("remove",
+                                                                                            lib = "glyphicon")),
+                                                                                size = "s"),
 
-                      column(8,
-                        dygraphs::dygraphOutput("covid_comp")
-                      )),
+                                                # actionButton("reset", "clear selected"),
+                                                shinyWidgets::materialSwitch(inputId = "roll_stock_comp", label = "7 day smoothing?", value = F)
+                                      )),
+                               column(8,
+                                      dygraphs::dygraphOutput("stocks_comp")
+                               )),
 
 
-                    tags$br(),
-                    tags$br(),
-                    tags$br(),
+
+
+
+                      tags$br(),
 
                       fluidRow(column(4,
-                        ####### twitter
-                    wellPanel(tags$h4("Twitter"),
+                                      ####### twitter
+                                      wellPanel(tags$h4("Twitter"),
 
-                        tags$hr(),
-                        tags$h4("Filter Tweets"),
+                                                tags$hr(),
+                                                tags$h4("Filter Tweets"),
 
-                        ###### langauge of tweets selector
-                        shinyWidgets::radioGroupButtons("lang_comp", "Language of tweets",
-                                                        choices = c("English" = "EN",
-                                                                    "German" = "DE"),
-                                                        status = "primary",
-                                                        checkIcon = list(
-                                                          yes = icon("ok",
-                                                                     lib = "glyphicon"),
-                                                          no = icon("remove",
-                                                                    lib = "glyphicon")),
-                                                        size = "sm"),
-                        ###### choose tweet type (company or unfiltererd)
-                        selectInput("twitter_comp_comp","Choose tweets",
-                                    company_terms,
-                                    selected = "NoFilter"),
+                                                ###### langauge of tweets selector
+                                                shinyWidgets::radioGroupButtons("lang_comp", "Language of tweets",
+                                                                                choices = c("English" = "EN",
+                                                                                            "German" = "DE"),
+                                                                                status = "primary",
+                                                                                checkIcon = list(
+                                                                                  yes = icon("ok",
+                                                                                             lib = "glyphicon"),
+                                                                                  no = icon("remove",
+                                                                                            lib = "glyphicon")),
+                                                                                size = "sm"),
+                                                ###### choose tweet type (company or unfiltererd)
+                                                selectInput("twitter_comp_comp","Choose tweets",
+                                                            company_terms,
+                                                            selected = "NoFilter"),
 
 
-                        ####### filter min rt, likes, long tweets
-                        shinyWidgets::radioGroupButtons("rt_comp", "Minimum tweets",
-                                                        choices = c(0, 10, 50, 100, 200),
-                                                        status = "primary",
-                                                        checkIcon = list(
-                                                          yes = icon("ok",
-                                                                     lib = "glyphicon"),
-                                                          no = icon("remove",
-                                                                    lib = "glyphicon")),
-                                                        size = "xs") %>%
-                          shinyhelper::helper(type = "inline",
-                                              title = "",
-                                              content = c("Choose the minimum number of retweets
+                                                ####### filter min rt, likes, long tweets
+                                                shinyWidgets::radioGroupButtons("rt_comp", "Minimum tweets",
+                                                                                choices = c(0, 10, 50, 100, 200),
+                                                                                status = "primary",
+                                                                                checkIcon = list(
+                                                                                  yes = icon("ok",
+                                                                                             lib = "glyphicon"),
+                                                                                  no = icon("remove",
+                                                                                            lib = "glyphicon")),
+                                                                                size = "xs") %>%
+                                                  shinyhelper::helper(type = "inline",
+                                                                      title = "",
+                                                                      content = c("Choose the minimum number of retweets
                                                     a tweet needs to have"),
-                                              size = "s"),
+                                                    size = "s"),
 
 
-                      ####### minimum likes
-                        shinyWidgets::radioGroupButtons("likes_comp", "Minimum Likes",
-                                                        choices = c(0, 10, 50, 100, 200),
-                                                        status = "primary",
-                                                        checkIcon = list(
-                                                          yes = icon("ok",
-                                                                     lib = "glyphicon"),
-                                                          no = icon("remove",
-                                                                    lib = "glyphicon")),
-                                                        size = "xs") %>%
-                          shinyhelper::helper(type = "inline",
-                                              title = "",
-                                              content = c("Choose the minimum number of likes
+                                                ####### minimum likes
+                                                shinyWidgets::radioGroupButtons("likes_comp", "Minimum Likes",
+                                                                                choices = c(0, 10, 50, 100, 200),
+                                                                                status = "primary",
+                                                                                checkIcon = list(
+                                                                                  yes = icon("ok",
+                                                                                             lib = "glyphicon"),
+                                                                                  no = icon("remove",
+                                                                                            lib = "glyphicon")),
+                                                                                size = "xs") %>%
+                                                  shinyhelper::helper(type = "inline",
+                                                                      title = "",
+                                                                      content = c("Choose the minimum number of likes
                                                                 a tweet needs to have"),
-                                              size = "s"),
+                                                                size = "s"),
 
-                        ####### long tweet switch
-                        shinyWidgets::materialSwitch(inputId = "long_comp",
-                                                     label = "Long Tweets only?", value = F) %>%
-                          shinyhelper::helper(type = "inline",
-                                              title = "",
-                                              content = c("Long Tweets are tweets that contain more
+                                                ####### long tweet switch
+                                                shinyWidgets::materialSwitch(inputId = "long_comp",
+                                                                             label = "Long Tweets only?", value = F) %>%
+                                                  shinyhelper::helper(type = "inline",
+                                                                      title = "",
+                                                                      content = c("Long Tweets are tweets that contain more
                                                                 than 80 characters"),
-                                              size = "s"),
-                      ##### select a value retweets/likes etc.
-                      selectInput("value_comp", "Select a value to show (multiple possible)",
-                                  choices = c(
-                                    "Sentiment" = "sentiment",
-                                    "Retweets Weighted Sentiment" = "sentiment_rt",
-                                    "Likes Weighted Sentiment" = "sentiment_likes",
-                                    "Length Weighted Sentiment" = "sentiment_tweet_length",
-                                    "Retweets" = "rt",
-                                    "Likes"="likes",
-                                    "Tweet Length" = "tweet_length"
-                                  ),
-                                  selected = "sentiment",
-                                  multiple = T),
-                      shinyWidgets::materialSwitch(inputId = "roll_twitter_comp", label = "7 day smoothing?", value = F)
+                                                                size = "s"),
+                                                ##### select a value retweets/likes etc.
+                                                selectInput("value_comp", "Select a value to show (multiple possible)",
+                                                            choices = c(
+                                                              "Sentiment" = "sentiment",
+                                                              "Retweets Weighted Sentiment" = "sentiment_rt",
+                                                              "Likes Weighted Sentiment" = "sentiment_likes",
+                                                              "Length Weighted Sentiment" = "sentiment_tweet_length",
+                                                              "Retweets" = "rt",
+                                                              "Likes"="likes",
+                                                              "Tweet Length" = "tweet_length"
+                                                            ),
+                                                            selected = "sentiment",
+                                                            multiple = T),
+                                                shinyWidgets::materialSwitch(inputId = "roll_twitter_comp", label = "7 day smoothing?", value = F)
 
-                      )),
+                                      )),
 
-                      column(8,
-                        dygraphs::dygraphOutput("twitter_comp")
-                      ))
+                               column(8,
+                                      dygraphs::dygraphOutput("twitter_comp")
+                               )),
+                      tags$br(),
+                      tags$br(),
+                      tags$br(),
+                      ######## covid
+                      fluidRow(column(4,
+
+                                      wellPanel(tags$h4("COVID-19"),
+                                                selectize_corona(),
+                                                selectInput("CoronaCountry","Country",c("Germany","USA" = "United States"),selected = "United States",
+                                                            multiple = T),
+                                                shinyWidgets::materialSwitch(inputId = "roll_covid_comp", label = "7 day smoothing?", value = F)
+                                      )),
+
+                               column(8,
+                                      dygraphs::dygraphOutput("covid_comp")
+                               ))
              ),#close tabPanel Corona
 
 
@@ -1060,7 +1061,7 @@ ui <- fluidPage(
                                    conditionalPanel(condition="input.tabs == 'Summary statistics'",
                                                     tabs_custom_xgb()),
                                    conditionalPanel(condition="input.tabs == 'AR & MA structure'",
-                                                    radioButtons("lag_tabs","How do you want to proceed?",choices = c("default","custom"),
+                                                    radioButtons("lag_tabs","How do you want to generate your dataset?",choices = c("default","custom"),
                                                                  selected = "default")  %>% shinyhelper::helper(type = "markdown",
                                                                                                                 title = "Inline Help",
                                                                                                                 content = "default_lag_selection",
@@ -1095,7 +1096,9 @@ ui <- fluidPage(
                                                                                                                    fade = TRUE,
                                                                                                                    size = "s"),
                                                     actionButton("run", "Run Model"),
+                                                    shinyjs::hidden(p(id = "text1", "Processing...")),
                                                     actionButton("pred", "Predict"),
+                                                    shinyjs::hidden(p(id = "text2", "Please run the model first")),
                                                     selectInput("forecast_plot_choice","Select plot to show:",
                                                                 c("Forecasted","Full"),selected="Full")
 
@@ -1110,15 +1113,18 @@ ui <- fluidPage(
                                                     radioButtons("ftpye2","Select covariates for forecast",choices = c("no_features","past_features","forecasted_features"),
                                                                  selected = "forecasted_features"),
                                                     actionButton("run2", "Run Model on the full dataset"),
-                                                    actionButton("pred2", "Predict"))
+                                                    shinyjs::hidden(p(id = "text1_act", "Processing...")),
+                                                    actionButton("pred2", "Predict")),
+                                                    shinyjs::hidden(p(id = "text2_act", "Please run the model first")),
+
 
                                  ),
                                  mainPanel(
                                    tabsetPanel(type = "tabs", id = "tabs",
                                                tabPanel("Summary statistics",value="Summary statistics",
                                                         tableOutput("xgb_summary"),
-                                                        tableOutput("correlation_xgb")
-                                                        # plotOutput("correlation_plot")
+                                                        plotOutput("correlation_xgb")
+
                                                ),
                                                tabPanel("AR & MA structure", value = "AR & MA structure",
                                                         conditionalPanel(
@@ -1128,21 +1134,25 @@ ui <- fluidPage(
                                                           condition = "input.correlation_type == 'PACF'  && input.lag_tabs == 'custom'",
                                                           plotOutput("pacf_plot_xgb")),
                                                         conditionalPanel("input.lag_tabs == 'custom'",
+                                                                         textOutput("error_text"),
                                                                          DT::dataTableOutput("tableCustom")),
                                                         conditionalPanel("input.lag_tabs == 'default'",
                                                                          DT::dataTableOutput("df_xgb_default"))
                                                ),
                                                tabPanel("Validity", value = "Validity",
-                                                        verbatimTextOutput("model_xgb"),
-                                                        tableOutput("model_fit"),
-                                                        verbatimTextOutput("serial_out_xgb"),
-                                                        dygraphs::dygraphOutput("forecast_xgb"),
+                                                        #verbatimTextOutput("model_xgb"),
+                                                        tableOutput("model_fit")%>% shinycssloaders::withSpinner(type = 5),
+                                                        tableOutput("serial_out_xgb"),
+                                                        htmlOutput("test_text_xgb"),
+                                                        dygraphs::dygraphOutput("forecast_xgb")%>% shinycssloaders::withSpinner(type = 5),
                                                         tableOutput("xgb_metrics")
                                                ),
                                                tabPanel("Actual forecast", value = "Actual forecast",
-                                                        verbatimTextOutput("model_xgb2"),
-                                                        verbatimTextOutput("serial_out_xgb_for"),
+                                                        tableOutput("model_fit_act")%>% shinycssloaders::withSpinner(type = 5),
+                                                        tableOutput("serial_out_xgb_for"),
+                                                        htmlOutput("test_text_xgb_act"),
                                                         dygraphs::dygraphOutput("plot_1_xgb_actual")
+
                                                )
                                    )
                                  )

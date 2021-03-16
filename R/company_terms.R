@@ -133,3 +133,34 @@ company_terms_stock <- list(
 
 
 
+
+
+
+
+
+########################## comparison plot
+
+###### control variables
+controls_comp_list <- list(
+
+  "COVID-19" = list(
+
+    "New Cases per Million" = "new_cases_per_million",
+    "New Deaths per Million" = "new_deaths_per_million",
+    "Reproduction Rate" = "reproduction_rate",
+    "Google coronavirus searches" = "coronavirus"
+  ),
+
+
+  "Other country-level controls" = list(
+                  "Volatility index" = "VIX"
+
+  ),
+  "Other global controls" = list(
+
+    "Financial distress index" = "OFR.FSI",
+    "Economic uncertainty index" = "WLEMUINDXD"
+  )
+)
+
+

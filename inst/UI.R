@@ -1061,12 +1061,14 @@ ui <- fluidPage(
                       ######## covid
                       fluidRow(column(4,
 
-                                      wellPanel(tags$h4("COVID-19"),
+                                      wellPanel(tags$h4("Control Variables"),
                                        div(id = "covid_comp_instr",
-                                           selectize_corona(),
-                                                selectInput("CoronaCountry","Country",c("Germany","USA" = "United States"),selected = "United States",
+                                         selectInput("controls_comp", "Select a control variable",
+                                                     choices =  controls_comp_list,
+                                                     selected = "new_cases_per_million"),
+                                                selectInput("ControlCountry","Country",c("Germany","USA" = "United States"),selected = "United States",
                                                             multiple = T),
-                                                shinyWidgets::materialSwitch(inputId = "roll_covid_comp", label = "7 day smoothing?", value = F)
+                                                shinyWidgets::materialSwitch(inputId = "roll_control_comp", label = "7 day smoothing?", value = F)
                                       ))),
 
                                column(8,

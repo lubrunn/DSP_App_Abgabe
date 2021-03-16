@@ -1469,30 +1469,212 @@ server <- function(input, output, session) {
 
   # start introjs when button is pressed with custom options and events
   observeEvent(input$instrucitons_desc,{
-    rintrojs::introjs(session, options = list("nextLabel"="Move on",
-                                              "prevLabel"="Go back",
-                                              "skipLabel"="Skip instructions"))
+
+    guide1$init()$start()
 
   })
+
+  guide1 <- Cicerone$
+    new()$
+    step(
+      el = "lang_instr",
+      title = "Text Input",
+      description = "Here you can select the language of the tweets."
+    )$
+    step(
+      "comp_instr",
+      "Select a company",
+      "Here you can either select company specific tweets or tweets that were randomly scraped
+                              without any search term"
+    )$
+    step(
+      "date_instr",
+      "Date range",
+      "Here you can select the date range to analyse. We have data starting from 2018-11-30 until yesterday.
+      The app is updated daily. You can always reset your choice to the entire date range."
+    )$
+    step(
+      "desc_filter_instr",
+      "Filters",
+      "Here you may choose to filter the tweets according to minimum number of retweets or likes a tweet needs to have.
+      You can also display only 'Long Tweets' which are tweets with at least 80 characters"
+    )$
+    step(
+      "metric_desc_instr",
+      "Time series",
+      "In this section you can select a metric to display in the time series plots. Sentiment is also available as weighted metrics.
+      You can choose between the mean, the standard deviation and the median. You can also choose to show the number of tweets per day.
+      Multiple selections are possible. Once multiple metrics are selected all values get scaled with mean 0 and SD 1 in order to allow
+      for plotting on a similar scale"
+    )$
+    step(
+      "time_series1_instr",
+      "Time series",
+      "Here the time series for the current selection are depicted. You can zoom in (select area with mouse) and out (double click) of the plot.
+      The ribbon below is only shown when a single metric is selected. It is green when the values are above and red when they are below the average over
+      the selected period."
+    )$
+    step(
+      "plot_saver_button",
+      "Save button",
+      "You can temporarily store a plot in the area below the first plot. This may help you with comparing plots from different companies
+      or comparing different metrics without overcrowding the plot."
+    )$
+    step(
+      "time_series2_instr",
+      "Saved time series",
+      "In this area the temporarily saved plot will appear."
+    )$
+    step(
+      "sum_stats_table_instr",
+      "Summary Statistics",
+      "Here you can see the summary statistics for the currently selected inputs."
+    )$
+    step(
+      "histo_instr",
+      "Histogram",
+      "Here you can select for which metric you would like to see the histogram. You may choose one of sentiment, retweets, likes or tweet length.
+      You can adjust the number of bins of the histogram.
+      "
+    )$
+    step(
+      "log_scale_instr",
+      "Log scale",
+      "For retweets, likes and tweet length it may be more interesting to show the log transformed distribution as these values have many outliers.
+      For sentiment this option is blocked as a log transformation of negative values is not possible (sentiment goes from -1 to 1)."
+    )$
+      step(
+        "histo_plot_instr",
+        "Histogram output",
+        "Here the histogram for the current selection is shown. Note that the histogram also depends on the tweet type, date range, retweets, likes
+        and tweets length filters from above."
+      )
+
 
   observeEvent(input$instructions_comp,{
-    rintrojs::introjs(session, options = list("nextLabel"="Move on",
-                                              "prevLabel"="Go back",
-                                              "skipLabel"="Skip instructions"))
+    guide2$init()$start()
 
   })
 
 
+  guide2 <- Cicerone$
+    new()$
+    step(
+      el = "stock_instr",
+      title = "Stocks",
+      description = "Here you can select any stock from the DAX or DJI or the indeces themselves. You may choose to show either the
+      returns or the adjusted closing prices. Multiple selection are possible. Once more than one stock is selected and the metric
+      'Adjusted Close' is selected the values will be automatically be set to base value of 100 at the start of the period."
+    )$
+    step(
+      "stock_roll_instr",
+      "Moving Average",
+      "With the switch you can depict a 7-day moving average instead of the normal daily values."
+    )$
+    step(
+      "stocks_comp_plot_instr",
+      "Stock Plot",
+      "Here the stock values are depicted. Note that you can zoom in and out (through double click) of the plot. The zooming will affect
+      all plots in this tab."
+    )$
+    step(
+      "twitter_comp_instr",
+      "Twitter",
+      "Here you have the same options as on the previous tabs. You can also choose to see the 7-day moving average by toggling
+      the switch at the bottom."
+    )$
+    step(
+      "twitter_comp_plot_instr",
+      "Twitter Plot",
+      "Like above the plot has a zooming ability and is scaled once mutliple metrics are selected."
+    )$
+    step(
+      "covid_comp_instr",
+      "COVID-19",
+      "Here you can select different COVID-19 related metrics for Germany and the US (can plot both simultaneously). Again you may choose
+      to depict a 7-day moving average."
+    )$
+    step(
+      "covid_plot_comp_instr",
+      "COVID-19 Plot",
+      "Here the plot with the COVID-19 data is shown. Again, you can zoom in and out of the plot."
+    )
+
+
+
+  observeEvent(input$instrucitons_expl, {
+    guide_expl$init()$start()
+  })
+
+
+  guide_expl <- Cicerone$
+    new()$
+    step(
+      el = "tweets_all_expl",
+      title = "Tweets",
+      description = "For the tweets you have the same filter options as on the previous tab."
+    )$
+    step(
+      "emoji_instr",
+      "Emoji filter",
+      "Here you can omit words the stem form emoji replacements. Click the question mark for more info."
+    )$
+    step(
+      "plot_type_expl_instr",
+      "Plot type",
+      "You can either show a bar plot with the most frequent words or a word cloud. Both outputs have a hovering ability.
+      As the option for the word cloud and bar plot vary simply click on the question marks for further information on their
+      controls. Note that you have an additional search option when selecting bigrams."
+    )$
+    step(
+      "num_words_expl_instr",
+      "Info",
+      "Here we tell you the number of total umber of tweets for the current selection as well the the number of unique words/bigrams.
+      Note that it can happen that 0 words/bigrams are found despite the info showing a positive amount of tweets
+      for the current selection. This is due to the pre-processing of the data where we set an abosulte minimum frequency requirement of 5 and 2 (or
+      1% and 0.1% of total tweets per day depending on which is higher) occurences per day for words and bigrams respectively. "
+    )$
+    step(
+      "expl_plots_instr",
+      "Outputs",
+      "Here the bar plot or wordcloud are shown. Note that the wordcloud can have a bug that it disappears when resizing the window. This bug can be avoided
+      by installing the github version of the wordcloud2 package with : devtools::install_github('lchiffon/wordcloud2')",
+      position = "bottom"
+    )
 
 
 
 
+  ##### instructions for network plot
+  observeEvent(input$net_instr, {
+    guide_net$init()$start()
+  })
 
-
-
-
-
-
+  guide_net <- Cicerone$
+    new()$
+    step(
+      el = "tweet_net_instr",
+      title = "Tweets",
+      description = "Here you have similar controls for selecting tweets as beofre. However, now you can select and arbitaray number of minimum
+      likes, retweets and can also filter for specific sentiments. However, a maximum of only 2 days can analysed at a time."
+    )$
+    step(
+      "sentiment_net_instr",
+      "Sentiment",
+      "Here you can select to show tweets for certain range of sentiments."
+    )$
+    step(
+      "emoji_net_instr",
+      "Emoji words",
+      "You can again omit emoji words from your analysis."
+    )$
+    step(
+      "search_net_instr",
+      "Search terms",
+      "Here you can look for tweets containing a certain word or tweets from specific users. Note that in both cases the search is not case sensitive and search
+      terms will be stemmed to fit the cleaned tweet data. You can not only look for exact matches in usernames but also partial. For example you may search
+      for all tweets from users that have the word trump in their usernames."
+    )
 
 
 

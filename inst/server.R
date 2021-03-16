@@ -895,7 +895,10 @@ server <- function(input, output, session) {
 
   output$reg_summary <- function(){
     #colnames(df_need)<- "value"
-    knitr::kable(df_need_reg(), caption = glue("Summary statistics"),colnames = NULL) %>%
+    knitr::kable(df_need_reg(),colnames = NULL) %>%
+      column_spec(1:6, color = "lightgrey") %>%
+      column_spec(1, bold = T, color = "white") %>%
+      row_spec(1, bold = T) %>%
       kableExtra::kable_styling(c("striped","hover"), full_width = F,
                                 position = "center",
                                 font_size = 16)
@@ -1221,6 +1224,9 @@ server <- function(input, output, session) {
   output$var_summary <- function(){
     #colnames(df_need)<- "value"
     knitr::kable(df_need(), caption = glue("Summary statistics"),colnames = NULL) %>%
+      column_spec(1:6, color = "lightgrey") %>%
+      column_spec(1, bold = T, color = "white") %>%
+      row_spec(1, bold = T) %>%
       kableExtra::kable_styling(c("striped","hover"), full_width = F,
                                 position = "center",
                                 font_size = 16)
@@ -1377,6 +1383,9 @@ server <- function(input, output, session) {
     colnames(df_need)<- "forecast"
     df_need$insample <- test
     knitr::kable(df_need, caption = glue("Performance metrics"),colnames = NULL) %>%
+      column_spec(1:2, color = "lightgrey") %>%
+      column_spec(1, bold = T, color = "white") %>%
+      row_spec(1, bold = T) %>%
       kableExtra::kable_styling(c("striped","hover"), full_width = F,
                                 position = "center",
                                 font_size = 16)
@@ -1528,11 +1537,11 @@ server <- function(input, output, session) {
 
   })
 
-  guide1 <- Cicerone$
+  guide1 <- cicerone::Cicerone$
     new()$
     step(
       el = "lang_instr",
-      title = "Text Input",
+      title = "Language",
       description = "Here you can select the language of the tweets."
     )$
     step(
@@ -1597,12 +1606,12 @@ server <- function(input, output, session) {
       "For retweets, likes and tweet length it may be more interesting to show the log transformed distribution as these values have many outliers.
       For sentiment this option is blocked as a log transformation of negative values is not possible (sentiment goes from -1 to 1)."
     )$
-      step(
-        "histo_plot_instr",
-        "Histogram output",
-        "Here the histogram for the current selection is shown. Note that the histogram also depends on the tweet type, date range, retweets, likes
+    step(
+      "histo_plot_instr",
+      "Histogram output",
+      "Here the histogram for the current selection is shown. Note that the histogram also depends on the tweet type, date range, retweets, likes
         and tweets length filters from above."
-      )
+    )
 
 
   observeEvent(input$instructions_comp,{
@@ -1611,7 +1620,7 @@ server <- function(input, output, session) {
   })
 
 
-  guide2 <- Cicerone$
+  guide2 <- cicerone::Cicerone$
     new()$
     step(
       el = "stock_instr",
@@ -1661,7 +1670,7 @@ server <- function(input, output, session) {
   })
 
 
-  guide_expl <- Cicerone$
+  guide_expl <- cicerone::Cicerone$
     new()$
     step(
       el = "tweets_all_expl",
@@ -1704,7 +1713,7 @@ server <- function(input, output, session) {
     guide_net$init()$start()
   })
 
-  guide_net <- Cicerone$
+  guide_net <- cicerone::Cicerone$
     new()$
     step(
       el = "tweet_net_instr",
@@ -1760,7 +1769,6 @@ server <- function(input, output, session) {
       "Data",
       "Here you can take a look at the tweets contained in the network. This also updates in realtime."
     )
-
 
 
   ############################################################################
@@ -2481,6 +2489,7 @@ server <- function(input, output, session) {
 
   ###########################################################################
   ###########################################################################
+  ###########################################################################
   ######################### GOING DEEPER ####################################
   ###########################################################################
   ###########################################################################
@@ -2508,9 +2517,9 @@ server <- function(input, output, session) {
   data_filterer_net_react <- reactive({
     df <- data_getter_net_react()
     if (dim(df)[1] > 0){
-    df <- network_plot_filterer(df, input$rt, input$likes_net, input$long_net,
-                          input$sentiment_net, input$search_term_net,
-                          input$username_net, input$lang_net)
+      df <- network_plot_filterer(df, input$rt, input$likes_net, input$long_net,
+                                  input$sentiment_net, input$search_term_net,
+                                  input$username_net, input$lang_net)
     }
     df
 
@@ -2522,7 +2531,7 @@ server <- function(input, output, session) {
     ######### disable render plot button if incorrect path, no date or too many dates selected
     if (length(input$dates_net) > 1){
       if (difftime(as.Date(input$dates_net[2]) ,
-                   as.Date(input$dates_net[1]) , units = c("days")) > 4) {
+                   as.Date(input$dates_net[1]) , units = c("days")) > 1) {
         removeUI("#network_plot")
         shinyjs::disable("button_net")
       } else {
@@ -2530,6 +2539,9 @@ server <- function(input, output, session) {
       }
     } else if (correct_path() == F | is.null(input$dates_net)){
 
+      removeUI("#network_plot")
+      shinyjs::disable("button_net")
+    } else if (input$username_net != "" & nchar(input$username_net) < 4){
       removeUI("#network_plot")
       shinyjs::disable("button_net")
     } else {
@@ -2554,6 +2566,17 @@ server <- function(input, output, session) {
 
       validate("Need to select at least one day.")
     }
+  })
+
+
+  ###### username checker
+  ##### validate that more than 3 chars are put in
+  output$username_checker <- renderText({
+    if (input$username_net != "" & nchar(input$username_net) < 4){
+      validate("Usernames must have at least 4 characters.")
+    }
+
+
   })
 
   ############################################################
@@ -2684,13 +2707,15 @@ server <- function(input, output, session) {
 
     if (input$word_type_net == "word_pairs_net"){
       df <- network_word_corr(network, input$n_net,
-                              input$corr_net, min_n)
+                              input$corr_net, min_n,
+                              input$username_net)
     } else {
       df <- network_bigrammer(df, network, input$n_net, input$n_bigrams_net,
-                              min_n)
+                              min_n, input$username_net)
     }
 
     if(is.null(df) | length(df) == 0){
+      showNotification("No tweets found or thresholds too high", type = "error")
       enable("button_net")
       removeUI("#network_plot")
       return()
@@ -2709,7 +2734,7 @@ server <- function(input, output, session) {
       validate(need(initial.ok == 0, message = "The computation has been aborted."))
     }
 
-    insertUI("#placeholder", "beforeEnd", ui = networkD3::forceNetworkOutput("network_plot", height ="800px"))
+    insertUI("#placeholder", "beforeEnd", ui = networkD3::forceNetworkOutput("network_plot", height ="1000px"))
 
 
     # render the network plot
@@ -3310,6 +3335,9 @@ server <- function(input, output, session) {
   output$xgb_summary <- function(){
     ##### summary table
     knitr::kable(df_need_xgb(), caption = glue("Summary statistics"),colnames = NULL) %>%
+      column_spec(1:6, color = "lightgrey") %>%
+      column_spec(1, bold = T, color = "white") %>%
+      row_spec(1, bold = T) %>%
       kableExtra::kable_styling(c("striped","hover"), full_width = F,
                                 position = "center",
                                 font_size = 16)
@@ -3698,10 +3726,16 @@ output$finish_button <- renderUI({
   output$tableCustom <- DT::renderDataTable({
     #### create datable based on final dataset created by the user
     DT::datatable(custom_df(),options = list(
-      autoWidth = FALSE, scrollX = TRUE)) %>% DT::formatStyle(names(custom_df()),
-                                                              lineHeight = '80%',
-                                                              lineWidth = '80%')
+      initComplete = JS(
+        "function(settings, json) {",
+        "$(this.api().table().header()).css({'background-color': '#000', 'color': '#fff'});",
+        "}")
+    ), rownames = F
+    ) %>% DT::formatStyle(columns = c(1), width='85px')
   })
+
+
+
 
   ######################################Default dataset###########################
   df_xgb <- reactive({
@@ -3722,11 +3756,24 @@ output$finish_button <- renderUI({
   output$df_xgb_default <- DT::renderDataTable({
     ##### create datatable
     DT::datatable(df_xgb(),options = list(
-      autoWidth = FALSE, scrollX = TRUE)) %>% DT::formatStyle(names(df_xgb()),
-                                                              lineHeight = '80%',
-                                                              lineWidth = '80%')
+    scrollX = T,
+    autoWidth = T,
+    initComplete = JS(
+      "function(settings, json) {",
+      "$(this.api().table().header()).css({'background-color': '#000', 'color': '#fff'});",
+      "}")
+  ), rownames = F
+  ) %>% DT::formatStyle(columns = c(1), width='75px')
   })
 
+
+
+
+
+  # options = list(
+  #   autoWidth = FALSE, scrollX = TRUE)) %>% DT::formatStyle(names(df_xgb()),
+  #                                                           lineHeight = '80%',
+  #                                                           lineWidth = '80%')
 ########################### Validity tab #######################################
 
   df_xgb_train <- reactive({
@@ -3957,6 +4004,9 @@ output$model_fit <- function(){
                           row.names = c("RMSE","MAE","MAPE"))
     colnames(df_need)<- "value"
     knitr::kable(df_need, caption = glue("Performance metrics"),colnames = NULL) %>%
+      column_spec(1:2, color = "lightgrey") %>%
+      column_spec(1, bold = T, color = "white") %>%
+      row_spec(1, bold = T) %>%
       kableExtra::kable_styling(c("striped","hover"), full_width = F,
                                 position = "center",
                                 font_size = 16)
@@ -3990,6 +4040,9 @@ output$xgb_metrics <- function(){
                         row.names = c("RMSE","MAE","MAPE"))
   colnames(df_need)<- "value"
   knitr::kable(df_need, caption = glue("Performance metrics"),colnames = NULL) %>%
+    column_spec(1:2, color = "lightgrey") %>%
+    column_spec(1, bold = T, color = "white") %>%
+    row_spec(1, bold = T) %>%
     kableExtra::kable_styling(c("striped","hover"), full_width = F,
                               position = "center",
                               font_size = 16)
@@ -4039,6 +4092,9 @@ output$serial_out_xgb <- function(){
     colnames(df_need)<- "Summary"
     #### table output
     knitr::kable(df_need, caption = glue("Performance metrics"),colnames = NULL) %>%
+      column_spec(1:2, color = "lightgrey") %>%
+      column_spec(1, bold = T, color = "white") %>%
+      row_spec(1, bold = T) %>%
       kableExtra::kable_styling(c("striped","hover"), full_width = F,
                                 position = "center",
                                 font_size = 16)
@@ -4305,6 +4361,9 @@ observeEvent(input$mod_spec_for, {
                             row.names = c("RMSE","MAE","MAPE"))
       colnames(df_need)<- "value"
       knitr::kable(df_need, caption = glue("Performance metrics"),colnames = NULL) %>%
+        column_spec(1:2, color = "lightgrey") %>%
+        column_spec(1, bold = T, color = "white") %>%
+        row_spec(1, bold = T) %>%
         kableExtra::kable_styling(c("striped","hover"), full_width = F,
                                   position = "center",
                                   font_size = 16)
@@ -4355,6 +4414,9 @@ observeEvent(input$mod_spec_for, {
       colnames(df_need)<- "Summary"
       #### table output
       knitr::kable(df_need, caption = glue("Performance metrics"),colnames = NULL) %>%
+        column_spec(1:2, color = "lightgrey") %>%
+        column_spec(1, bold = T, color = "white") %>%
+        row_spec(1, bold = T) %>%
         kableExtra::kable_styling(c("striped","hover"), full_width = F,
                                   position = "center",
                                   font_size = 16)

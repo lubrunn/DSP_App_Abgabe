@@ -778,6 +778,12 @@ div(id = "tweet_net_instr",  tags$h4("Tweet controls"),
     div(id = "search_net_instr",      textInput("search_term_net", "Only select tweets containing the following:"),
           textInput("username_net", "Only show tweets for usernames containing the following:")
         ),
+        #### optional text in case less than 4 chars input to username
+        textOutput("username_checker"),
+        tags$head(tags$style("#username_checker{color: red;
+
+                                         }"
+        )),
 
 
         ####### type of plot bigram/word pairs
@@ -1111,7 +1117,16 @@ ui <- fluidPage(
                                                         htmlOutput("info_regression"),
                                                         withMathJax()),
                                                tabPanel("Summary Statistics",
+                                                        "Summary Statistics",
                                                         tableOutput("reg_summary"),
+                                                        tags$head(tags$style(HTML("#reg_summary{
+                                   color: black;
+                                 font-size: 18px;
+                                 font-style: bold;
+                                 color: white !important;
+                                 }"
+                                                        )
+                                                        )),
                                                         plotOutput("correlation_reg")
                                                ),
                                                tabPanel("Linear Regression",

@@ -36,8 +36,8 @@ computation to be done. The networks can appear very empty when reducing the dat
 threshold using the advanced settings. However, note that setting values too low may result in very overcrowded plots. Hence, we only
 show a maximum of 2000 unique word combinations in a network plot. The absolute thresholds for minimum number of occurences are set to 10 while and the minimum
 correlation is set to 0.15. When choosing lower values the filters will default to the aforementioned values. When searching tweets of specific users
-the thresholds can be set lower as there will also be fewer tweets available. Minimum values here are 1 for occurences of words and bigrams while correlation
-still has to be at leastt 0.15.
+the thresholds can be set lower as there will also be fewer tweets available. Minimum values here are 1 for occurences of words and bigrams while the minimum correlation can be
+set to 0.1.
 If the plot still becomes too overcrowded we recommend to first remove the network through the 'Remove Network' button in order to avoid lag.
 Then we recommend increasing the thresholds. Another option if the chosen network stemmed from word pairs is to switch to bigram networks
 as they tend be less overcrowded for the same parameters.

@@ -2221,7 +2221,8 @@ server <- function(input, output, session) {
       ### need to have data
       validate(need(dim(df_need)[1] > 0, "No data available for current selection" ))
 
-
+      #### drop duplicates
+      df_need <- unique(df_need)
 
       df_need
     } else { #for case of choosen company
@@ -2230,6 +2231,10 @@ server <- function(input, output, session) {
                                    select = 1:3)
       ### need to have data
       validate(need(dim(df_need)[1] > 0, "No data available for current selection" ))
+
+
+      #### drop duplicates
+      df_need <- unique(df_need)
 
       df_need
 
@@ -2350,8 +2355,14 @@ server <- function(input, output, session) {
                                               "emo"),
                         colClasses = c("date_variable" = "Date"))
 
+      #### drop duplicates
+      dt <- unique(dt)
+
       #### check if data in dt
       validate(need(dim(dt)[1] > 0, "No data available for current selection"))
+
+
+
 
       ### return dt
       dt
@@ -2366,6 +2377,9 @@ server <- function(input, output, session) {
                                               "N",
                                               "emo"),
                         colClasses = c("date" = "Date"))
+
+      #### drop duplicates
+      dt <- unique(dt)
 
       #### check if data in dt
       validate(need(dim(dt)[1] > 0, "No data available for current selection"))

@@ -1475,6 +1475,13 @@ server <- function(input, output, session) {
 
   })
 
+  observeEvent(input$instructions_comp,{
+    rintrojs::introjs(session, options = list("nextLabel"="Move on",
+                                              "prevLabel"="Go back",
+                                              "skipLabel"="Skip instructions"))
+
+  })
+
 
 
 
@@ -1505,7 +1512,7 @@ server <- function(input, output, session) {
     if (is.integer(input$directory)) {
       setwd(volumes)
 
-      cat(glue("No directory has been selected. Current directory {getwd()})"))
+      #cat(glue("No directory has been selected. Current directory {getwd()})"))
 
     } else {
       ##### when button is pressed set wd to choosen dir

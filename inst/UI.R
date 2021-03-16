@@ -247,8 +247,16 @@ twitter_main_panel <- function(){
                       tags$br(),
                       network_sidebar,
                       mainPanel(
-                        tags$h4("Word Network Analysis", color = "white"),
-                      tags$div(id = "placeholder", style = "height: 800px; width: 90%;")
+
+                        textOutput("number_tweets_net"),
+                        tags$head(tags$style("#number_tweets_net{
+                                 font-size: 20px;
+                                 font-style: bold;
+                                 color: white;
+                                 }"
+                        )
+                        ),
+                      tags$div(id = "placeholder", style = "height: 800px; width: 100%;")
                       ),
                       tags$br(),
                       tags$br(),
@@ -271,14 +279,7 @@ twitter_main_panel <- function(){
                      )),
 
                       fluidRow(column(12,
-                                      textOutput("number_tweets_net"),
-                                      tags$head(tags$style("#number_tweets_net{
-                                 font-size: 20px;
-                                 font-style: bold;
-                                 color: white;
-                                 }"
-                                      )
-                                      ),
+
                                       tags$br(),
                                       tags$style(HTML("
                     .dataTables_wrapper .dataTables_length, .dataTables_wrapper .dataTables_filter, .dataTables_wrapper .dataTables_info, .dataTables_wrapper .dataTables_processing, .dataTables_wrapper .dataTables_paginate, .dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {
@@ -696,7 +697,7 @@ twitter_tab_desc <- tabPanel( "Descriptives",
 
 #################################### going deeeper sidbarpanel
 #tabPanel( "Network Analysis",
-network_sidebar <- sidebarPanel(
+network_sidebar <- sidebarPanel(width = 4,
 
   #shinyWidgets::dropdown(
   #icon = icon("align-justify"),tooltip = tooltipOptions(title = "Set filters for network anylsis"),
@@ -768,7 +769,7 @@ div(id = "tweet_net_instr",  tags$h4("Tweet controls"),
 
           ##### additional
           ######### search terms
-    div("search_net_instr",      textInput("search_term_net", "Only select tweets containing the following:"),
+    div(id = "search_net_instr",      textInput("search_term_net", "Only select tweets containing the following:"),
           textInput("username_net", "Only show tweets for usernames containing the following:")
         ),
 
@@ -821,7 +822,7 @@ div(id = "tweet_net_instr",  tags$h4("Tweet controls"),
                               size = "s"),
 
         #### removing plot
-        actionButton("reset_net", "Remove Network"),
+        shinyjs::disabled(actionButton("reset_net", "Remove Network")),
 
 
         ### canceling computation

@@ -225,9 +225,9 @@ tabs_custom_gra <- function(){
              uiOutput("ControlsGranger"),
              selectize_corona_granger(),
              sliderInput("date_granger",label="Timeseries",
-                         value = c(as.Date("2020-02-12"),as.Date("2021-02-12")),
-                         min = as.Date("2020-01-02"),
-                         max = as.Date("2021-02-12"),
+                         value = c(as.Date("2018-11-30"),as.Date(date_avail)),
+                         min = as.Date("2018-11-30"),
+                         max = as.Date(date_avail),
                          step = 1,timeFormat = "%F"),
              checkboxInput("direction_granger","Second variable causes first?",value = TRUE)%>% shinyhelper::helper(type = "inline",
                                                                                                                     title = "",
@@ -422,10 +422,10 @@ tabs_custom <- function(){
              #radioButtons("Granger_outcome","Which variable?",c("Open","High","Low","Close","Adj.Close","Volume"),selected = "Close"),
              #selectizeInput("Sentiment_Granger","Choose second argument: Sentiment",choices="under construction"),
              sliderInput("date_regression",label = "Timeseries",
-                         value = c(as.Date("2020-01-02"),as.Date("2021-02-12")),
-                         min = as.Date("2020-01-02"),
-                         max = as.Date("2021-02-12"),
-                         step = 1,timeFormat = "%F")
+                         value = c(as.Date("2018-11-30"),as.Date(date_avail)),
+                         min = as.Date("2018-11-30"),
+                         max = as.Date(date_avail),
+                         step = 1,timeFormat = "%F"),
 
 
 
@@ -579,9 +579,9 @@ tabs_custom_var <- function(){
              selectize_corona_var(),
              actionButton("reset_regression_var", "clear selected"),
              sliderInput("date_regression_var",label = "Timeseries",
-                         value = c(as.Date("2020-02-12"),as.Date("2021-02-12")),
-                         min = as.Date("2020-01-02"),
-                         max = as.Date("2021-02-12"),
+                         value = c(as.Date("2018-11-30"),as.Date(date_avail)),
+                         min = as.Date("2018-11-30"),
+                         max = as.Date(date_avail),
                          step = 1,timeFormat = "%F"),
              numericInput("ahead", "choose how many days to forecast", value = 5, min = 1, max = 100),
              conditionalPanel(
@@ -742,9 +742,9 @@ tabs_custom_xgb <- function(){
              #radioButtons("Granger_outcome","Which variable?",c("Open","High","Low","Close","Adj.Close","Volume"),selected = "Close"),
              #selectizeInput("Sentiment_Granger","Choose second argument: Sentiment",choices="under construction"),
              sliderInput("date_regression_xgb",label = "Timeseries",
-                         value = c(as.Date("2020-02-12"),as.Date("2021-02-12")),
-                         min = as.Date("2020-01-02"),
-                         max = as.Date("2021-02-12"),
+                         value = c(as.Date("2018-11-30"),as.Date(date_avail)),
+                         min = as.Date("2018-11-30"),
+                         max = as.Date(date_avail),
                          step = 1,timeFormat = "%F"),
              radioButtons("country_corona_xgb","Which country ?",c("Germany","United States"),selected = "Germany"),
              uiOutput("corona_vars_xgb")

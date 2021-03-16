@@ -248,7 +248,7 @@ twitter_main_panel <- function(){
                       network_sidebar,
                       mainPanel(
 
-                        textOutput("number_tweets_net"),
+                     div(id = "num_tweets_info_net_instr",   textOutput("number_tweets_net")),
                         tags$head(tags$style("#number_tweets_net{
                                  font-size: 20px;
                                  font-style: bold;
@@ -256,7 +256,7 @@ twitter_main_panel <- function(){
                                  }"
                         )
                         ),
-                      tags$div(id = "placeholder", style = "height: 800px; width: 100%;")
+                      tags$div(id = "placeholder", style = "height: 1000px; width: 100%;")
                       ),
                       tags$br(),
                       tags$br(),
@@ -297,7 +297,7 @@ twitter_main_panel <- function(){
 
 
                                       )),
-                   DT::dataTableOutput("raw_tweets_net")
+               div(id = "data_table_instr",    DT::dataTableOutput("raw_tweets_net"))
                       )
 
                       )
@@ -449,7 +449,7 @@ twitter_tab_desc <- tabPanel( "Descriptives",
 
                               tags$hr(),
                    div(id = "tweets_all_expl",
-                       div(id = "lang_instr",  tags$h4("Filter Tweets"),
+                       div(id = "lang_instr",  tags$h4("Tweet Controls"),
 
                               ###### langauge of tweets selector
                               #rintrojs::introBox(
@@ -509,12 +509,12 @@ twitter_tab_desc <- tabPanel( "Descriptives",
                                                         lib = "glyphicon"),
                                              no = icon("remove",
                                                        lib = "glyphicon")),
-                                           size = "xs") %>%
-                                shinyhelper::helper(type = "inline",
-                                                    title = "",
-                                                    content = c("Choose the minimum number of retweets
-                                                    a tweet needs to have"),
-                                                    size = "s"),
+                                           size = "xs"),
+                                # shinyhelper::helper(type = "inline",
+                                #                     title = "",
+                                #                     content = c("Choose the minimum number of retweets
+                                #                     a tweet needs to have"),
+                                #                     size = "s"),
 
                               shinyWidgets::radioGroupButtons("likes", "Minimum Likes",
                                            choices = c(0, 10, 50, 100, 200),
@@ -524,12 +524,12 @@ twitter_tab_desc <- tabPanel( "Descriptives",
                                                         lib = "glyphicon"),
                                              no = icon("remove",
                                                        lib = "glyphicon")),
-                                           size = "xs") %>%
-                                shinyhelper::helper(type = "inline",
-                                                    title = "",
-                                                    content = c("Choose the minimum number of likes
-                                                                a tweet needs to have"),
-                                                    size = "s"),
+                                           size = "xs"),
+                                # shinyhelper::helper(type = "inline",
+                                #                     title = "",
+                                #                     content = c("Choose the minimum number of likes
+                                #                                 a tweet needs to have"),
+                                #                     size = "s"),
 
 
                               ###### style radio buttons
@@ -738,7 +738,15 @@ div(id = "tweet_net_instr",  tags$h4("Tweet controls"),
           numericInput("likes_net", "Choose a minimum number of likes", min = 0, max = 10000, value = 0),
 
           # long tweets switch
-          shinyWidgets::materialSwitch(inputId = "long_net", label = "Long Tweets only?", value = F)
+          shinyWidgets::materialSwitch(inputId = "long_net", label = "Long Tweets only?", value = F)  %>%
+    shinyhelper::helper(type = "inline",
+                        title = "",
+                        content = c("Long Tweets are tweets that contain more
+                                                                than 80 characters"),
+                        size = "s")
+
+
+
   ),
   ### filter by sentiment
   #shinyWidgets::setSliderColor(c("red"), c(1)),
@@ -748,7 +756,16 @@ div(id = "tweet_net_instr",  tags$h4("Tweet controls"),
   ),
 
           # filter out emoji words
-       div(id = "emoji_net_instr",   shinyWidgets::materialSwitch(inputId = "emo_net", label = "Remove Emoji Words?", value = F)
+       div(id = "emoji_net_instr",   shinyWidgets::materialSwitch(inputId = "emo_net", label = "Remove Emoji Words?", value = F) %>%
+             shinyhelper::helper(type = "inline",
+                                 title = "",
+                                 content = c("During the cleaning process of the tweets we replace emojis and
+                                                                emoticons with text. For exmaple a lauging emoji becomes 'laughing face'.
+                                                                As many tweets contain emojis these substitution words dominate the
+                                                                frequency analysis. With this button you may remove these words from
+                                                                the analysis in order to focus on potentially more interesting words/bigrams."),
+                                 size = "m")
+
         ),
 
 
@@ -762,10 +779,9 @@ div(id = "tweet_net_instr",  tags$h4("Tweet controls"),
           textInput("username_net", "Only show tweets for usernames containing the following:")
         ),
 
-      conditionalPanel(
-        condition = "input.network_analysis == 2",
+
         ####### type of plot bigram/word pairs
-        shinyWidgets::radioGroupButtons("word_type_net",
+   div(id = "net_type_instr",     shinyWidgets::radioGroupButtons("word_type_net",
                                         "Select the type of word combination you would like to analyse",
                                         choices = c("Bigram" = "bigrams_net",
                                                     "Word Pairs" = "word_pairs_net"),
@@ -775,22 +791,33 @@ div(id = "tweet_net_instr",  tags$h4("Tweet controls"),
                                                      lib = "glyphicon"),
                                           no = icon("remove",
                                                     lib = "glyphicon")),
-                                        size = "xs"),
+                                        size = "xs")
+       ),
 
       ##### advanced settings toggle
-      shinyWidgets::materialSwitch("adv_settings_net", "Advanced Settings", value = F),
+  div(id = "adv_settings_net_instr",    shinyWidgets::materialSwitch("adv_settings_net", "Advanced Settings", value = F)),
       conditionalPanel(
         condition = "input.adv_settings_net == true",
         ######## adjusting plot
         numericInput("n_net", "Minimum number of occurences of a single word in the sample",
-                     min = 50, value = 50),
+                     min = 10, value = 50) %>%
+        shinyhelper::helper(type = "inline",
+        title = "",
+        content = c("This sets the minimum number of times a single word needs to occur within the filtered dataset."),
+        size = "s"),
+
+
 
 
         ### panel in case of word pairs to compute word correlations
         conditionalPanel(
           condition = "input.word_type_net == 'word_pairs_net'",
           numericInput("corr_net", "Minimum word correlation of word pairs", value = 0.15, min = 0.15, max = 1,
-                       step = 0.01)
+                       step = 0.01) %>%
+            shinyhelper::helper(type = "inline",
+                                title = "",
+                                content = c("This sets the minimum correlation two words need to have."),
+                                size = "s")
 
         ),
 
@@ -799,13 +826,17 @@ div(id = "tweet_net_instr",  tags$h4("Tweet controls"),
         conditionalPanel(
           condition = "input.word_type_net == 'bigrams_net'",
           numericInput("n_bigrams_net", "Minimum number of occurences of a Bigram in the selected sample",
-                       min = 50, value = 50)
+                       min = 50, value = 50)%>%
+            shinyhelper::helper(type = "inline",
+                                title = "",
+                                content = c("This sets the minimum number of times a bigram needs to occur within the filtered dataset."),
+                                size = "s"),
         )
       ),
 
 
 
-        actionButton("button_net", "Render Plot"),
+    div(id = "buttons_net_instr",    actionButton("button_net", "Render Plot"),
           # shinyhelper::helper(type = "markdown",
           #                     title = "Inline Help",
           #                     content = "network_plot_button",
@@ -821,7 +852,7 @@ div(id = "tweet_net_instr",  tags$h4("Tweet controls"),
         ### canceling computation
         shinyjs::disabled(actionButton("cancel_net", "Cancel Rendering"))
 
-      )
+        )
 
           )
 #)

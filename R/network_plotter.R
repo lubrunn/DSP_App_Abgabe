@@ -66,7 +66,7 @@ network_plot_datagetter <- function(input_lang, input_date1, input_date2, input_
    }
 
    # if its the first file set it up as df_all
-   if (is.null(df)){
+   if (is.null(df_all)){
 
         df_all <- df
 
@@ -94,6 +94,14 @@ network_plot_filterer <- function(df, input_rt, input_likes, input_tweet_length,
                                   input_sentiment, input_search_term,
                                   input_username, input_lang) {
 
+
+  #### control for empty rt/likes input
+  if(is.na(input_rt)){
+    input_rt <- 0
+  }
+  if(is.na(input_likes)){
+    input_likes <- 0
+  }
 
 #### convert search terms to lower
   input_search_term <- corpus::stem_snowball(tolower(input_search_term), algorithm = tolower(input_lang))

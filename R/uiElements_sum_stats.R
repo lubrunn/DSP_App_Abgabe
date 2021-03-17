@@ -134,7 +134,7 @@ word_freq_cond <- conditionalPanel(
   ),
 
   ####### select single words or bigrams
-  shinyWidgets::radioGroupButtons("ngram_sel", "Single words or bigrams?",
+div(id = "ngram_sel_instr",  shinyWidgets::radioGroupButtons("ngram_sel", "Single words or bigrams?",
                                   choices = c("Unigram", "Bigram"),
                                   status = "primary",
                                   checkIcon = list(
@@ -142,7 +142,8 @@ word_freq_cond <- conditionalPanel(
                                                lib = "glyphicon"),
                                     no = icon("remove",
                                               lib = "glyphicon")),
-                                  size = "xs"),
+                                  size = "xs")
+    ),
 
 
 
@@ -238,7 +239,7 @@ twitter_tab_desc <- tabPanel( "Descriptives",
 
                                 ###### min rt
                                   div(id = "desc_filter_instr",
-                                      shinyWidgets::radioGroupButtons("rt", "Minimum tweets",
+                                      shinyWidgets::radioGroupButtons("rt", "Minimum retweets",
                                                                       choices = c(0, 10, 50, 100, 200),
                                                                       status = "primary",
                                                                       checkIcon = list(

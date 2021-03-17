@@ -7,6 +7,9 @@
 sum_stats_table_creator <- function(df_need, input_date1, input_date2){
 
 
+  ##### replace missing values with 0
+  df_need[is.na(df_need)] <- 0
+
 df_need <-   df_need %>%
   filter(between(as.Date(created_at), as.Date(input_date1), as.Date(input_date2))) ### filter for date range
 

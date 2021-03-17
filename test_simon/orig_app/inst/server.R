@@ -2194,7 +2194,7 @@ Ma_part2 <- reactive({
 
 
 final_regression_diff <- reactive({
-  
+
   res <- final_regression_df_xgb()
   res <- lag_cols(res,input$regression_outcome_xgb)
   res <- make_ts_stationary(res)
@@ -2235,6 +2235,8 @@ output$error_text2 <- renderText({
   v_4b()
   v_5a()
   v_5b()
+  v_6()
+  
 })
 
 
@@ -2273,6 +2275,11 @@ v_5b <- reactive({
   validate(validate_no_zeros(input$ma_select2))
 })
 
+v_6 <- reactive({
+  validate(validate_missing_values(final_regression_df_xgb(),input$var_1))
+})
+
+
 
 observe({
   #if(input$addButton > 0) {
@@ -2291,6 +2298,7 @@ observe({
     v_4b()
     v_5a()
     v_5b()
+    v_6()
     if((input$var_1 == "Close") | (input$var_1 == "Return")){
       #v()
       
@@ -2298,15 +2306,16 @@ observe({
       isolate(b <- Ma_part1())
       rv_action_button$i <- 1
       Ar_part <- AR_creator(final_regression_diff() ,input$var_1,input$num_2)
-      isolate(xchange$df_full <-  cbind(final_regression_diff(),Ar_part,c,b))}
-    
+      isolate(xchange$df_full <-  cbind(final_regression_diff(),Ar_part,c,b))
+      showNotification("Succesfully stored features!", type = "message")}
     else if(input$var_1 == "VIX"){
      # v()
       rv_action_button$i <- 1
       isolate(b <- Ma_part1())
       isolate(c <- Ma_part2())
       Ar_part <- AR_creator(final_regression_diff() ,input$var_1,input$num_2)
-      isolate(xchange$df_full2 <-  cbind(final_regression_diff(),Ar_part,c,b))}
+      isolate(xchange$df_full2 <-  cbind(final_regression_diff(),Ar_part,c,b))
+      showNotification("Succesfully stored features!", type = "message")}
     else if(input$var_1 == "coronavirus"){
       #v()
       rv_action_button$i <- 1
@@ -2314,13 +2323,13 @@ observe({
       isolate(c <- Ma_part2())
       Ar_part <- AR_creator(final_regression_diff() ,input$var_1,input$num_2)
       isolate(xchange$df_full3 <-  cbind(final_regression_diff(),Ar_part,c,b))}
-    # else if(input$var_1 == "OFR.FSI"){
-    #   #v()
-    #   rv_action_button$i <- 1
-    #   isolate(b <- Ma_part1())
-    #   isolate(c <- Ma_part2())
-    #   Ar_part <- AR_creator(final_regression_diff() ,input$var_1,input$num_2)
-    #   isolate(xchange$df_full4 <-  cbind(final_regression_diff(),Ar_part,c,b))}
+    else if(input$var_1 == "OFR.FSI"){
+      #v()
+      rv_action_button$i <- 1
+      isolate(b <- Ma_part1())
+      isolate(c <- Ma_part2())
+      Ar_part <- AR_creator(final_regression_diff() ,input$var_1,input$num_2)
+      isolate(xchange$df_full4 <-  cbind(final_regression_diff(),Ar_part,c,b))}
     else if(input$var_1 == "WLEMUINDXD"){
       #v()
       rv_action_button$i <- 1
@@ -2347,17 +2356,49 @@ observe({
  
 })
 
- 
-observe({
-  if(input$reset_cus > 0) {
-  xchange$df_full <- NULL
-  xchange$df_full2 <- NULL
-  xchange$df_full3 <- NULL
-  xchange$df_full4 <- NULL
-  xchange$df_full5 <- NULL
-  xchange$df_full6 <- NULL
-  xchange$df_full7 <- NULL}
+modal_confirm <- modalDialog(
+  "Are you sure you want to continue?",
+  title = "Deleting files",
+  footer = tagList(
+    actionButton("cancel", "Cancel"),
+    actionButton("ok", "Delete", class = "btn btn-danger")
+  )
+)
+
+
+observeEvent(input$reset_cus,{
+  showModal(modal_confirm)
+  
 })
+
+observeEvent(input$ok, {
+  showNotification("Files deleted")
+  removeModal()
+     xchange$df_full <- NULL
+     xchange$df_full2 <- NULL
+     xchange$df_full3 <- NULL
+     xchange$df_full4 <- NULL
+     xchange$df_full5 <- NULL
+     xchange$df_full6 <- NULL
+     xchange$df_full7 <- NULL
+})
+
+observeEvent(input$cancel, {
+  removeModal()
+})
+
+# 
+# observe({
+#   if(input$reset_cus > 0) {
+#     
+#   xchange$df_full <- NULL
+#   xchange$df_full2 <- NULL
+#   xchange$df_full3 <- NULL
+#   xchange$df_full4 <- NULL
+#   xchange$df_full5 <- NULL
+#   xchange$df_full6 <- NULL
+#   xchange$df_full7 <- NULL}
+# })
 
 custom_df <- eventReactive(input$finish, { 
     list_dfs <- c(xchange$df_full,xchange$df_full2,xchange$df_full3,xchange$df_full4,
@@ -2444,10 +2485,12 @@ observeEvent(input$info_default, {
   }
 })
 
+####valdiate for non missing custom df, but cannot be, at least original dataset is selected
 
 df_xgb_train <- reactive({
   if(input$lag_tabs == "default"){
     res <- final_regression_df_xgb()
+    browser()
     list_dfs <- default_prep(res,input$regression_outcome_xgb,input$n_ahead,input$ftpye,1)
   }else{
     res <- custom_df()
@@ -2471,6 +2514,7 @@ df_xgb_train_for <- reactive({
     list_dfs <- default_prep(res,input$regression_outcome_xgb,input$n_ahead2,input$ftpye2,2)
   }else{
     res <- custom_df()
+    browser()
     list_dfs <- split_data_for_ahead(res,input$n_ahead2,input$ftpye2)
   }
   

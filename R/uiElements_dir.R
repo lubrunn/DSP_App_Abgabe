@@ -14,7 +14,7 @@ dir_setter_panel <- function() {
                ## in case dir path chooser not working enter manually
                tags$br(),
                tags$br(),
-               tags$p("In the case that choosing a path through the 'Select Folder' button \
+               tags$p("In the case that choosing a path through the 'Select Folder' button \n
              is not possible we recommentd updating RStudio. If that does not help you can
              also enter your path manually"),
              textInput("dir_path_man", ""),
@@ -28,9 +28,10 @@ dir_setter_panel <- function() {
 
            ),
            column(8,
+                  tags$p("Welcom to our shiny app. Please select the folder containing the \n
+                         data in order to continue."),
                   tags$h4("Selected folder"),
-                  tags$p(HTML("Please check that you picked the correct folder containing \n
-             the 'Data' folder. otherwise the App will not work.")),
+
              textOutput("directorypath"),
              tags$hr())
            ),

@@ -1792,7 +1792,7 @@ server <- function(input, output, session) {
       #cat(glue("No directory has been selected. Current directory {getwd()})"))
 
     } else {
-      ##### when button is pressed set wd to choosen dir
+      ##### when button is pressed set wd to choosen dirfwefe
       path <- shinyFiles::parseDirPath(volumes, input$directory)
 
       setwd(path)
@@ -1806,6 +1806,15 @@ server <- function(input, output, session) {
   ####### manually entered path
   observeEvent(input$dir_path_man_btn, {
 
+
+    if (!dir.exists(input$dir_path_man)){
+      output$path_checker_man <- renderText({
+        "Please enter a valid path"
+      })
+    }
+
+    #### require that path exists
+    validate(need(dir.exists(input$dir_path_man), "Please enter a valid path"))
     ### when manual path button is pressed set wd to enterd path
     setwd(input$dir_path_man)
   })
@@ -2083,7 +2092,7 @@ server <- function(input, output, session) {
     num_tweets_avg <- formatC(round(mean(df_need$N)), format="f", big.mark = ",", digits=0)
 
     ##### set up string for header of time series graphs
-    glue("{comp_name} ({num_tweets} tweets total,
+    glue("{comp_name} ({num_tweets} tweets total;
            {num_tweets_avg} on average per day)")
   })
 
@@ -2525,7 +2534,6 @@ server <- function(input, output, session) {
       validate(need(days_inrange <= 1,"More than 2 days selected. Please choose a maximum of 2 days."))
     }
 
-
     lang <- stringr::str_to_title(input$lang_net)
     df <- network_plot_datagetter(lang, input$dates_net[1], input$dates_net[2], input$comp_net)
 
@@ -2537,7 +2545,8 @@ server <- function(input, output, session) {
   data_filterer_net_react <- reactive({
     df <- data_getter_net_react()
     if (dim(df)[1] > 0){
-      df <- network_plot_filterer(df, input$rt, input$likes_net, input$long_net,
+
+      df <- network_plot_filterer(df, input$rt_net, input$likes_net, input$long_net,
                                   input$sentiment_net, input$search_term_net,
                                   input$username_net, input$lang_net)
     }
@@ -3078,7 +3087,7 @@ server <- function(input, output, session) {
     }
 
     ##### set up string for header of time series graphs
-    glue("{comp_name} ({round(sum(df_need$N))} tweets total,
+    glue("{comp_name} ({round(sum(df_need$N))} tweets total;
            {round(mean(df_need$N))} on average per day)")
   })
 

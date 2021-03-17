@@ -9,22 +9,22 @@ network_description_text <- "<div style='background-color:#344a5f; padding: 20px
 
 
 In this section we aim to analyse word networks. We offer both bigrams and word pairs as possible
-word combinations to analyse. Bigrams are consecutive word combinations. For exmaple the tweet: 'it is late' would create the bigrams:
+word combinations to analyse. Bigrams are consecutive word combinations. For example, the tweet: 'it is late' would create the bigrams:
 'it is' and 'is late'. Word pairs are all possible word combinations in a tweet. The tweet from above would create the word pairs: 'it is',
 'is late', 'it late'. Hence, there are considerably more word pairs than bigrams for a given sentence. The advantage of word pairs is
 that one also finds word combinations that often appear together even if they are not followed by each other. <br/>
 <br/>
 The word network then depicts all unique word combinations found. The network consists of nodes and links. A node is a single
 word and a link connects two words. A node is created for every single unique word and links are created for
-every single unique word combination. For example if the data contained the three word combinations 'this is' 'is an' and 'example text', 5 nodes
+every single unique word combination. For example, if the data contained the three word combinations 'this is' 'is an' and 'example text', 5 nodes
 and 3 links would be created. For further information you may visit <a href='https://www.tidytextmining.com/ngrams.html'>Tidytextmining</a> or
 <a href='https://cbail.github.io/SICSS_Text_Networks.html'>Text Networks</a> .
 <br/>
 <br/>
 In this application the size of the nodes increase with the number of adjacent links it has. For bigrams the link width depends on the number of
-occurences of an unque bigram. For the the word pairs the link width increases with an increasing word correlation.
+occurrences of an unique bigram. For the word pairs the link width increases with an increasing word correlation.
 The word correlation is a measure that depicts how often words either appear together or
-not at all compared to appearing alone. It helps indentifying word combinations that often appear together while ignoring the total number
+not at all compared to appearing alone. It helps identifying word combinations that often appear together while ignoring the total number
 of occurences. For more information you may visit <a href='https://www.tidytextmining.com/ngrams.html'>Tidytextmining</a> .
 <br/>
 <br/>
@@ -34,15 +34,17 @@ Once started, the computation cannot be started again until the word network
 has been fully computed. But you can cancel the running process in case you want to change parameters without waiting for the current
 computation to be done. The networks can appear very empty when reducing the data through the use of filters. You adjust the minimum
 threshold using the advanced settings. However, note that setting values too low may result in very overcrowded plots. Hence, we only
-show a maximum of 2000 unique word combinations in a network plot. The absolute thresholds for minimum number of occurences are set to 10 while and the minimum
-correlation is set to 0.15. When choosing lower values the filters will default to the aforementioned values.
+show a maximum of 2000 unique word combinations in a network plot. The absolute thresholds for minimum number of occurrences are set to 10 while and the minimum
+correlation is set to 0.15. When choosing lower values, the filters will default to the aforementioned values. When searching tweets of specific users,
+the thresholds can be set lower as there will also be fewer tweets available. Minimum values here are 1 for occurrences of words and bigrams while the minimum correlation can be
+set to 0.1.
 If the plot still becomes too overcrowded we recommend to first remove the network through the 'Remove Network' button in order to avoid lag.
 Then we recommend increasing the thresholds. Another option if the chosen network stemmed from word pairs is to switch to bigram networks
 as they tend be less overcrowded for the same parameters.
 <br/>
 <br/>
-Below the network plot you can also take a look at the raw tweets for you current filter selection. Note that the table updates immediately when changing inputs and
-not only after presssing the button. This provides the possibility to scan the data before starting the computation.
+Below the network plot you can also take a look at the raw tweets for your current filter selection. Note that the table updates immediately when changing inputs and
+not only after pressing the button. This provides the possibility to scan the data before starting the computation.
 
 
 </div>

@@ -51,7 +51,7 @@ time_series_plotter2 <- function(df, filter_type, selected_metrics, num_tweets, 
                       ylab = "Scaled Values",
                       main = input_title,
                       group = group) %>%
-    dygraphs::dyOptions(axisLineWidth = 2, drawGrid = FALSE) %>%
+    dygraphs::dyOptions(axisLineWidth = 2) %>%
     dygraphs::dyLegend() %>%
 
      # {if(date_range == T)  dygraphs::dyRangeSelector(.,dates + 1) else .} %>%
@@ -98,7 +98,7 @@ time_series_plotter2 <- function(df, filter_type, selected_metrics, num_tweets, 
                       group = group) %>%
       dygraphs::dySeries(label = selected_metrics_new) %>%
      {if (ribbon == T) dygraphs::dyRibbon(.,data = ribbonData, top = 0.05, bottom = 0) else . } %>%
-      dygraphs::dyOptions(axisLineWidth = 2, drawGrid = FALSE) %>%
+      dygraphs::dyOptions(axisLineWidth = 2) %>%
       dygraphs::dyLegend() %>%
 
       #{if(date_range == T)  dygraphs::dyRangeSelector(.,dates + 1) else .} %>%

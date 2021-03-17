@@ -5,6 +5,10 @@ time_series_plotter2 <- function(df, filter_type, selected_metrics, num_tweets, 
                                  input_dates2, dates = NA, date_range =T,
                                  input_title, group, input_roll = F, ribbon = T){
 
+  #### replace missing values with 0 (for weighted metrics soemtimes missing when sum of weight is 0 because than dividing by 0)
+  df[is.na(df)] <- 0
+
+
 
   #### convert to date
   df$created_at <- as.Date(df$created_at)

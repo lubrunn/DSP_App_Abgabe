@@ -68,7 +68,7 @@ histogram_plotter <- function(df, date_input1, date_input2, input_bins, input_lo
 
 
   ## show N in thousands
-  df$N <- df$N / 1000
+  df$N <- round(df$N / 1000)
 
 
 ### find distance between first two bins for setting width in geom_col

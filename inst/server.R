@@ -2217,13 +2217,32 @@ server <- function(input, output, session) {
     } else { #if company is chosen
       ### replace umlaute from input, 1233
 
-      comp <- gsub("ö","Ã¶", input$comp)
-      comp <- gsub("ü", "Ã¼", comp)
+      ### control for münchner rück and deutsch börse which are stored with normal
+      # and corrupted umlaute
 
-      glue('SELECT *  FROM sum_stats_companies WHERE
+
+      if( input$comp == "Münchener Rück"){
+        glue('SELECT *  FROM sum_stats_companies WHERE
          retweets_count = {input$rt} and likes_count = {input$likes} and
-         tweet_length = {long} and company  = "{comp}" and
+         tweet_length = {long} and company  = "Münchener Rück" or company ="MÃ¼nchener RÃ¼ck"
+         and
              language = "{tolower(input$lang)}"' )
+      } else if (input$comp == "Deutsche Börse") {
+
+
+        glue('SELECT *  FROM sum_stats_companies WHERE
+         retweets_count = {input$rt} and likes_count = {input$likes} and
+         tweet_length = {long} and company  = "Münchener Rück" or company ="MÃ¼nchener RÃ¼ck"
+         and
+             language = "{tolower(input$lang)}"' )
+
+      } else {
+
+        glue('SELECT *  FROM sum_stats_companies WHERE
+         retweets_count = {input$rt} and likes_count = {input$likes} and
+         tweet_length = {long} and company  = "{input$comp}" and
+             language = "{tolower(input$lang)}"' )
+      }
     }
 
 
@@ -2339,7 +2358,7 @@ server <- function(input, output, session) {
     req(!is.null(input$value) | input$num_tweets_box == T)
 
     ###### need at least two days selected for time series plot
-    validate(need(length(input$dates_desc) != 1, "Cannot plot time series for single day"))
+    validate(need(length(input$dates_desc) != 1, "Cannot plot time series for single date. Please select more dates."))
 
     ##### need date input to not be null
     validate(need(!is.null(input$dates_desc), "Please select a date."))
@@ -2350,23 +2369,26 @@ server <- function(input, output, session) {
     ### get data for plots
     df <- get_data_sum_stats_tables()
 
+    ### need to have at least to obs for time series
+    validate(need(dim(df)[1] > 1, "Only one date found for current selection. Cannot plot time series for single date"))
+
 
     #### when number of tweets should not be plotted
     if (input$num_tweets_box == F){
-     p <-  time_series_plotter2(df, input$metric, input$value, num_tweets = F,
-                           input$dates_desc[1], input$dates_desc[2],
-                           input_title = input_title,
-                           group = "twitter_desc")
+      p <-  time_series_plotter2(df, input$metric, input$value, num_tweets = F,
+                                 input$dates_desc[1], input$dates_desc[2],
+                                 input_title = input_title,
+                                 group = "twitter_desc")
 
-     ### need to have data
-     validate(need(!is.null(p), "No data available for current selection" ))
-     p
+      ### need to have data
+      validate(need(!is.null(p), "No data available for current selection" ))
+      p
     } else { ##### when number of tweets should be plotted
 
       p <- time_series_plotter2(df, input$metric, input$value, num_tweets = T,
-                           input$dates_desc[1], input$dates_desc[2],
-                           input_title = input_title,
-                           group = "twitter_desc")
+                                input$dates_desc[1], input$dates_desc[2],
+                                input_title = input_title,
+                                group = "twitter_desc")
 
       ### need to have data
       validate(need(!is.null(p), "No data available for current selection" ))
@@ -2384,6 +2406,7 @@ server <- function(input, output, session) {
 
   ##### if button is clicked store time series plot in serperate part
   observeEvent(input$plot_saver_button, {
+
     #### date input cannot be null
     validate(need(!is.null(input$dates_desc), "Please select a date."))
     ###### need at leat ne value selected
@@ -2406,7 +2429,7 @@ server <- function(input, output, session) {
                                              input_title = input_title,
                                              group = "twitter_desc")
     } else { ## in case where number of tweets should be included in plot
-      save_plot$plot <- time_series_plotter2(df, input$metric, input$value, num_tweets = F,
+      save_plot$plot <- time_series_plotter2(df, input$metric, input$value, num_tweets = T,
                                              input$dates_desc[1], input$dates_desc[2], r,
                                              date_range = F,
                                              input_title = input_title,
@@ -2417,6 +2440,7 @@ server <- function(input, output, session) {
 
   ######## time series plot when pressing save plot button
   output$sum_stats_plot2 <-dygraphs::renderDygraph({
+
     req(!is.null(save_plot$plot))
     save_plot$plot
     # dygraphs::dygraph(don) %>%
@@ -2461,7 +2485,8 @@ server <- function(input, output, session) {
     } else { #for case of choosen company
       file_path <- file.path(glue("Twitter/plot_data/Companies/{input$comp}/{querry_histo()}"))
       df_need <- data.table::fread(file_path,
-                                   select = 1:3)
+                                   select = 1:4) %>% filter(language == tolower(input$lang)) %>%
+        select(-language)
       ### need to have data
       validate(need(dim(df_need)[1] > 0, "No data available for current selection" ))
 
@@ -2483,9 +2508,9 @@ server <- function(input, output, session) {
 
     req(input$histo_value)
 
-
+browser()
     p <- histogram_plotter(data_histo(), date_input1 = dates_desc()[1], date_input2 = dates_desc()[2],
-                      input_bins = input$bins, input_log = input$log_scale)
+                           input_bins = input$bins, input_log = input$log_scale)
 
     #### check if data in plot
     validate(need(!is.null(p), "No data available for current selection" ))
@@ -2582,11 +2607,11 @@ server <- function(input, output, session) {
       file_path <- file.path("Twitter/term_freq",folder, subfolder, file_name)
       # read file
       dt <- data.table::fread(file_path, select = c("date_variable",
-                                              "language_variable",
-                                              "word",
-                                              "N",
-                                              "emo"),
-                        colClasses = c("date_variable" = "Date"))
+                                                    "language_variable",
+                                                    "word",
+                                                    "N",
+                                                    "emo"),
+                              colClasses = c("date_variable" = "Date"))
 
       #### drop duplicates
       dt <- unique(dt)
@@ -2605,11 +2630,11 @@ server <- function(input, output, session) {
       file_path <- file.path("Twitter/term_freq",folder, subfolder, file_name)
       # read file
       dt <- data.table::fread(file_path, select = c("date",
-                                              "language",
-                                              "word",
-                                              "N",
-                                              "emo"),
-                        colClasses = c("date" = "Date"))
+                                                    "language",
+                                                    "word",
+                                                    "N",
+                                                    "emo"),
+                              colClasses = c("date" = "Date"))
 
       #### drop duplicates
       dt <- unique(dt)
@@ -2650,16 +2675,15 @@ server <- function(input, output, session) {
       input_word_freq_filter <- input$word_freq_filter
     }
     df <- word_freq_data_wrangler(data_expl(), dates_desc()[1], dates_desc()[2],
-                            input$emo, emoji_words,
-                            input_word_freq_filter,
-                            tolower(input$lang),
-                            input$comp)
+                                  input$emo, emoji_words,
+                                  input_word_freq_filter,
+                                  tolower(input$lang),
+                                  input$comp)
 
-    #### account for empty df
-    validate(need(!is.null(df), "No data available for current selection"))
+
 
     df
-    })
+  })
 
 
 
@@ -2670,7 +2694,8 @@ server <- function(input, output, session) {
 
 
 
-
+    #### account for empty df
+    validate(need(!is.null(word_freq_df()), "No data available for current selection"))
 
 
     df <- df_filterer(word_freq_df() , input$n_freq)
@@ -2690,7 +2715,8 @@ server <- function(input, output, session) {
   output$wordcloud <- wordcloud2::renderWordcloud2({
     req(input$plot_type_expl == "Word Cloud")
 
-
+    #### account for empty df
+    validate(need(!is.null(word_freq_df()), "No data available for current selection"))
 
     df <- df_filterer(word_freq_df(), input$n_freq_wc)
 
@@ -2711,13 +2737,18 @@ server <- function(input, output, session) {
     df_need$created_at <- as.Date(df_need$created_at)
     # filter dates
     df_need <- df_need %>%
-      filter(between(created_at, as.Date(dates_desc()[1]), as.Date(dates_desc()[2])))
+      filter(between(created_at, as.Date(dates_desc()[1]), as.Date(dates_desc()[2])) &
+               language == tolower(input$lang))
     # get number of total tweets
     number_tweets <- round(sum(df_need$N))
 
 
     #### number of unqiue words/bigrams
     number_words <-  unique_words(word_freq_df())
+
+    if (is.null(number_words)){
+      number_words <- 0
+    }
 
     HTML(glue("Number of unique {tolower(input$ngram_sel)}s available for current selection: {number_words} <br>
          Number of tweets for current selection: {number_tweets}"))
@@ -3174,18 +3205,18 @@ server <- function(input, output, session) {
 
 
       } else if (input$ControlCountry == "Germany"){
-          lang <- "DE"
+        lang <- "DE"
 
-          df <- data.table::fread(glue("Twitter/sentiment/Model/controls_{lang}.csv")) %>%
-            select(Date, input$controls_comp)
+        df <- data.table::fread(glue("Twitter/sentiment/Model/controls_{lang}.csv")) %>%
+          select(Date, input$controls_comp)
 
-        } else if (input$ControlCountry == "United States") {
-          lang <- "US"
+      } else if (input$ControlCountry == "United States") {
+        lang <- "US"
 
-          df <- data.table::fread(glue("Twitter/sentiment/Model/controls_{lang}.csv")) %>%
-            select(Date, input$controls_comp)
+        df <- data.table::fread(glue("Twitter/sentiment/Model/controls_{lang}.csv")) %>%
+          select(Date, input$controls_comp)
 
-        }
+      }
 
 
 
@@ -3332,6 +3363,7 @@ server <- function(input, output, session) {
                          input_roll = input$roll_twitter_comp,
                          ribbon = F)
   })
+
 
 
   ###############################################################################

@@ -64,15 +64,20 @@ MA_creator <- function(df,variable,avg_len){
 # input variable for "Close"
 ARMA_creator <- function(res,variable){
   
+  
+  
    names(res)[1] <- "date"
    
    help_df <- res %>% dplyr::select(-date)
    
+   help_df <- help_df %>% select_if(~ !any(is.na(.)))
+   
    list_var <- names(help_df)
    
    optlags <- NULL
-                                  #or just rename to y
-   for(i in list_var[-1]){      #insert here
+     
+                            
+   for(i in list_var[-1]){  
      lag <- VARselect(help_df[,c(variable,i)],lag.max = 10, type = "const")$selection[["AIC(n)"]]
      optlags <- c(optlags,lag)
    }
@@ -135,9 +140,6 @@ lag_cols <- function(res,variable){    #input variable for "Close"
 make_ts_stationary <- function(res){
     
  for(i in 2:ncol(res)){ 
- # optlags <- VARselect(res[,i],lag.max = 10, 
- #                      type = "const")$selection[["AIC(n)"]]
- #   
   if(adf.test(res[,i],k=2)$p.value > 0.1){
     res[,i] <- c(diff(res[,i],1),NA)
     
@@ -150,6 +152,9 @@ make_ts_stationary <- function(res){
 }
 #' @export
 #' @rdname xgboost_prep   
+sample <- res
+n_ahead <- 5
+variable <- "Return"
 split_data_for <- function(sample,n_ahead,ftype,variable){
   names(sample)[1] <- "date"
   sample <- sample %>%
@@ -192,7 +197,7 @@ split_data_for <- function(sample,n_ahead,ftype,variable){
       names()
 
   for(i in covariates){
-    
+  
   Lambda <- BoxCox.lambda(out$df_train[,i])
   arima_fit <-  auto.arima(out$df_train[,i],D=1,approximation = F,allowdrift = T,
                            allowmean = T,seasonal = T,lambda = Lambda)
@@ -224,6 +229,7 @@ split_data_for <- function(sample,n_ahead,ftype,variable){
 
 #' @export
 #' @rdname xgboost_prep
+sample <- res
 split_data_for_ahead <- function(sample,n_ahead2,ftype2){
   names(sample)[1] <- "date"
   sample <- sample %>%
@@ -330,17 +336,6 @@ split_data_eval <- function(sample,n_ahead3){
  
   return(out)
 }
-
-#' @export
-#' @rdname xgboost_prep
-corona_dummy <- function(res){
-  names(res)[1] <- "date"
-  res$date <- as.Date(res$date)
-  res$corona_shock_dummy <- 0
-  res$corona_shock_dummy[(res$date >= "2020-02-10") & (res$date <= "2020-05-25")] <- 1
-return(res)
-}
-
 
 #' 
 #' #' @export

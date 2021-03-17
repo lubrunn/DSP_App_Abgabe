@@ -437,6 +437,7 @@ Sys.setlocale("LC_TIME", "English")
 ui <- fluidPage(
   shinyFeedback::useShinyFeedback(),
   shinyjs::useShinyjs(),
+  cicerone::use_cicerone(),
   theme = shinythemes::shinytheme("darkly"),
   #shinythemes::themeSelector(),
   #titlePanel("Sentiment_Covid_App"),
@@ -558,7 +559,9 @@ ui <- fluidPage(
                                    ))),#close tabpanel VAR forecasting
                         tabPanel("XGboost-forecasting",
                                  sidebarPanel(
-                                     conditionalPanel(condition="input.tabs == 'Summary statistics'",       
+                                   
+                                     conditionalPanel(condition="input.tabs == 'Summary statistics'", 
+                                                      actionButton("descr_xgb1", "Instructions"),
                                                       tabs_custom_xgb()),
                                      conditionalPanel(condition="input.tabs == 'AR & MA structure'",
                                                       radioButtons("lag_tabs","How do you want to proceed?",choices = c("default","custom"),
@@ -620,6 +623,7 @@ ui <- fluidPage(
                                     tabsetPanel(type = "tabs", id = "tabs",
                                                 tabPanel("Summary statistics",value="Summary statistics",
                                                          tableOutput("xgb_summary"),
+                                                         tags$hr(style="border-color: white;"),
                                                          plotOutput("correlation_xgb"),
                                                          textOutput("xgb_date_check")
                                                          # plotOutput("correlation_plot")
@@ -631,8 +635,10 @@ ui <- fluidPage(
                                                          conditionalPanel(
                                                            condition = "input.correlation_type == 'PACF'  && input.lag_tabs == 'custom'",
                                                            plotOutput("pacf_plot_xgb")),
-                                                         conditionalPanel("input.lag_tabs == 'custom'",     
+                                                         conditionalPanel("input.lag_tabs == 'custom'",
+                                                                          tags$hr(style="border-color: white;"),
                                                                           textOutput("error_text"),
+                                                                          textOutput("error_text2"),
                                                                           DT::dataTableOutput("tableCustom")),
                                                          conditionalPanel("input.lag_tabs == 'default'",
                                                                           DT::dataTableOutput("df_xgb_default"))

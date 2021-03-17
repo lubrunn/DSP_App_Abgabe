@@ -28,7 +28,7 @@ validate_iregulars <- function(input) {
   single_nums <- unlist(str_split(input, ","))
   c <- !is.na(as.numeric(single_nums))
   if (is.element(FALSE, c)) {
-    "Please choose numbers"
+    "Please choose a value!"
   } else {
     NULL
   }
@@ -39,7 +39,7 @@ validate_iregulars <- function(input) {
 validate_negatives <- function(input) {
   single_nums <- unlist(str_split(input, ","))
   if (any(single_nums < 0)) {
-    "Please choose numbers"
+    "Please choose a positive value!"
   } else {
     NULL
   }
@@ -52,7 +52,7 @@ validate_negatives <- function(input) {
 validate_Large_numbers <- function(input) {
   single_nums <- unlist(str_split(input, ","))
   if (any(single_nums > 400)) {
-    "Please choose a small window"
+    "Please choose a smaller value!"
   } else {
     NULL
   }
@@ -66,8 +66,26 @@ validate_Large_numbers <- function(input) {
 validate_no_zeros <- function(input) {
   single_nums <- unlist(str_split(input, ","))
   if (any(single_nums == 0)) {
-    "Do not include zeros"
+    "Do not include zeros!"
   } else {
     NULL
   }
 }
+
+#' @export
+#' @rdname validation
+#'
+#
+validate_missing_values <- function(res,var) {
+  col <- res[,var]
+  if(any(is.na(col))) {
+    "Please choose another variable. Calculations do not allow missing values!"
+  } else {
+    NULL
+  }
+}
+
+
+
+
+

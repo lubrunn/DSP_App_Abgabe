@@ -598,7 +598,7 @@ server <- function(input, output, session) {
     }
 
     if (input$country_regression_var == "Germany"){
-      global_controls <- global_controls_test_DE()   #load controls
+      global_controls <- global_controls_test_DE() 
       global_controls$Date <- as.Date(global_controls$Date) #transform date
       dax <- GDAXI()  #load dax
       dax$Date <- as.Date(dax$Date, "%d %b %Y") #transform date
@@ -2013,10 +2013,9 @@ observeEvent(input$reset_corona_xgb,{
 
 
 output$xgb_summary <- function(){
-  knitr::kable(df_need_xgb(), caption = glue("Summary statistics"),colnames = NULL) %>%
-    kableExtra::kable_styling(c("striped","hover"), full_width = F,
-                              position = "center",
-                              font_size = 16)
+  res <- df_need_xgb()
+  graph <- kable_tab(res,"Summary statistics")
+  graph
 }
 
 
@@ -2032,10 +2031,22 @@ df_need_xgb <- reactive({
   df_need
   
 })
-
+##### require either controls or corona
 output$correlation_xgb <- renderPlot({
-  ggpairs(final_regression_df_xgb()[-1])
+  req(input$Controls_xgb)
+  
+  res <- final_regression_df_xgb()[-1]
+  help_df <- res %>% select_if(~ !any(is.na(.)))
+  if(any(is.na(res))){
+  names_missing <- colnames(res)[ncol(res)]
+  showNotification(glue("Removed {names_missing} for plot due to missing values"), 
+                   type = "message")}
+  
+  ggpairs(help_df, upper = list(continuous = wrap(ggally_cor, size = 8)), lower = list(continuous = 'smooth'))
 })
+### message if something was removed
+
+
 
 
 
@@ -2090,6 +2101,7 @@ output$add_features <- renderUI({
 
 observeEvent(input$lag_tabs, {                         #Observe event from input (model choices)
   req(input$lag_tabs)
+  
   updateTabsetPanel(session, "lag_tab", selected = input$lag_tabs)
 })
 ######################################Custom dataset############################
@@ -2100,7 +2112,8 @@ xchange$df_full2 <- NULL
 xchange$df_full3 <- NULL
 xchange$df_full4 <- NULL
 xchange$df_full5 <- NULL
-
+xchange$df_full6 <- NULL
+xchange$df_full7 <- NULL
 
 xchange$df1 <- NULL
 xchange$df2 <- NULL
@@ -2116,7 +2129,7 @@ Ma_part1 <- reactive({
   helpi <- rep("MA",length(num_vec))
   names_vec <- paste0(helpi,variables_list, single_nums)
   #
-
+  
   help_matrix <- mapply(c,num_vec, variables_list, SIMPLIFY = T)
   lies <- NULL
 
@@ -2181,15 +2194,15 @@ Ma_part2 <- reactive({
 
 
 final_regression_diff <- reactive({
-  
+
   res <- final_regression_df_xgb()
   res <- lag_cols(res,input$regression_outcome_xgb)
   res <- make_ts_stationary(res)
   res
 })
-v <- reactive({
-  validate(validate_MA(input$num_1))
-})
+# v <- reactive({
+#   validate(validate_MA(input$num_1))
+# })
 # validate that MA cannot be 1
 
 rv_action_button <- reactiveValues(i = 0)
@@ -2208,7 +2221,24 @@ output$error_text <- renderText({
   }else{
     b <- ""
   }
+  
+  
 })
+output$error_text2 <- renderText({
+  v_1a()
+  v_1b()
+  v_2a()
+  v_2b()
+  v_3a()
+  v_3b()
+  v_4a()
+  v_4b()
+  v_5a()
+  v_5b()
+  v_6()
+  
+})
+
 
 v_1a <- reactive({
   validate(validate_iregulars(input$ma_select))
@@ -2245,6 +2275,11 @@ v_5b <- reactive({
   validate(validate_no_zeros(input$ma_select2))
 })
 
+v_6 <- reactive({
+  validate(validate_missing_values(final_regression_df_xgb(),input$var_1))
+})
+
+
 
 observe({
   #if(input$addButton > 0) {
@@ -2263,6 +2298,7 @@ observe({
     v_4b()
     v_5a()
     v_5b()
+    v_6()
     if((input$var_1 == "Close") | (input$var_1 == "Return")){
       #v()
       
@@ -2270,15 +2306,16 @@ observe({
       isolate(b <- Ma_part1())
       rv_action_button$i <- 1
       Ar_part <- AR_creator(final_regression_diff() ,input$var_1,input$num_2)
-      isolate(xchange$df_full <-  cbind(final_regression_diff(),Ar_part,c,b))}
-    
+      isolate(xchange$df_full <-  cbind(final_regression_diff(),Ar_part,c,b))
+      showNotification("Succesfully stored features!", type = "message")}
     else if(input$var_1 == "VIX"){
      # v()
       rv_action_button$i <- 1
       isolate(b <- Ma_part1())
       isolate(c <- Ma_part2())
       Ar_part <- AR_creator(final_regression_diff() ,input$var_1,input$num_2)
-      isolate(xchange$df_full2 <-  cbind(final_regression_diff(),Ar_part,c,b))}
+      isolate(xchange$df_full2 <-  cbind(final_regression_diff(),Ar_part,c,b))
+      showNotification("Succesfully stored features!", type = "message")}
     else if(input$var_1 == "coronavirus"){
       #v()
       rv_action_button$i <- 1
@@ -2286,42 +2323,87 @@ observe({
       isolate(c <- Ma_part2())
       Ar_part <- AR_creator(final_regression_diff() ,input$var_1,input$num_2)
       isolate(xchange$df_full3 <-  cbind(final_regression_diff(),Ar_part,c,b))}
+    else if(input$var_1 == "OFR.FSI"){
+      #v()
+      rv_action_button$i <- 1
+      isolate(b <- Ma_part1())
+      isolate(c <- Ma_part2())
+      Ar_part <- AR_creator(final_regression_diff() ,input$var_1,input$num_2)
+      isolate(xchange$df_full4 <-  cbind(final_regression_diff(),Ar_part,c,b))}
+    else if(input$var_1 == "WLEMUINDXD"){
+      #v()
+      rv_action_button$i <- 1
+      isolate(b <- Ma_part1())
+      isolate(c <- Ma_part2())
+      Ar_part <- AR_creator(final_regression_diff() ,input$var_1,input$num_2)
+      isolate(xchange$df_full5 <-  cbind(final_regression_diff(),Ar_part,c,b))}
+    else if(input$var_1 == "DAX" | input$var_1 == "DJI"){
+      #v()
+      rv_action_button$i <- 1
+      isolate(b <- Ma_part1())
+      isolate(c <- Ma_part2())
+      Ar_part <- AR_creator(final_regression_diff() ,input$var_1,input$num_2)
+      isolate(xchange$df_full6 <-  cbind(final_regression_diff(),Ar_part,c,b))}
     else{
       #v()
       rv_action_button$i <- 1
       isolate(b <- Ma_part1())
       isolate(c <- Ma_part2())
       Ar_part <- AR_creator(final_regression_diff() ,input$var_1,input$num_2)
-      isolate(xchange$df_full4 <-  cbind(final_regression_diff(),Ar_part,c,b))
+      isolate(xchange$df_full7 <-  cbind(final_regression_diff(),Ar_part,c,b))
     }
   }
  
 })
 
- 
-observe({
-  if(input$reset_cus > 0) {
-  xchange$df_full <- NULL
-  xchange$df_fullb <- NULL
-  xchange$df_full2 <- NULL
-  xchange$df_full3 <- NULL
-  xchange$df_full4 <- NULL
-  xchange$df_full5 <- NULL}
+modal_confirm <- modalDialog(
+  "Are you sure you want to continue?",
+  title = "Deleting files",
+  footer = tagList(
+    actionButton("cancel", "Cancel"),
+    actionButton("ok", "Delete", class = "btn btn-danger")
+  )
+)
+
+
+observeEvent(input$reset_cus,{
+  showModal(modal_confirm)
+  
 })
 
+observeEvent(input$ok, {
+  showNotification("Files deleted")
+  removeModal()
+     xchange$df_full <- NULL
+     xchange$df_full2 <- NULL
+     xchange$df_full3 <- NULL
+     xchange$df_full4 <- NULL
+     xchange$df_full5 <- NULL
+     xchange$df_full6 <- NULL
+     xchange$df_full7 <- NULL
+})
+
+observeEvent(input$cancel, {
+  removeModal()
+})
+
+# 
+# observe({
+#   if(input$reset_cus > 0) {
+#     
+#   xchange$df_full <- NULL
+#   xchange$df_full2 <- NULL
+#   xchange$df_full3 <- NULL
+#   xchange$df_full4 <- NULL
+#   xchange$df_full5 <- NULL
+#   xchange$df_full6 <- NULL
+#   xchange$df_full7 <- NULL}
+# })
+
 custom_df <- eventReactive(input$finish, { 
-    list_dfs <- c(xchange$df_full,xchange$df_full2,xchange$df_full3,xchange$df_full4)
-      df <- data.frame((sapply(list_dfs,c)))
-      df <- df[!duplicated(as.list(df))]
-      df <- df %>% dplyr::select(-contains("."))
-      df$Dates <- as.Date(df$Dates)
-      cols <- setdiff(colnames(df), "date")
-      df <- df[,cols]
-      if(input$corona_dummy == "yes"){
-        df <- corona_dummy(df)
-      }else{
-        df
-      }
+    list_dfs <- c(xchange$df_full,xchange$df_full2,xchange$df_full3,xchange$df_full4,
+                  xchange$df_full5,xchange$df_full6,xchange$df_full7)
+      df <- prep_custom(list_dfs)
       df
 })
 
@@ -2347,6 +2429,10 @@ df_xgb <- reactive({
   res <- final_regression_df_xgb()
 
   res <- ARMA_creator(res,input$regression_outcome_xgb)
+  
+  # if(!is.null(missing_names)){
+  #   showNotification(paste0("The following variable is not used to create autoregressive features due to missing values: ", 
+  #                           missing_names,collapse = ","), type = "message")}
 })
 
 observeEvent(input$lag_tabs, {
@@ -2365,17 +2451,47 @@ output$df_xgb_default <- DT::renderDataTable({
 })
 # 
 
+
+observeEvent(input$info_default, {
+  if(input$info_default == "yes"){
+    res <- final_regression_df_xgb()
+    missing_names <- colnames(res)[!complete.cases(t(res))]
+    str1 <- paste("1 .The default option automatically chooses the autoregressive structure
+                  and moving average period for each variable. The number of autoregressive variables is based on the function
+                  `vars::VARselect`. This function returns the number of lags with the
+                  lowest information criterion. (Each variable is evaluated in relation to the dependent variable).
+                  The period for the moving average is set to
+                  5. This is deducted from the assumption forecasts are computed for a
+                  short horizon.","<br/>",
+                  "2. The ADF tests for stationarity and differences the time series by 1","<br/>",
+                  "3. All features except the dependent variable is lagged by one 1 to avoid leakage of information","<br/>")
+    
+    if(!is.null(missing_names)){
+    str2a <- paste("For the following variable/s no additional features could be created due to missing values:",sep = '<br/>')
+    str2b <- paste(missing_names,collapse = ",",sep = '<br/>')
+    str2 <- paste(str2a,str2b)
+    }else{
+    str2 <- paste("Features could be created for all variables",
+                    missing_names,collapse = ",",sep = '<br/>')
+      
+    }
+    
+    
+  showModal(modalDialog(
+    title = "Information about dataset",
+    renderUI(HTML(paste(str1,str2,sep = '<br/>'))),
+    easyClose = TRUE
+  ))
+  }
+})
+
+####valdiate for non missing custom df, but cannot be, at least original dataset is selected
+
 df_xgb_train <- reactive({
   if(input$lag_tabs == "default"){
     res <- final_regression_df_xgb()
-    res <- lag_cols(res,input$regression_outcome_xgb)
-    res <- make_ts_stationary(res)
-    list_dfs <- split_data_for(res,input$n_ahead,input$ftpye,input$regression_outcome_xgb)
-    res <- ARMA_creator(res,input$regression_outcome_xgb)
-    
-    cols <- setdiff(colnames(res),colnames(list_dfs$df_train))
-    res <- res[,c("date",cols)]
-    list_dfs$df_train <- left_join(list_dfs$df_train,res)
+    browser()
+    list_dfs <- default_prep(res,input$regression_outcome_xgb,input$n_ahead,input$ftpye,1)
   }else{
     res <- custom_df()
     
@@ -2387,7 +2503,6 @@ df_xgb_train <- reactive({
   #rename with columns from train
   list_dfs$df_forecast <- res
   # corona dummy
-  
   list_dfs
 })
 
@@ -2396,16 +2511,10 @@ df_xgb_train <- reactive({
 df_xgb_train_for <- reactive({
   if(input$lag_tabs == "default"){
     res <- final_regression_df_xgb()
-    res <- lag_cols(res,input$regression_outcome_xgb)
-    res <- make_ts_stationary(res)
-    list_dfs <- split_data_for_ahead(res,input$n_ahead2,input$ftpye2)
-    res <- ARMA_creator(res,input$regression_outcome_xgb)
-    
-    cols <- setdiff(colnames(res),colnames(list_dfs$df_train))
-    res <- res[,c("date",cols)]
-    list_dfs$df_train <- left_join(list_dfs$df_train,res)
+    list_dfs <- default_prep(res,input$regression_outcome_xgb,input$n_ahead2,input$ftpye2,2)
   }else{
     res <- custom_df()
+    browser()
     list_dfs <- split_data_for_ahead(res,input$n_ahead2,input$ftpye2)
   }
   
@@ -2533,15 +2642,8 @@ prediction_xgb <-  eventReactive(input$pred,{
   
   
   res <- df_xgb_train() 
-  colnames(res$df_forecast)[which(names(res$df_forecast) == input$regression_outcome_xgb)] <- "y"
-  
-  colnames(res$df_train)[which(names(res$df_train) == input$regression_outcome_xgb)] <- "y"
-  model <- model_xgbi()[[1]]
-  
-  preds <- model %>%
-    fit(formula = y ~ .,data = res$df_train[,c(-1)]) %>%
-    predict(new_data = res$df_forecast[,c(-1)])
-  
+  preds <- pred_output(res,input$regression_outcome_xgb,model_xgbi()[[1]])
+
   df_orig <- final_regression_df_xgb()
   #a <- df_orig$Close[1]
   #abc <- diffinv(res$df_train$y, xi = a)
@@ -2575,52 +2677,37 @@ output$model_fit <- function(){
         fit(formula = y ~ .,data = res$df_train[,c(-1)])
 
       fits <- predict(model_xgboost,res$df_train[,c(-1)])
+
+      out <- metrics_out(res,fits)
       
-      diff <- (fits[,1]-res$df_train[,"y"])
-      mean_diff <- mean(diff[,1]^2)
-      rsme <- sqrt(mean_diff)
-      mean_abs <- mean(abs(diff[,1]))
-      diff_per <- ((res$df_train[,"y"]-fits[,1])/res$df_train[,"y"]) 
-      diff_per <- diff_per[!is.infinite(rowSums(diff_per)),]
-      mape <- mean(abs(diff_per)*100)
-   
-      
-      df_need <- data.frame(c(rsme,
-                              mean_abs,
-                              mape),
+      df_need <- data.frame(c(out$rsme,
+                              out$mean_abs,
+                              out$mape),
                             row.names = c("RMSE","MAE","MAPE"))
       colnames(df_need)<- "value"
-      knitr::kable(df_need, caption = glue("Performance metrics"),colnames = NULL) %>%
-        kableExtra::kable_styling(c("striped","hover"), full_width = F,
-                                  position = "center",
-                                  font_size = 16)
+      # exists func
+      kable_tab(df_need,"Performance metrics")
 }
 }
 
 
 output$xgb_metrics <- function(){
  
-  
   preds <- prediction_xgb()
   res <- df_xgb_train()
   df_orig <- final_regression_df_xgb()
   y <- df_orig  %>% filter(Dates >= min(res$f_dates) & Dates <= max(res$f_dates))
-  diff <- (preds[,1]-y[,2])
-  mean_diff <- mean(diff[,1]^2)
-  rsme <- sqrt(mean_diff)
-  mean_abs <- mean(abs(diff[,1]))
-  diff_per <- ((y[,2]-preds[,1])/y[,2]) 
-  mape <- mean(abs(diff_per[,1])*100)
-  
-  df_need <- data.frame(c(rsme,
-                          mean_abs,
-                          mape),
+
+  out <- metrics_out_final(preds,y)
+    
+  df_need <- data.frame(c(out$rsme,
+                          out$mean_abs,
+                          out$mape),
                         row.names = c("RMSE","MAE","MAPE"))
   colnames(df_need)<- "value"
-  knitr::kable(df_need, caption = glue("Performance metrics"),colnames = NULL) %>%
-    kableExtra::kable_styling(c("striped","hover"), full_width = F,
-                              position = "center",
-                              font_size = 16)
+  
+  kable_tab(df_need,"Performance metrics")
+  
   
 }
 
@@ -2651,10 +2738,7 @@ output$serial_out_xgb <- function(){
                           m$method),
                         row.names = c("statistic","p.value","method"))
   colnames(df_need)<- "Summary"
-  knitr::kable(df_need, caption = glue("Performance metrics"),colnames = NULL) %>%
-    kableExtra::kable_styling(c("striped","hover"), full_width = F,
-                              position = "center",
-                              font_size = 16)
+  kable_tab(df_need,"Autocorrelation test")
   
   
   
@@ -2670,34 +2754,9 @@ output$forecast_xgb <- renderDygraph({
   full_df <- final_regression_df_xgb()
   res <- df_xgb_train()
   preds <- prediction_xgb()
-  preds <- preds %>%
-    zoo(seq(from = as.Date(min(res$f_dates)), to = as.Date(max(res$f_dates)), by = "day"))
-  
-  if(input$forecast_plot_choice == "Full"){
-
-    ts <- full_df %>% pull(input$regression_outcome_xgb) %>%
-      zoo(seq(from = as.Date(min(full_df$Dates)), to = as.Date(max(full_df$Dates)), by = "day"))
-    
-    {cbind(actuals=ts, predicted=preds)} %>% dygraph() %>%
-      dyEvent(as.Date(min(res$f_dates)), "Start of prediction", labelLoc = "bottom",color = "red") %>%  dyOptions(colors = c("white","green"))
-    
-  }else if(input$forecast_plot_choice == "Forecasted"){
-    ts <- full_df %>% pull(input$regression_outcome_xgb) %>%
-      zoo(seq(from = as.Date(min(res$f_dates)), to = as.Date(max(res$f_dates)), by = "day"))
-    
-    {cbind(actuals=ts, predicted=preds)} %>% dygraph() %>%  dyOptions(colors = c("white","green"))
-    
-    
-  }else{
-    colnames(res$df_train)[which(names(res$df_train) == input$regression_outcome_xgb)] <- "y"
-    
-    model_xgboost <-  model_xgbi()[[1]] %>%
-      fit(formula = y ~ .,data = res$df_train[,c(-1)])
-    plot <- xgb.importance(model=model_xgboost$fit) %>% xgb.ggplot.importance(
-      top_n=20, measure=NULL, rel_to_first = F)
-  plot
-  }
-  
+ plot <-  forcast_plot_xgb(res,preds,full_df,input$forecast_plot_choice,input$regression_outcome_xgb,
+                           input$Stock_Regression_xgb)
+ plot
 })
 
 
@@ -2754,7 +2813,7 @@ output$plot_1_xgb_actual <- renderDygraph({
     zoo(seq(from = as.Date(min(full_df$Dates)), to = as.Date(max(full_df$Dates)), by = "day"))
   
   {cbind(actuals=ts, predicted=preds)} %>% dygraph() %>%
-    dyEvent(as.Date(max(full_df$Dates)), "Start forecast", labelLoc = "bottom",color = "red") %>%  dyOptions(colors = c("white","green"))
+    dyEvent(as.Date(max(res$df_train$Date)), "Start forecast", labelLoc = "bottom",color = "red") %>%  dyOptions(colors = c("white","green"))
   #%>% dyCSS("C:/Users/simon/Desktop/WS_20_21/Git_tracked_Sentiment_App/DSP_Sentiment_Covid_App/test_simon/SimonApp/css/dygraph.css")
   
   
@@ -2805,6 +2864,62 @@ output$finish_button <- renderUI({
   actionButton("finish", "Finish")
   
 })
+# start introjs when button is pressed with custom options and events
+observeEvent(input$descr_xgb1,{
+  
+  guide1_xgb$init()$start()
+  
+})
+
+guide1_xgb <- Cicerone$
+  new()$
+  step(
+    el = "country_regression_xgb_inst",
+    title = "Text Input",
+    description = "Here you can select the country for the stocks."
+  )$
+  step(
+    "stock_regression_xgb_inst",
+    "Select a company",
+    "Here you can either select company specific tweets or tweets that were randomly scraped
+                              without any search term"
+  )$
+  step(
+    "stock_regression_xgb_inst",
+    "Select a company",
+    "Here you can either select company specific tweets or tweets that were randomly scraped
+                              without any search term"
+  )$
+  step(
+    "regression_outcome_xgb_inst",
+    "Select dependent variable",
+    "Here you can either select the adjusted closing price, return or the log transformed
+    adjusted closing price"
+  )$
+  step(
+    "senti_yesno_inst",
+    "Include sentiment",
+    "Here you can choose whether the sentiment should be part of the model. This sentiment
+    can be filtered by various factors. This done on the second sidebar 'Filter sentiment input'"
+  )$
+  step(
+    "Controls_xgb_inst",
+    "Select control variables",
+    "Here you can select additional variables. Those variables include a volatility measure (VIX), a
+    Covid-19 attention variable based on Google trends (Google-trends), an Index to display the financial distress (FDI),
+    and an Index, which captures the economic uncertainty."
+  )$
+  step(
+    "date_xgb_inst",
+    "Select time frame",
+    "Here you can filter for your time of interest. Please do not choose a period lower than 30 days."
+  )$
+  step(
+    "corona_vars_xgb",
+    "Select Covid-19 related variable",
+    "Here you can select multiple variabels, which are related to the global COVID-19 pandemic."
+  )
+
 
 
 

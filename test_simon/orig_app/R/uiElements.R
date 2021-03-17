@@ -178,7 +178,7 @@ tabs_custom <- function(){
            radioButtons("country_regression","Which country?",c("Germany","USA"),selected = "Germany"),
            uiOutput("stock_regression"),
            radioButtons("regression_outcome","Which variable?",c("Open","High","Low","Close","Adj.Close","Volume","Return"),selected = "Close"),
-           switchInput("senti_yesno_reg","Include Sentiment?",onLabel="Yes",offLabel="No"),
+           div(id="senti_yesno_inst",switchInput("senti_yesno_reg","Include Sentiment?",onLabel="Yes",offLabel="No")),
            conditionalPanel(
              condition = "input.regressiontabs==1",
              numericInput("Quantiles","Choose quantile",value=0.5,min=0.05,max=0.95,step = 0.05)),
@@ -186,11 +186,11 @@ tabs_custom <- function(){
            actionButton("reset_regression", "clear selected"),
            #radioButtons("Granger_outcome","Which variable?",c("Open","High","Low","Close","Adj.Close","Volume"),selected = "Close"),
            #selectizeInput("Sentiment_Granger","Choose second argument: Sentiment",choices="under construction"),
-           sliderInput("date_regression",label = "Timeseries",
+           div(id="date_xgb_inst",sliderInput("date_regression",label = "Timeseries",
                        value = c(as.Date("2020-01-02"),as.Date("2021-02-12")),
                        min = as.Date("2020-01-02"),
                        max = as.Date("2021-02-12"),
-                       step = 1,timeFormat = "%F")
+                       step = 1,timeFormat = "%F"))
 
 
 
@@ -391,16 +391,16 @@ tabsetPanel(
            radioButtons("country_regression_xgb","Which country?",c("Germany","USA"),selected = "Germany"),
            uiOutput("stock_regression_xgb"),
            radioButtons("regression_outcome_xgb","Which variable?",c("Adj.Close" = "Close","Return"),selected = "Return",inline = T),
-           switchInput("senti_yesno_xgb","Include Sentiment?",onLabel="Yes",offLabel="No"),
+           div(id="senti_yesno_inst",switchInput("senti_yesno_xgb","Include Sentiment?",onLabel="Yes",offLabel="No")),
            uiOutput("Controls_xgb"),
            actionButton("reset_regression_xgb", "clear selected"),
            #radioButtons("Granger_outcome","Which variable?",c("Open","High","Low","Close","Adj.Close","Volume"),selected = "Close"),
            #selectizeInput("Sentiment_Granger","Choose second argument: Sentiment",choices="under construction"),
-           sliderInput("date_regression_xgb",label = "Timeseries",
+           div(id="date_xgb_inst",sliderInput("date_regression_xgb",label = "Timeseries",
                        value = c(as.Date("2020-02-12"),as.Date("2021-02-12")),
                        min = as.Date("2020-01-02"),
                        max = as.Date("2021-02-12"),
-                       step = 1,timeFormat = "%F"),
+                       step = 1,timeFormat = "%F")),
            radioButtons("country_corona_xgb","Which country ?",c("Germany","United States"),selected = "Germany"),
            uiOutput("corona_vars_xgb"),
            actionButton("reset_corona_xgb", "clear selected")
@@ -435,7 +435,7 @@ tabsetPanel(
            #radioButtons("ma_type","Select a type of moving average", choices = c("mean","exponential")),
            #numericInput("num_1","Chose length of moving average",min=0,value = 2),
            numericInput("num_2","Chose Autoregressive lags for",min=0,value = 1),
-           radioButtons("corona_dummy","1st lockdown dummy",choices = c("yes","no")),
+           #radioButtons("corona_dummy","1st lockdown dummy",choices = c("yes","no")),
            actionButton("addButton", "Upload"),
            uiOutput("finish_button"),
            actionButton("reset_cus", "Reset")
@@ -510,10 +510,20 @@ custom_lag_tab <- function(){
 tabsetPanel(
   id = "lag_tab",
   type = "hidden",
-  tabPanel("default"),
+  tabPanel("default",
+           radioButtons("info_default","Show information about dataset",choices = c("yes","no"),selected = "no")),
   tabPanel("custom",
+           tags$br(),
+           tags$br(),
            selectInput("correlation_type", "Chose type of correlation plot:", choices = c("ACF","PACF"), selected = ""),
            uiOutput("correlation_plot_choice"),
+           tags$br(),
+           tags$br(),
+           tags$br(),
+           tags$br(),
+           tags$br(),
+           tags$br(),
+           tags$hr(style="border-color: white;"),
            numeric_features()
            # actionButton("reset_arma", "clear selected")
            

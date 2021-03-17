@@ -560,16 +560,27 @@ server <- function(input, output, session) {
                           htmltools::p("In order to perform the Granger causality Analysis, built the model using the panel on the left: ",htmltools::tags$br(),
                                        htmltools::div("- select the first variable",htmltools::tags$br(),
                                                       "- select the second variable",htmltools::tags$br(),
-                                                      "- choose the direction of the causality test using the checkbox",htmltools::tags$br(),
-                                                      "- the tab ",htmltools::em("Visualize"),"contains plots of both series for comparison",
-                                                      "- the tab ",htmltools::em("Background-steps")," contains all important steps required in the analysis",htmltools::tags$br(),
-                                                      "- the results can be accessed on the tab ",htmltools::em("Results"), style="margin-left: 1em;font-weight: 18px; font-size: 18px; line-height: 1;"),style = "font-weight: 18px; font-size: 18px; line-height: 1;"),
+                                                      "- choose the direction of the causality test using the checkbox",htmltools::tags$br()
+                                                      # "- the tab ",htmltools::strong(em("Visualize")),"contains plots of both series for comparison",htmltools::tags$br(),
+                                                      # "- the tab ",htmltools::strong(em("Background-steps"))," contains all important steps required in the analysis",htmltools::tags$br(),
+                                                      # "- the results can be accessed on the tab ",htmltools::strong(em("Results"))
+                                                      , style="margin-left: 1em;font-weight: 18px; font-size: 18px; line-height: 1;"),style = "font-weight: 18px; font-size: 18px; line-height: 1;"),
                           htmltools::h2(htmltools::strong("Analysis steps:") ,style = "font-family: 'Times', serif; font-weight: 20px; font-size: 20px; line-height: 1;"),
                           htmltools::p("The following steps are automatically performed after the user selects two time series: ",htmltools::tags$br(),
                                        htmltools::div("1. The optimal number of lags is calculated",htmltools::tags$br(),
                                                       "2. Stationarity is repeatedly tested and the series are differenced until sationarity is achieved",htmltools::tags$br(),
                                                       "3. A VAR model is estimated with the optimal number of lags and the (if necessary) transformed series",htmltools::tags$br(),
-                                                      "4. A granger causality test is performed.",style="margin-left: 1em;font-weight: 18px; font-size: 18px; line-height: 1;"),style = "font-weight: 18px; font-size: 18px; line-height: 1;")))
+                                                      "4. A granger causality test is performed.",
+                                                      style="margin-left: 1em;font-weight: 18px; font-size: 18px; line-height: 1;"),
+                                                      style = "font-weight: 18px; font-size: 18px; line-height: 1;"),
+                          htmltools::h2(htmltools::strong("Visualize-Tab") ,style = "font-family: 'Times', serif; font-weight: 20px; font-size: 20px; line-height: 1;"),
+                          htmltools::p("  ",style = "font-weight: 18px; font-size: 18px; line-height: 1;"),
+                          htmltools::h2(htmltools::strong("Background-steps") ,style = "font-family: 'Times', serif; font-weight: 20px; font-size: 20px; line-height: 1;"),
+                          htmltools::p("  ",style = "font-weight: 18px; font-size: 18px; line-height: 1;"),
+                          htmltools::h2(htmltools::strong("Results") ,style = "font-family: 'Times', serif; font-weight: 20px; font-size: 20px; line-height: 1;"),
+                          htmltools::p("  ",style = "font-weight: 18px; font-size: 18px; line-height: 1;")
+
+                          ))
   })
 
   ################################################################################################### Regression

@@ -2508,7 +2508,7 @@ server <- function(input, output, session) {
 
     req(input$histo_value)
 
-browser()
+
     p <- histogram_plotter(data_histo(), date_input1 = dates_desc()[1], date_input2 = dates_desc()[2],
                            input_bins = input$bins, input_log = input$log_scale)
 

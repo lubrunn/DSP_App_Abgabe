@@ -16,7 +16,7 @@ histogram_plotter <- function(df, date_input1, date_input2, input_bins, input_lo
   # count number of tweets per metric bin
   df <- df[created_at >= as.Date(date_input1) &
              created_at <= as.Date(date_input2),
-           list(sum_n = sum(N)),
+           list(sum_n = sum(N, na.rm = T)),
            by = c(input_metric)]
 
   ## if emtpy after filtering return
@@ -32,9 +32,15 @@ histogram_plotter <- function(df, date_input1, date_input2, input_bins, input_lo
   }
 
   # cut into intervalls according to bin input
+  ### control for single obs
+  if (dim(df)[1] == 1){
+    df <- data.frame("bin1" = df[1,1], "bin2" = df[1,1], "sum_n" = df[1,2])
+    names(df) <- c("bin1", "bin2", "sum_n")
+  } else {
+
   df[, bins := cut_interval(metric, n = input_bins)]
   #### count bins
-  df <- df[, .(sum_n = sum(sum_n)), by = bins]
+  df <- df[, .(sum_n = sum(sum_n, na.rm = T)), by = bins]
 
 
   #### create tick marks series
@@ -49,6 +55,7 @@ histogram_plotter <- function(df, date_input1, date_input2, input_bins, input_lo
   # convert to numeric
   df$bin1 <- as.numeric(df$bin1)
   df$bin2 <- as.numeric(df$bin2)
+  }
 
   ### take mean
   #df <- df %>% mutate(mean_bin = rowMeans(select(df, bin1, bin2), na.rm = T))

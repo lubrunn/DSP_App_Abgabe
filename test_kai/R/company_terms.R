@@ -1,6 +1,9 @@
 
+##### here is a list that is used for the select input, it fits the folder names and shows
+# nicer names to the user when folder names are not nice enough
 
 
+### this is for tweets selection
 company_terms <- list(
   "Unifiltered Tweets" = list("Unfiltered Tweets" = "NoFilter"),
   "DAX" = list(
@@ -83,7 +86,7 @@ company_terms <- list(
 
 
 
-
+##### this is for stock selection
 us_names <- c("Dow Jones Industrial",
               "Apple", "Amgen", "American Express", "Boeing",
               "Caterpillar", "Salesforce", "Cisco Systems", "Chevron",
@@ -119,6 +122,7 @@ ger_tickers <- c("GDAXI",
                    "MUV2.DE", "RWE.DE", "SAP.DE", "SIE.DE", "VNA.DE", "VOW3.DE")
 
 
+##### create named list for selectInput
 company_terms_stock_us <- setNames(as.list(us_tickers), us_names)
 company_terms_stock_ger <- setNames(as.list(ger_tickers), ger_names)
 
@@ -128,12 +132,35 @@ company_terms_stock <- list(
 )
 
 
-# us <- readr::read_csv("C:/Users/lukas/OneDrive - UT Cloud/Data/Yahoo/USA/USA_Index_Components.csv")
-# ger <- readr::read_csv("C:/Users/lukas/OneDrive - UT Cloud/Data/Yahoo/Germany/Germany_Index_Components.csv")
-#
-# dput(us$`Company Name`)
-# dput(us$Symbol)
-#
-# dput(ger$`Company Name`)
-# dput(ger$Symbol)
+
+
+
+
+
+
+########################## comparison plot
+
+###### control variables
+controls_comp_list <- list(
+
+  "COVID-19" = list(
+
+    "New Cases per Million" = "new_cases_per_million",
+    "New Deaths per Million" = "new_deaths_per_million",
+    "Reproduction Rate" = "reproduction_rate",
+    "Google coronavirus searches" = "coronavirus"
+  ),
+
+
+  "Other country-level controls" = list(
+                  "Volatility index" = "VIX"
+
+  ),
+  "Other global controls" = list(
+
+    "Financial distress index" = "OFR.FSI",
+    "Economic uncertainty index" = "WLEMUINDXD"
+  )
+)
+
 

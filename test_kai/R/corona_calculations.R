@@ -37,7 +37,7 @@ CORONA_neu <- function(country){
 #' @export
 #' @rdname corona_calculations
 selectize_corona_granger <- function() {
-  selectizeInput("corona_measurement_granger","Choose Corona control",
+  selectizeInput("corona_measurement_granger","Corona variable:",
                  c("total_cases","new_cases","total_deaths","new_deaths","total_cases_per_million",
                    "new_cases_per_million","total_deaths_per_million","new_deaths_per_million","reproduction_rate",
                    "icu_patients","icu_patients_per_million","hosp_patients","hosp_patients_per_million",
@@ -52,7 +52,7 @@ selectize_corona_granger <- function() {
 #' @export
 #' @rdname corona_calculations
 selectize_corona_regression <- function() {
-  selectizeInput("corona_measurement_regression","Choose Corona control",
+  selectizeInput("corona_measurement_regression","Corona controls:",
                  c("","total_cases","new_cases","total_deaths","new_deaths","total_cases_per_million",
                    "new_cases_per_million","total_deaths_per_million","new_deaths_per_million","reproduction_rate",
                    "icu_patients","icu_patients_per_million","hosp_patients","hosp_patients_per_million",
@@ -66,7 +66,22 @@ selectize_corona_regression <- function() {
 #' @export
 #' @rdname corona_calculations
 selectize_corona_var <- function() {
-  selectizeInput("corona_measurement_var","Choose Corona control",
+  selectizeInput("corona_measurement_var","Corona controls:",
+                 c("","total_cases","new_cases","total_deaths","new_deaths","total_cases_per_million",
+                   "new_cases_per_million","total_deaths_per_million","new_deaths_per_million","reproduction_rate",
+                   "icu_patients","icu_patients_per_million","hosp_patients","hosp_patients_per_million",
+                   "weekly_icu_admissions","weekly_icu_admissions_per_million","weekly_hosp_admissions",
+                   "weekly_hosp_admissions_per_million","new_tests","total_tests","total_tests_per_thousand",
+                   "new_tests_per_thousand","positive_rate","tests_per_case","total_vaccinations","people_vaccinated",
+                   "people_fully_vaccinated","new_vaccinations","total_vaccinations_per_hundred","people_vaccinated_per_hundred",
+                   "people_fully_vaccinated_per_hundred"),selected = "",multiple = FALSE)
+}
+
+
+#' @export
+#' @rdname corona_calculations
+selectize_corona_xgb <- function() {
+  selectizeInput("corona_measurement_xgb","Corona controls:",
                  c("","total_cases","new_cases","total_deaths","new_deaths","total_cases_per_million",
                    "new_cases_per_million","total_deaths_per_million","new_deaths_per_million","reproduction_rate",
                    "icu_patients","icu_patients_per_million","hosp_patients","hosp_patients_per_million",

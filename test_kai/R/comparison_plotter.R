@@ -1,5 +1,10 @@
+#### here are the plot creations for covid and stocks from the comparison tabs
 
 
+
+### this function plots the stock data according to user input
+#'@export
+#'@rdname comparison_plotter
 stock_plotter <- function(df, input_metric, input_comp, input_roll){
 
 
@@ -10,7 +15,7 @@ stock_plotter <- function(df, input_metric, input_comp, input_roll){
       filter(
           grepl(paste(input_comp, collapse = "|"), name))
     ## convert to wide format for dygraph
-    df <- df %>% pivot_wider(names_from = name, values_from = input_metric)
+    df <- df %>% tidyr::pivot_wider(names_from = name, values_from = input_metric)
 
     ### replace missing values in dow with first value they had (went public on 01/04/2019)
     if ("DOW" %in% names(df)){
@@ -30,12 +35,14 @@ stock_plotter <- function(df, input_metric, input_comp, input_roll){
                       ylab = input_metric,
                       group = "comp_plots",
                       main = glue::glue("{input_metric}")) %>%
+      ### when 1 cimmpany selceted change label to company name
       {if (length(input_comp) == 1) dygraphs::dySeries(.,label = input_metric) else .} %>%
+      #### when mutiple comapnies slecte and adj. close selcted scael the data
       {if (length(input_comp) > 1 & input_metric == "Adj.Close") dygraphs::dyRebase(.,value = 100) else . } %>%
-      dygraphs::dyOptions(axisLineWidth = 2, drawGrid = FALSE) %>%
+      dygraphs::dyOptions(axisLineWidth = 2) %>%
       dygraphs::dyLegend() %>%
       dygraphs::dyShading(from = min(df_dates), to = max(df_dates), color = "white") %>%
-      {if (input_roll == T) dygraphs::dyRoller(., rollPeriod = 7, showRoller = F) else .}
+      {if (input_roll == T) dygraphs::dyRoller(., rollPeriod = 7, showRoller = F) else .} #### smoothing
 
 
 
@@ -44,8 +51,9 @@ stock_plotter <- function(df, input_metric, input_comp, input_roll){
 
 
 
-
-
+###### this function plots the covid data according to user input
+#'@export
+#'@rdname comparison_plotter
 covid_plotter <- function(df, selected_metric, input_country, input_roll = F){
 
   ## select relevant variables
@@ -63,15 +71,17 @@ covid_plotter <- function(df, selected_metric, input_country, input_roll = F){
   ##### format selected metrics so it looks nicer
   selected_metric <- gsub("_", " ", selected_metric) %>% stringr::str_to_title()
 
-
+  ###### set up dygraph
   dygraphs::dygraph(don,
                     ylab = selected_metric,
                     group = "comp_plots",
-                    main = glue::glue("COVID-19 numbers")) %>%
+                    main = glue::glue("Control Variable")) %>%
+    #### when mutiple countries selected change label shown on hover
    {if (length(input_country) > 1) dygraphs::dySeries(.) else dygraphs::dySeries(.,label = input_country)}  %>%
-    dygraphs::dyOptions(axisLineWidth = 2, drawGrid = FALSE) %>%
+    dygraphs::dyOptions(axisLineWidth = 2) %>%
     dygraphs::dyLegend() %>%
     dygraphs::dyShading(from = min(df$date), to = max(df$date), color = "white") %>%
+    #### when smoothin selected show moving averages
     {if (input_roll == T) dygraphs::dyRoller(., rollPeriod = 7, showRoller = F) else .}
 
 
@@ -79,6 +89,33 @@ covid_plotter <- function(df, selected_metric, input_country, input_roll = F){
   }
 
 
+#'@rdname comparison_plotter
+##### other controls plot
+controls_plotter  <- function(df, input_controls_comp, input_ControlCountry, input_roll){
+
+### put values into seperate df
+  df_values <- df %>% select(-Date)
+
+
+  ## convert to time series
+  don <- xts::xts(df_values, as.Date(df$Date))
+
+  ### plot
+  dygraphs::dygraph(don,
+                    ylab = input_controls_comp,
+                    group = "comp_plots",
+                    main = glue::glue("Control Variable")) %>%
+    #### when mutiple countries selected change label shown on hover
+    {if (length(input_ControlCountry) > 1) dygraphs::dySeries(.) else dygraphs::dySeries(.,label = input_ControlCountry)}  %>%
+    dygraphs::dyOptions(axisLineWidth = 2) %>%
+    dygraphs::dyLegend() %>%
+    dygraphs::dyShading(from = min(df$Date), to = max(df$Date), color = "white") %>%
+    #### when smoothin selected show moving averages
+    {if (input_roll == T) dygraphs::dyRoller(., rollPeriod = 7, showRoller = F) else .}
+
+
+
+}
 
 
 

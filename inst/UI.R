@@ -57,23 +57,36 @@ ui <- fluidPage(
                                  mainPanel(
                                    tabsetPanel(
                                      tabPanel("Information Granger",
+                                              tags$hr(),
                                               htmlOutput("info_granger"),
                                               withMathJax()),
                                      tabPanel("Visualize",
+                                              tags$hr(),
                                               dygraphs::dygraphOutput("stocks_granger"),
+                                              tags$hr(),
                                               dygraphs::dygraphOutput("second_granger")),
                                      tabPanel("Background-steps",
+                                              tags$hr(),
                                               htmlOutput("grangertext1"),
                                               verbatimTextOutput("optimallags"),
+                                              tags$hr(),
                                               htmlOutput("grangertext2"),
                                               verbatimTextOutput("dickey_fuller"),
                                               verbatimTextOutput("dickey_fuller_second"),
+                                              tags$hr(),
                                               htmlOutput("grangertext3"),
                                               verbatimTextOutput("dickey_fuller_diff"),
                                               verbatimTextOutput("dickey_fuller_second_diff")),
                                      tabPanel("Results",
+                                              tags$hr(),
                                               verbatimTextOutput("granger_result"),
-                                              htmlOutput("granger_satz"))))),
+                                              htmlOutput("granger_satz"),
+                                              tags$head(tags$style(HTML("#granger_satz{
+
+                                                 font-size: 22px;
+                                                 font-style: bold;
+                                                 color: white !important;}")))
+                                              )))),
                         tabPanel("Regression Analysis",
                                  sidebarPanel(
                                    tabs_custom()
@@ -81,9 +94,11 @@ ui <- fluidPage(
                                  mainPanel(
                                    tabsetPanel(id = "regressiontabs",
                                                tabPanel("Information Regression",
+                                                        tags$hr(),
                                                         htmlOutput("info_regression"),
                                                         withMathJax()),
                                                tabPanel("Summary Statistics",
+                                                        tags$hr(),
                                                         "Summary Statistics",
                                                         tableOutput("reg_summary"),
                                                         tags$head(tags$style(HTML("#reg_summary{
@@ -97,10 +112,13 @@ ui <- fluidPage(
                                                         plotOutput("correlation_reg")
                                                ),
                                                tabPanel("Linear Regression",
+                                                        tags$hr(),
                                                         htmlOutput("regression_equation"),
-                                                        verbatimTextOutput("regression_result")),
+                                                        tags$hr(),
+                                                        tableOutput("regression_result")),
                                                tabPanel("Quantile Regression",value=1,
-                                                        verbatimTextOutput("regression_result_Qreg")
+                                                        tags$hr(),
+                                                        tableOutput("regression_result_Qreg")
 
                                                )
                                    )
@@ -113,20 +131,29 @@ ui <- fluidPage(
                                  mainPanel(
                                    tabsetPanel(id = "vartabs",
                                      tabPanel("Information VAR",
+                                              tags$hr(),
                                               htmlOutput("info_var"),
                                               withMathJax()),
                                      tabPanel("Summary Statistics",
+                                              tags$hr(),
+                                              "Summary Statistics",
                                               tableOutput("var_summary"),
                                               plotOutput("correlation_var")
                                      ),
                                      tabPanel("Validity",
+                                              tags$hr(),
                                               dygraphs::dygraphOutput("plot_forecast"),
+                                              tags$hr(),
+                                              "Performance Metrics:",
                                               tableOutput("var_metrics"),
+                                              tags$hr(),
                                               verbatimTextOutput("serial_test"),
                                               htmlOutput("var"),value=1,
                                      ),
                                      tabPanel("Actual Forecast",
+                                              tags$hr(),
                                               dygraphs::dygraphOutput("plot_forecast_real"),
+                                              tags$hr(),
                                               verbatimTextOutput("serial_test_real"),
                                               htmlOutput("var_real"))
                                    ))),#close tabpanel VAR forecasting

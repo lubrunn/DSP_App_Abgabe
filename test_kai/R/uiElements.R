@@ -47,15 +47,18 @@ selectize_corona <- function() {
                  c(
                    "New Cases per Million" = "new_cases_per_million",
                    "New Deaths per Million" = "new_deaths_per_million",
-                   "Reproduction Rate" = "reproduction_rate",
-                   "ICU Patients per Million" = "icu_patients_per_million",
-                   "Hospital Patients per Million" = "hosp_patients_per_million",
-                   "Weekly ICU Admissions per Million" = "weekly_icu_admissions_per_million",
-                   "Weekly Hospital Admissions per Million" = "weekly_hosp_admissions_per_million"
+                   "Reproduction Rate" = "reproduction_rate"
                  ),
                  multiple = FALSE,
                  selected = "total_deaths")
 }
+
+
+
+
+
+
+
 # sliderinput for dates
 #' @export
 #' @rdname uiElements
@@ -215,18 +218,37 @@ tabs_custom_gra <- function(){
   tabsetPanel(
     id = "regression_tabs_gra",
     tabPanel("Model specifcation",
-             radioButtons("country_granger","Which country?",c("Germany","USA"),selected = "Germany"),
+             tags$h4("Choose first variable:"),
+             shinyWidgets::radioGroupButtons("country_granger","Which country?",choices=c("Germany","USA"),
+                                             status = "primary",checkIcon = list(yes = icon("ok",lib = "glyphicon"),
+                                                                                 no = icon("remove",lib = "glyphicon")),size = "sm")%>% shinyhelper::helper(type = "inline",
+                                                                                                                             title = "",
+                                                                                                                             content = c("Select country for the company selection. Only refers to the first variable."),
+                                                                                                                             size = "s"),
+
              uiOutput("Stock_Granger"),
-             radioButtons("Granger_outcome","Which variable?",c("Open","High","Low","Close","Adj.Close","Volume","Return"),selected = "Close"),
+             shinyWidgets::radioGroupButtons("Granger_outcome","variable:",choices=c("Adjusted Close"="Adj.Close","Return"="Return","log Adj. Close"="log_Close"),
+                                             status = "primary",checkIcon = list(yes = icon("ok",lib = "glyphicon"),
+                                                                                 no = icon("remove",lib = "glyphicon")),size = "sm"),
+             tags$hr(),
+             tags$h4("Choose second variable:"),
              switchInput("senti_yesno_gra","Include Sentiment?",onLabel="Yes",offLabel="No"),
+             textOutput("gra_con_check"),
+             tags$head(tags$style("#gra_con_check{color: red;}")),
              uiOutput("ControlsGranger"),
              selectize_corona_granger(),
-             sliderInput("date_granger",label="Timeseries",
-                         value = c(as.Date("2020-02-12"),as.Date("2021-02-12")),
-                         min = as.Date("2020-01-02"),
-                         max = as.Date("2021-02-12"),
+             tags$hr(),
+             textOutput("gra_date_check"),
+             tags$head(tags$style("#gra_date_check{color: red;}")),
+             sliderInput("date_granger",label="Choose timeseries:",
+                         value = c(as.Date("2018-11-30"),as.Date(date_avail)),
+                         min = as.Date("2018-11-30"),
+                         max = as.Date(date_avail),
                          step = 1,timeFormat = "%F"),
-             checkboxInput("direction_granger","Second variable causes first?",value = TRUE)
+             checkboxInput("direction_granger","Second variable causes first?",value = TRUE)%>% shinyhelper::helper(type = "inline",
+                                                                                                                    title = "",
+                                                                                                                    content = c("Select the direction of causation. If checked, the second variable granger causes the first one."),
+                                                                                                                    size = "s")
 
 
 
@@ -400,23 +422,38 @@ tabs_custom <- function(){
   tabsetPanel(
     id = "regression_tabs",
     tabPanel("Model specifcation",
-             radioButtons("country_regression","Which country?",c("Germany","USA"),selected = "Germany"),
+             tags$h4("Choose dependent variable:"),
+             shinyWidgets::radioGroupButtons("country_regression","Which country?",choices=c("Germany","USA"),
+                                             status = "primary",checkIcon = list(yes = icon("ok",lib = "glyphicon"),
+                                                                                 no = icon("remove",lib = "glyphicon")),size = "sm")%>% shinyhelper::helper(type = "inline",
+                                                                                                                                title = "",
+                                                                                                                                content = c("Select country for the company selection. Only refers to the dependent variable."),
+                                                                                                                                size = "s"),
              uiOutput("stock_regression"),
-             radioButtons("regression_outcome","Which variable?",c("Open","High","Low","Close","Adj.Close","Volume","Return"),selected = "Close"),
+             shinyWidgets::radioGroupButtons("regression_outcome","variable:",choices=c("Adjusted Close"="Adj.Close","Return"="Return","log Adj. Close"="log_Close"),
+                                             status = "primary",checkIcon = list(yes = icon("ok",lib = "glyphicon"),
+                                                                                 no = icon("remove",lib = "glyphicon")),size = "sm"),
+             tags$hr(),
+             tags$h4("Choose control variables:"),
              switchInput("senti_yesno_reg","Include Sentiment?",onLabel="Yes",offLabel="No"),
-             conditionalPanel(
-               condition = "input.regressiontabs==1",
-               numericInput("Quantiles","Choose quantile",value=0.5,min=0.05,max=0.95,step = 0.05)),
+             textOutput("reg_con_check"),
+             tags$head(tags$style("#reg_con_check{color: red;}")),
              uiOutput("Controls"),
              selectize_corona_regression(),
              actionButton("reset_regression", "clear selected"),
              #radioButtons("Granger_outcome","Which variable?",c("Open","High","Low","Close","Adj.Close","Volume"),selected = "Close"),
              #selectizeInput("Sentiment_Granger","Choose second argument: Sentiment",choices="under construction"),
-             sliderInput("date_regression",label = "Timeseries",
-                         value = c(as.Date("2020-01-02"),as.Date("2021-02-12")),
-                         min = as.Date("2020-01-02"),
-                         max = as.Date("2021-02-12"),
-                         step = 1,timeFormat = "%F")
+             tags$hr(),
+             conditionalPanel(
+               condition = "input.regressiontabs==1",
+               numericInput("Quantiles","Choose quantile",value=0.5,min=0.05,max=0.95,step = 0.05)),
+             textOutput("reg_date_check"),
+             tags$head(tags$style("#reg_date_check{color: red;}")),
+             sliderInput("date_regression",label = "Choose timeseries",
+                         value = c(as.Date("2018-11-30"),as.Date(date_avail)),
+                         min = as.Date("2018-11-30"),
+                         max = as.Date(date_avail),
+                         step = 1,timeFormat = "%F"),
 
 
 
@@ -559,20 +596,37 @@ tabs_custom_var <- function(){
   tabsetPanel(
     id = "regression_tabs_var",
     tabPanel("Model specifcation",
-             radioButtons("country_regression_var","Which country?",c("Germany","USA"),selected = "Germany"),
+             tags$h4("Choose dependent variable:"),
+             shinyWidgets::radioGroupButtons("country_regression_var","Which country?",choices=c("Germany","USA"),
+                                             status = "primary",checkIcon = list(yes = icon("ok",lib = "glyphicon"),
+                                                                                 no = icon("remove",lib = "glyphicon")),size = "sm")%>% shinyhelper::helper(type = "inline",
+                                                                                                                                    title = "",
+                                                                                                                                    content = c("Select country for the company selection. Only refers to the dependent variable."),
+                                                                                                                                    size = "s"),
              uiOutput("stock_regression_var"),
-             radioButtons("regression_outcome_var","Which variable?",c("Open","High","Low","Close","Adj.Close","Volume","Return"),selected = "Close"),
+             shinyWidgets::radioGroupButtons("regression_outcome_var","variable:",c("Adjusted Close"="Adj.Close","Return"="Return","log Adj. Close"="log_Close"),
+                                             status = "primary",checkIcon = list(yes = icon("ok",lib = "glyphicon"),
+                                                                                 no = icon("remove",lib = "glyphicon")),size = "sm"),
+             tags$hr(),
+             tags$h4("Choose control variables:"),
              switchInput("senti_yesno_var","Include Sentiment?",onLabel="Yes",offLabel="No"),
+             textOutput("var_con_check"),
+             tags$head(tags$style("#var_con_check{color: red;}")),
              uiOutput("Controls_var"),
              selectize_corona_var(),
              actionButton("reset_regression_var", "clear selected"),
+             tags$hr(),
+             textOutput("var_date_check"),
+             tags$head(tags$style("#var_date_check{color: red;}")),
              sliderInput("date_regression_var",label = "Timeseries",
-                         value = c(as.Date("2020-02-12"),as.Date("2021-02-12")),
-                         min = as.Date("2020-01-02"),
-                         max = as.Date("2021-02-12"),
+                         value = c(as.Date("2018-11-30"),as.Date(date_avail)),
+                         min = as.Date("2018-11-30"),
+                         max = as.Date(date_avail),
                          step = 1,timeFormat = "%F"),
              numericInput("ahead", "choose how many days to forecast", value = 5, min = 1, max = 100),
-             selectInput("var_which_plot","Select plot to show:",c("Forecasted period only","Full time series"),selected="Forecasted period only")
+             conditionalPanel(
+               condition = "input.vartabs==1",
+               selectInput("var_which_plot","Select plot to show:",c("Forecasted period only","Full time series"),selected="Forecasted period only"))
 
 
 
@@ -719,21 +773,29 @@ tabs_custom_xgb <- function(){
   tabsetPanel(
     id = "regression_tabs_xgb",
     tabPanel("Model specifcation",
+             tags$h4("Choose dependent variable:"),
              radioButtons("country_regression_xgb","Which country?",c("Germany","USA"),selected = "Germany"),
              uiOutput("stock_regression_xgb"),
-             radioButtons("regression_outcome_xgb","Which variable?",c("Open","High","Low","Close","Adj.Close","Volume"),selected = "Close",inline = T),
+             radioButtons("regression_outcome_xgb","variable:",c("Adjusted Close"="Adj.Close","Return"="Return","log Adj. Close"="log_Close")),
+             tags$hr(),
+             tags$h4("Choose control variables:"),
              switchInput("senti_yesno_xgb","Include Sentiment?",onLabel="Yes",offLabel="No"),
              uiOutput("Controls_xgb"),
+             #uiOutput("corona_vars_xgb"),
+             selectize_corona_xgb(),
+             #radioButtons("country_corona_xgb","country of corona variable?",c("Germany","United States"),selected = "Germany"),
              actionButton("reset_regression_xgb", "clear selected"),
              #radioButtons("Granger_outcome","Which variable?",c("Open","High","Low","Close","Adj.Close","Volume"),selected = "Close"),
              #selectizeInput("Sentiment_Granger","Choose second argument: Sentiment",choices="under construction"),
+             tags$hr(),
+             textOutput("xgb_date_check"),
+             tags$head(tags$style("#xgb_date_check{color: red;}")),
              sliderInput("date_regression_xgb",label = "Timeseries",
-                         value = c(as.Date("2020-02-12"),as.Date("2021-02-12")),
-                         min = as.Date("2020-01-02"),
-                         max = as.Date("2021-02-12"),
-                         step = 1,timeFormat = "%F"),
-             radioButtons("country_corona_xgb","Which country ?",c("Germany","United States"),selected = "Germany"),
-             uiOutput("corona_vars_xgb")
+                         value = c(as.Date("2018-11-30"),as.Date(date_avail)),
+                         min = as.Date("2018-11-30"),
+                         max = as.Date(date_avail),
+                         step = 1,timeFormat = "%F")
+
 
 
     ),
@@ -847,4 +909,19 @@ custom_lag_tab <- function(){
   )
 
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

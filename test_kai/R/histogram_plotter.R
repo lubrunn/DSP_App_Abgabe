@@ -1,3 +1,6 @@
+
+### here is the function that computes the histograms
+
 #'@export
 #'@rdname histogram_plotter
 #'
@@ -7,14 +10,19 @@ histogram_plotter <- function(df, date_input1, date_input2, input_bins, input_lo
 
   ## second column is always column of interest
   input_metric <- names(df)[2]
-
-
+ ### tunr of scientifc notation
+  options(scipen=999)
 
   # count number of tweets per metric bin
   df <- df[created_at >= as.Date(date_input1) &
              created_at <= as.Date(date_input2),
            list(sum_n = sum(N)),
            by = c(input_metric)]
+
+  ## if emtpy after filtering return
+  if (dim(df)[1] == 0){
+    return()
+  }
 
   # take log if asked
   if (input_log == T){
@@ -59,6 +67,11 @@ histogram_plotter <- function(df, date_input1, date_input2, input_bins, input_lo
   names(df) <- stringr::str_replace(names(df), "bin1", input_metric)
 
 
+  ## show N in thousands
+
+
+
+
 ### find distance between first two bins for setting width in geom_col
  # df <- df %>% arrange(.data[[input_metric]])
  # min_dist <- df[[input_metric]][2] - df[[input_metric]][1]
@@ -73,7 +86,8 @@ histogram_plotter <- function(df, date_input1, date_input2, input_bins, input_lo
     geom_col(color = "black", fill = "grey") +
     theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
     theme_classic() +
-    geom_hline(yintercept = 0)
+    geom_hline(yintercept = 0) +
+    labs(y = "N")
 
 
   plotly::ggplotly(p)

@@ -68,7 +68,8 @@ histogram_plotter <- function(df, date_input1, date_input2, input_bins, input_lo
 
 
   ## show N in thousands
-  df$N <- round(df$N / 1000)
+
+
 
 
 ### find distance between first two bins for setting width in geom_col
@@ -86,7 +87,7 @@ histogram_plotter <- function(df, date_input1, date_input2, input_bins, input_lo
     theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
     theme_classic() +
     geom_hline(yintercept = 0) +
-    labs(y = "N (in thousands)")
+    labs(y = "N")
 
 
   plotly::ggplotly(p)

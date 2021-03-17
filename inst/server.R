@@ -1691,6 +1691,11 @@ server <- function(input, output, session) {
       As the option for the word cloud and bar plot vary simply click on the question marks for further information on their
       controls. Note that you have an additional search option when selecting bigrams."
     )$
+    step("ngram_sel_instr",
+         "NGram Selection",
+         "You can decide between showing single words or bigrams. For bigrams you also have the option to search for bigrams
+         containing specific words."
+         )$
     step(
       "num_words_expl_instr",
       "Info",
@@ -1833,7 +1838,7 @@ server <- function(input, output, session) {
 
     #### when sqlitestudio dir exists everything correct
     if(dir.exists("SQLiteStudio")) {
-      glue("Current path is set to: {getwd()} ")
+      glue("Current path is set to: {getwd()}. This seems correct.")
 
     } else {
       #### if sqlitstudio does not exist something wrong probably

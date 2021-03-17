@@ -19,27 +19,27 @@ if(dim(df_need)[1] == 0){
 df_need <- df_need %>%
   select(!contains("sentiment_")) %>% #### get correct names that are needed, get everyhing without sentiment
   select(starts_with(c("mean","median", "std"))) %>% ### get means, median, stf and take there averages
-  summarise_all(mean) %>%
+  summarise_all(list(mean), na.rm = T) %>%
   cbind(
     ### now add qunatile info
    df_need %>%
          filter(between(as.Date(created_at), as.Date(input_date1), as.Date(input_date2))) %>%
          select(!contains("sentiment_")) %>%
          select(starts_with(c("q"))) %>%
-         summarise_all(mean) %>% ### take mean of qunatiles, approximation using aggregated data
+          summarise_all(list(mean), na.rm = T) %>% ### take mean of qunatiles, approximation using aggregated data
         summarise_all(as.integer) ### convert to integer
     ) %>%
   cbind(
     ##### add maximum info
     df_need%>%
       filter(between(as.Date(created_at), as.Date(input_date1), as.Date(input_date2))) %>%
-      select(!contains("sentiment_"))  %>% summarise_at(vars(starts_with("max")), max) ## here take max
+      select(!contains("sentiment_"))  %>% summarise_at(vars(starts_with("max")), max, na.rm = T) ## here take max
   ) %>%
   cbind(
     ### add minimum info
     df_need %>%
       filter(between(as.Date(created_at), as.Date(input_date1), as.Date(input_date2))) %>%
-      select(!contains("sentiment_")) %>% summarise_at(vars(starts_with("min")), min) ### her take min
+      select(!contains("sentiment_")) %>% summarise_at(vars(starts_with("min")), min, na.rm = T) ### her take min
   ) %>%
   cbind(
     ### add number of tweets info, here take acutal sum stats because data is not aggreagted but summed on a daily level
@@ -47,13 +47,13 @@ df_need <- df_need %>%
       filter(between(as.Date(created_at), as.Date(input_date1), as.Date(input_date2))) %>%
       select(N) %>%
 
-      summarise(std_N = sd(N),
-                mean_N = mean(N),
-                median_N = median(N),
-                q25_N = quantile(N, 0.25),
-                q75_N = quantile(N, 0.75),
-                min_N = min(N),
-                max_N = max(N))
+      summarise(std_N = sd(N, na.rm = T),
+                mean_N = mean(N, na.rm = T  ),
+                median_N = median(N, na.rm = T),
+                q25_N = quantile(N, 0.25, na.rm = T),
+                q75_N = quantile(N, 0.75, na.rm = T),
+                min_N = min(N, na.rm = T),
+                max_N = max(N, na.rm = T))
   ) %>%
   round(2) %>%
   ### create long dataframe

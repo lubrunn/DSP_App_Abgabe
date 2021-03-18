@@ -63,18 +63,19 @@ network_plot_datagetter <- function(input_lang, input_date1, input_date2, input_
                         "twet_length" = integer(), "created_at" = lubridate::Date(),
                         "sentiment" = double(), "tweet" = character())
      }
-   }
+     # if its the first file set it up as df_all
+     if (is.null(df_all)){
 
-   # if its the first file set it up as df_all
-   if (is.null(df_all)){
-
-        df_all <- df
+       df_all <- df
 
      } else { # if df_all already filled --> append
 
        df_all <- bind_rows(df_all, df)
 
      }
+   }
+
+
    }
 
 
@@ -298,7 +299,7 @@ network_bigrammer <- function(df, network, input_n, input_bigrams_n,
   ### split bigrams into two columns
 
   network <-  network %>%
-
+    head(2000) %>%
     graph_from_data_frame(directed = FALSE)
 
   return(network)

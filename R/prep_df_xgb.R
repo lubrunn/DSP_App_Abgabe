@@ -89,7 +89,7 @@ pred_output <- function(res,input_var,model){
 
 
   preds <- model %>%
-    fit(formula = y ~ .,data = res$df_train[,c(-1)]) %>%
+  parsnip::fit(formula = y ~ .,data = res$df_train[,c(-1)]) %>%
     predict(new_data = res$df_forecast[,c(-1)])
   return(preds)
 }

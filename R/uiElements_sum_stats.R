@@ -51,16 +51,16 @@ twitter_desc_conditional_sum_stats <- conditionalPanel(
 
 
       shinyWidgets::awesomeCheckbox("num_tweets_box", label = "Show average number of tweets", value = F)),
-  # data.step = 6,
-  # data.intro = "You may choose to see the to depict the means, standard deviations or the medians aggreagted
-  # on a daily level"
-  # ),
+
 
   #### style checkbox
   tags$style(HTML('.checkbox-primary input[type="checkbox"]:checked+label::before, .checkbox-primary input[type="radio"]:checked+label::before {
     background-color: #2b3e50;
     border-color: #888888;
 }')),
+
+###### 7 day smoothin toggle
+div(id = "twitter_7day",shinyWidgets::materialSwitch(inputId = "roll_twitter", label = "7 day smoothing?", value = F)),
 
 #rintrojs::introBox(
 actionButton("plot_saver_button", "Save the plot"),

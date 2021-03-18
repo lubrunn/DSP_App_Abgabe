@@ -114,7 +114,7 @@ word_freq_cond <- conditionalPanel(
   ###### panel for frequency plot, show different max value for slider input because becomes overcrowed otherwise
   conditionalPanel(
     condition = "input.plot_type_expl == 'Frequency Plot'",
-    sliderInput("n_freq", "Number of words to show", min = 5, max = 100, value = 20) %>%
+    sliderInput("n_freq", "Maximum number of words to show", min = 5, max = 100, value = 20) %>%
       shinyhelper::helper(type = "inline",
                           title = "",
                           content = c("Select the Top N (according to frequency) words/bigrams to display. Note that you can
@@ -125,7 +125,7 @@ word_freq_cond <- conditionalPanel(
   ####### slider input for wordcloud with larger max because wordcloud can handle more
   conditionalPanel(
     condition = "input.plot_type_expl != 'Frequency Plot'",
-    sliderInput("n_freq_wc", "Number of words to show", min = 5, max = 1000, value = 100)%>%
+    sliderInput("n_freq_wc", "Maximum number of words to show", min = 5, max = 500, value = 100)%>%
       shinyhelper::helper(type = "inline",
                           title = "",
                           content = c("Select the Top N (according to frequency) words/bigrams to display. Note that you can

@@ -62,4 +62,4 @@
 # if (!require("xgboost")) install.packages("xgboost")
 # if (!require("rintrojs")) install.packages("rintrojs")
 # if (!require("cicerone")) install.packages("cicerone")
-#
+# if (!require("waiter")) install.packages("waiter")

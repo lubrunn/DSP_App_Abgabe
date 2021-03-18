@@ -2094,6 +2094,10 @@ server <- function(input, output, session) {
       output$path_checker_man <- renderText({
         "Please enter a valid path"
       })
+    } else {
+      output$path_checker_man <- renderText({
+        ""
+      })
     }
 
     #### require that path exists
@@ -2138,6 +2142,8 @@ server <- function(input, output, session) {
       con
     }
   }
+
+
 
 
 
@@ -2437,7 +2443,8 @@ server <- function(input, output, session) {
       p <-  time_series_plotter2(df, input$metric, input$value, num_tweets = F,
                                  input$dates_desc[1], input$dates_desc[2],
                                  input_title = input_title,
-                                 group = "twitter_desc")
+                                 group = "twitter_desc",
+                                 input_roll = input$roll_twitter)
 
       ### need to have data
       validate(need(!is.null(p), "No data available for current selection" ))
@@ -2447,7 +2454,8 @@ server <- function(input, output, session) {
       p <- time_series_plotter2(df, input$metric, input$value, num_tweets = T,
                                 input$dates_desc[1], input$dates_desc[2],
                                 input_title = input_title,
-                                group = "twitter_desc")
+                                group = "twitter_desc",
+                                input_roll = input$roll_twitter)
 
       ### need to have data
       validate(need(!is.null(p), "No data available for current selection" ))
@@ -2486,13 +2494,15 @@ server <- function(input, output, session) {
                                              input$dates_desc[1], input$dates_desc[2], r,
                                              date_range = F,
                                              input_title = input_title,
-                                             group = "twitter_desc")
+                                             group = "twitter_desc",
+                                             input_roll = input$roll_twitter)
     } else { ## in case where number of tweets should be included in plot
       save_plot$plot <- time_series_plotter2(df, input$metric, input$value, num_tweets = T,
                                              input$dates_desc[1], input$dates_desc[2], r,
                                              date_range = F,
                                              input_title = input_title,
-                                             group = "twitter_desc")
+                                             group = "twitter_desc",
+                                             input_roll = input$roll_twitter)
     }
 
   })
@@ -2531,6 +2541,7 @@ server <- function(input, output, session) {
       shinyFeedback::feedbackDanger("histo_plot", !exists, "Please make sure you picked the correct path. The \n
                                 file cannot be found in the current directory")
       req(exists)
+
       df_need <- data.table::fread(file_path,
                                    select = 1:3)
 
@@ -2661,16 +2672,16 @@ server <- function(input, output, session) {
 
 
     if (input$comp != "NoFilter") {
+
       folder <- file.path("Companies")
       file_name <- glue("term_freq_{input$comp}_all_rt_{input$rt}_li_{input$likes}_lo_{long}.csv")
       file_path <- file.path("Twitter/term_freq",folder, subfolder, file_name)
       # read file
-      dt <- data.table::fread(file_path, select = c("date_variable",
-                                                    "language_variable",
-                                                    "word",
-                                                    "N",
-                                                    "emo"),
-                              colClasses = c("date_variable" = "Date"))
+
+      dt <- data.table::fread(file_path)
+
+
+      dt$date_variable <- as.Date(dt$date_variable)
 
       #### drop duplicates
       dt <- unique(dt)
@@ -2688,12 +2699,15 @@ server <- function(input, output, session) {
       file_name <- glue("{add_on}_{lang}_NoFilter_rt_{input$rt}_li_{input$likes}_lo_{long}.csv")
       file_path <- file.path("Twitter/term_freq",folder, subfolder, file_name)
       # read file
-      dt <- data.table::fread(file_path, select = c("date",
-                                                    "language",
-                                                    "word",
-                                                    "N",
-                                                    "emo"),
-                              colClasses = c("date" = "Date"))
+
+      dt <- data.table::fread(file_path)
+      dt <-dt[,c("date",
+                 "language",
+                 "word",
+                 "N",
+                 "emo")]
+      dt$date <- as.Date(dt$date)
+
 
       #### drop duplicates
       dt <- unique(dt)
@@ -2733,6 +2747,7 @@ server <- function(input, output, session) {
     } else {
       input_word_freq_filter <- input$word_freq_filter
     }
+
     df <- word_freq_data_wrangler(data_expl(), dates_desc()[1], dates_desc()[2],
                                   input$emo, emoji_words,
                                   input_word_freq_filter,
@@ -2759,6 +2774,7 @@ server <- function(input, output, session) {
 
     df <- df_filterer(word_freq_df() , input$n_freq)
 
+
     term_freq_bar_plot(df)
 
 
@@ -2777,7 +2793,11 @@ server <- function(input, output, session) {
     #### account for empty df
     validate(need(!is.null(word_freq_df()), "No data available for current selection"))
 
-    df <- df_filterer(word_freq_df(), input$n_freq_wc)
+    ### set max n_freq_wc to number of unique words/bigrams
+
+    n_freq_wc <- min(number_words(), input$n_freq_wc)
+
+    df <- df_filterer(word_freq_df(), n_freq_wc)
 
 
 
@@ -2785,7 +2805,16 @@ server <- function(input, output, session) {
 
   })
 
+  number_words <- reactive({
+    #### number of unqiue words/bigrams
+    number_words <-  unique_words(word_freq_df())
 
+    if (is.null(number_words)){
+      number_words <- 0
+    }
+
+    number_words
+  })
 
   ####################################### number unique words
   output$number_words <- reactive({
@@ -2799,34 +2828,16 @@ server <- function(input, output, session) {
       filter(between(created_at, as.Date(dates_desc()[1]), as.Date(dates_desc()[2])) &
                language == tolower(input$lang))
     # get number of total tweets
-    number_tweets <- round(sum(df_need$N))
+    number_tweets <- round(sum(df_need$N, na.rm = T))
 
 
-    #### number of unqiue words/bigrams
-    number_words <-  unique_words(word_freq_df())
-
-    if (is.null(number_words)){
-      number_words <- 0
-    }
+    number_words <- number_words()
 
     HTML(glue("Number of unique {tolower(input$ngram_sel)}s available for current selection: {number_words} <br>
          Number of tweets for current selection: {number_tweets}"))
 
   })
 
-
-
-
-  ############################## time series bigram plot
-  # output$word_freq_time_series <- plotly::renderPlotly({
-  #   req(length(input$dates_desc) > 1)
-  #   df <- word_freq_data_wrangler(data_expl(), dates_desc()[1], dates_desc()[2],
-  #                                 input$emo, emoji_words,
-  #                                 input$word_freq_filter, input$lang,
-  #                                 input$comp)
-  #
-  #    word_filter_time_series_plotter(df)
-  # })
 
 
 
@@ -2977,7 +2988,6 @@ server <- function(input, output, session) {
 
 
 
-
     if (initial.ok < input$cancel_net) {
       initial.ok <<- initial.ok + 1
       validate(need(initial.ok == 0, message = "The computation has been aborted."))
@@ -3002,6 +3012,7 @@ server <- function(input, output, session) {
       initial.ok <<- initial.ok + 1
       validate(need(initial.ok == 0, message = "The computation has been aborted."))
     }
+
 
 
 

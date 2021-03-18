@@ -17,109 +17,204 @@ server <- function(input, output, session) {
   })
 
 
-  output$stock_choice <- renderUI({
-    validate(need(correct_path() == T, "Please choose the correct path"))
-
-
-    input <- selectizeInput("Stock","Choose Companies:",
-                            c(COMPONENTS_DE()[["Company.Name"]],"DAX" = "GDAXI",
-                              COMPONENTS_US()[["Company.Name"]],"DJI" = "DJI"),
-                            selected = "Bayer ",multiple = TRUE)
-
-
-
-  })
-
-
-
-  # reset button for stock selection
-  observeEvent(input$reset,{
-    updateSelectizeInput(session,"Stock",selected = "")
-  })
-  # plot of the stocks
-  output$plot_DE <- renderPlot({
-    req(input$Stock)
-    validate(need(correct_path() == T, "Please choose the correct path"))
-
-    if (input$country_stocks == "Germany"){
-      plotdata <- filter(stockdata_DE(),
-                         .data$name %in% (c(COMPONENTS_DE()[["Symbol"]],"GDAXI")[c(COMPONENTS_DE()[["Company.Name"]],"GDAXI") %in% .env$input$Stock]) &
-                           .data$Dates >= .env$input$dates[1] & .data$Dates <= .env$input$dates[2])
-    } else {
-      plotdata <- filter(stockdata_US(),
-                         .data$name %in% (c(COMPONENTS_US()[["Symbol"]], "DJI")[c(COMPONENTS_US()[["Company.Name"]], "DJI") %in% .env$input$Stock]) &
-                           .data$Dates >= .env$input$dates[1] & .data$Dates <= .env$input$dates[2])
-    }
-
-    if (!is.null(ranges$x)) {
-      ranges$x <- as.Date(ranges$x, origin = "1970-01-01")
-    }
-    ggplot(plotdata,aes_string("Dates",input$stock_outcome,color = "name"))+
-      geom_line()+
-      theme_classic()+
-      coord_cartesian(xlim = ranges$x, ylim = ranges$y, expand = FALSE)
-  })
-  # hover info box
-  output$hover_info_DE <- renderUI({
-    req(input$hovering)
-    create_hover_info_DE(input$plot_hover_DE,stockdata_DE())
-  })
-  # zoom functionality
-  ranges <- reactiveValues(x = NULL, y = NULL)
-  observeEvent(input$plot1_dblclick, {
-    brush <- input$plot1_brush
-    if (!is.null(brush)) {
-      ranges$x <- c(brush$xmin, brush$xmax)
-      ranges$y <- c(brush$ymin, brush$ymax)
-
-    } else {
-      ranges$x <- NULL
-      ranges$y <- NULL
-    }
-  })
+  # output$stock_choice <- renderUI({
+  #   validate(need(correct_path() == T, "Please choose the correct path"))
+  #
+  #
+  #   input <- selectizeInput("Stock","Choose Companies:",
+  #                           c(COMPONENTS_DE()[["Company.Name"]],"DAX" = "GDAXI",
+  #                             COMPONENTS_US()[["Company.Name"]],"DJI" = "DJI"),
+  #                           selected = "Bayer ",multiple = TRUE)
+  #
+  #
+  #
+  # })
+  #
+  #
+  #
+  # # reset button for stock selection
+  # observeEvent(input$reset,{
+  #   updateSelectizeInput(session,"Stock",selected = "")
+  # })
+  # # plot of the stocks
+  # output$plot_DE <- renderPlot({
+  #   req(input$Stock)
+  #   validate(need(correct_path() == T, "Please choose the correct path"))
+  #
+  #   if (input$country_stocks == "Germany"){
+  #     plotdata <- filter(stockdata_DE(),
+  #                        .data$name %in% (c(COMPONENTS_DE()[["Symbol"]],"GDAXI")[c(COMPONENTS_DE()[["Company.Name"]],"GDAXI") %in% .env$input$Stock]) &
+  #                          .data$Dates >= .env$input$dates[1] & .data$Dates <= .env$input$dates[2])
+  #   } else {
+  #     plotdata <- filter(stockdata_US(),
+  #                        .data$name %in% (c(COMPONENTS_US()[["Symbol"]], "DJI")[c(COMPONENTS_US()[["Company.Name"]], "DJI") %in% .env$input$Stock]) &
+  #                          .data$Dates >= .env$input$dates[1] & .data$Dates <= .env$input$dates[2])
+  #   }
+  #
+  #   if (!is.null(ranges$x)) {
+  #     ranges$x <- as.Date(ranges$x, origin = "1970-01-01")
+  #   }
+  #   ggplot(plotdata,aes_string("Dates",input$stock_outcome,color = "name"))+
+  #     geom_line()+
+  #     theme_classic()+
+  #     coord_cartesian(xlim = ranges$x, ylim = ranges$y, expand = FALSE)
+  # })
+  # # hover info box
+  # output$hover_info_DE <- renderUI({
+  #   req(input$hovering)
+  #   create_hover_info_DE(input$plot_hover_DE,stockdata_DE())
+  # })
+  # # zoom functionality
+  # ranges <- reactiveValues(x = NULL, y = NULL)
+  # observeEvent(input$plot1_dblclick, {
+  #   brush <- input$plot1_brush
+  #   if (!is.null(brush)) {
+  #     ranges$x <- c(brush$xmin, brush$xmax)
+  #     ranges$y <- c(brush$ymin, brush$ymax)
+  #
+  #   } else {
+  #     ranges$x <- NULL
+  #     ranges$y <- NULL
+  #   }
+  # })
   #####################################################################
 
   ##################################################################### Corona
 
-  corona_data <- reactive({
-    validate(need(correct_path() == T, "Please choose the correct path"))
+  # corona_data <- reactive({
+  #   validate(need(correct_path() == T, "Please choose the correct path"))
+  #
+  #   CORONA(input$CoronaCountry,input$dates_corona[1],input$dates_corona[2])
+  # })
+  #
+  # output$corona_plot <- renderPlot({
+  #   if (!is.null(ranges2$x)) {
+  #     ranges2$x <- as.Date(ranges2$x, origin = "1970-01-01")
+  #   }
+  #
+  #   ggplot(corona_data(), aes_string("date",input$corona_measurement,color = "location"))+
+  #     geom_line() +
+  #     theme_classic() +
+  #     coord_cartesian(xlim = ranges2$x, ylim = ranges2$y, expand = FALSE)
+  # })
+  #
+  # # hover info box
+  # output$hover_info_corona <- renderUI({
+  #   req(input$hovering_corona)
+  #   create_hover_info_corona(input$plot_hover_corona, corona_data(),input$corona_measurement)
+  # })
+  #
+  # # zoom functionality
+  # ranges2 <- reactiveValues(x = NULL, y = NULL)
+  # observeEvent(input$plot_corona_dblclick, {
+  #   brush <- input$plot_corona_brush
+  #   if (!is.null(brush)) {
+  #     ranges2$x <- c(brush$xmin, brush$xmax)
+  #     ranges2$y <- c(brush$ymin, brush$ymax)
+  #
+  #   } else {
+  #     ranges2$x <- NULL
+  #     ranges2$y <- NULL
+  #   }
+  # })
+  #######################################################################   Instruction texts  ##################################################
+  ###############################################granger instructions
 
-    CORONA(input$CoronaCountry,input$dates_corona[1],input$dates_corona[2])
+
+  ###### In the following, the instruction text for the models are prepared:
+  observeEvent(input$instructions_granger,{
+    guide_granger$init()$start()
+
   })
 
-  output$corona_plot <- renderPlot({
-    if (!is.null(ranges2$x)) {
-      ranges2$x <- as.Date(ranges2$x, origin = "1970-01-01")
-    }
+  guide_granger <- cicerone::Cicerone$
+    new()$
+    step(
+      el = "first_variable_granger",
+      title = "Choose the first variable",
+      description = "Here, you can select the first variable for the Granger causality analysis. First, choose a country for the company/index. Secondly select the desired
+    company/index. Lastly pick a variable."
+    )$
+    step(
+      "second_variable_granger",
+      "Choose the first variable",
+      "Here, you can select the second variable. If you decide to use Sentiment, click on the switch and then specify the type of sentiment using the 'Filter sentiment
+    input' tab at the top. Alternatively, a variable from the first dropdown or second dropdown can be selected."
+    )$
+    step(
+      "date_variable_granger",
+      "Choose timeseries",
+      "Here, you can choose which period to focus on. The analysis is based on the selected range of Dates. Choose at least a period of 30 days!"
+    )$
+    step(
+      "direction_variable_granger",
+      "Direction",
+      "Here, you can choose the direction of the granger causality. If this box is checked, the analysis verifies whether the second variable granger causes the first."
+    )
 
-    ggplot(corona_data(), aes_string("date",input$corona_measurement,color = "location"))+
-      geom_line() +
-      theme_classic() +
-      coord_cartesian(xlim = ranges2$x, ylim = ranges2$y, expand = FALSE)
+  ############################################################# reg instructions
+  observeEvent(input$instructions_regression,{
+    guide_regression$init()$start()
+
   })
 
-  # hover info box
-  output$hover_info_corona <- renderUI({
-    req(input$hovering_corona)
-    create_hover_info_corona(input$plot_hover_corona, corona_data(),input$corona_measurement)
+  guide_regression <- cicerone::Cicerone$
+    new()$
+    step(
+      el = "first_variable_regression",
+      title = "Choose the first variable",
+      description = "Here, you can select the dependent variable for the regression analysis.First, choose a country for the company/index. Secondly select the desired
+    company/index. Lastly pick a variable."
+    )$
+    step(
+      "control_variable_regression",
+      "Choose the control variable(s)",
+      "Here, you can select control variables. If you decide to use Sentiment, click on the switch and then specify the type of sentiment using the 'Filter sentiment
+    input' tab at the top. Alternatively, a variable from the first dropdown or second dropdown can be selected."
+    )$
+    step(
+      "date_variable_regression",
+      "Choose timeseries",
+      "Here, you can choose which period to focus on. The analysis is based on the selected range of Dates. Choose at least a period of 30 days!"
+    )
+  ##################################################################  var
+  observeEvent(input$instructions_var,{
+    guide_var$init()$start()
+
   })
 
-  # zoom functionality
-  ranges2 <- reactiveValues(x = NULL, y = NULL)
-  observeEvent(input$plot_corona_dblclick, {
-    brush <- input$plot_corona_brush
-    if (!is.null(brush)) {
-      ranges2$x <- c(brush$xmin, brush$xmax)
-      ranges2$y <- c(brush$ymin, brush$ymax)
+  guide_var <- cicerone::Cicerone$
+    new()$
+    step(
+      el = "first_variable_var",
+      title = "Choose the first variable",
+      description = "Here, you can select the dependent variable for the VAR. First, choose a country for the company/index. Secondly select the desired
+    company/index. Lastly pick a variable."
+    )$
+    step(
+      "control_variable_var",
+      "Choose the control variable(s)",
+      "Here, you can select control variables. If you decide to use Sentiment, click on the switch and then specify the type of sentiment using the 'Filter sentiment
+    input' tab at the top. Alternatively, a variable from the first dropdown or second dropdown can be selected. Caution! If no control variable is selected,
+    an AR model is built using only the dependent variable!"
+    )$
+    step(
+      "date_variable_var",
+      "Choose timeseries",
+      "Here, you can choose which period to focus on. The analysis is based on the selected range of Dates. Choose at least a period of 30 days!"
+    )$
+    step(
+      "forecast_var",
+      "Choose how many days to forecast",
+      "Here, a number of days to forcast into the future can be selected. On the 'validity' tab, this is the period on which to calculate performance.
+    On the 'actual forecast' tab, these are the future dates for the forecast."
+    )
+  #############################################################################################################################################
+  #############################################################################################################################################
+  #############################################################################################################################################
+  ##################################################################################### Granger Model
 
-    } else {
-      ranges2$x <- NULL
-      ranges2$y <- NULL
-    }
-  })
-
-  ##################################################################################### Granger
-
+  ##Check that first input cannot equal the second input(in case of DAX and DJI)
   output$gra_con_check <- renderText({
     ##### date input
     test <- input$Controls_GRANGER
@@ -134,9 +229,7 @@ server <- function(input, output, session) {
         validate("Index control not feasible if Index chosen as dependent variable")
       }
     }
-
-
-  })
+})
 
 
   ##### check if the date has at leas 30 days as input
@@ -157,7 +250,7 @@ server <- function(input, output, session) {
     }
   })
 
-
+  ### select first granger variable
   output$Stock_Granger <- renderUI({
     validate(need(correct_path() == T, "Please choose the correct path"))
     if (input$country_granger == "Germany"){
@@ -174,28 +267,27 @@ server <- function(input, output, session) {
 
   })
 
-
+  #### select second variable
   output$ControlsGranger <- renderUI({
     if (input$country_granger == "Germany"){
       input <- selectizeInput("Controls_GRANGER","Choose control variables:",
-                              c("Google-Trends Coronavirus"="coronavirus",
+                              c("Google-Trends Coronavirus"="trend_corona",
                                 "VIX"="VIX",
-                                "Financial Distress Index"="OFR.FSI",
-                                "Economic Uncertainty Index"="WLEMUINDXD",
+                                "Financial Distress Index"="fin_distress",
+                                "Economic Uncertainty Index"="econ_uncertain",
                                 "DAX"="DAX"),selected = "VIX",multiple = FALSE)
-                              #c(colnames(global_controls_test_DE())[-1],"DAX"),selected = "VIX",multiple = FALSE)
-      #c(colnames(res[3:length(res)])),multiple = TRUE
+
     }else{
       input <- selectizeInput("Controls_GRANGER","Choose control variables:",
-                              c("Google-Trends Coronavirus"="coronavirus",
+                              c("Google-Trends Coronavirus"="trend_corona",
                                 "VIX"="VIX",
-                                "Financial Distress Index"="OFR.FSI",
-                                "Economic Uncertainty Index"="WLEMUINDXD",
+                                "Financial Distress Index"="fin_distress",
+                                "Economic Uncertainty Index"="econ_uncertain",
                                 "DJI"="DJI"),selected = "VIX",multiple = FALSE)
     }
   })
 
-
+   ##### only one control can be chosen, the remaining two are kicked out
   observeEvent(req(input$corona_measurement_granger != ""), {                         #Observe event from input (model choices)
     updateSelectizeInput(session, "Controls_GRANGER", selected = "")
     updateSwitchInput(session, "senti_yesno_gra", value = FALSE)
@@ -214,34 +306,31 @@ server <- function(input, output, session) {
 
 
 
-
+### put together the dataset:
   granger_data <- reactive({
     validate(need(correct_path() == T, "Please choose the correct path"))
     validate(need(input$senti_yesno_gra==TRUE | input$corona_measurement_granger != ""|input$Controls_GRANGER!="", "Choose the second variable!"))
     req(input$Stock_Granger)
+    ##stock data:
     if (input$country_granger == "Germany"){
       granger1 <- dplyr::filter(stockdata_DE(),
-                                #.data$name %in% (c(COMPONENTS_DE()[["Symbol"]], "GDAXI")[c(COMPONENTS_DE()[["Company.Name"]], "GDAXI") %in% .env$input$Stock_Granger]) &
                                 .data$name %in% .env$input$Stock_Granger &
                                   .data$Dates >= .env$input$date_granger[1] & .data$Dates <= .env$input$date_granger[2])[c("Dates", input$Granger_outcome)]
     } else {
       granger1 <-dplyr:: filter(stockdata_US(),
-                                #.data$name %in% (c(COMPONENTS_US()[["Symbol"]], "DJI")[c(COMPONENTS_US()[["Company.Name"]], "DJI") %in% .env$input$Stock_Granger]) &
                                 .data$name %in% .env$input$Stock_Granger &
                                   .data$Dates >= .env$input$date_granger[1] & .data$Dates <= .env$input$date_granger[2])[c("Dates", input$Granger_outcome)]
 
     }
-
+    ## control data:
     if (input$country_granger == "Germany"){
       if(input$Controls_GRANGER!=""){
         global_controls <- global_controls_test_DE()   #load controls
         global_controls$Date <- as.Date(global_controls$Date) #transform date
+        colnames(global_controls) <- c("Date","VIX","trend_corona","fin_distress","Credit","Volatility","Safe.assets","Equity.valuation","econ_uncertain")
         dax <- dplyr::filter(stockdata_DE(),.data$name %in% c("GDAXI")&
                                .data$Dates >= min(global_controls$Date) & .data$Dates <= max(global_controls$Date))[c("Dates","Close")]
         colnames(dax)[1]<-"Date"
-        # dax <- GDAXI()  #load dax
-        # dax$Date <- as.Date(dax$Date, "%d %b %Y") #transform date
-        # dax <- missing_date_imputer(dax,"Close.") #transform time series by imputing missing values
         colnames(dax)[2] <- "DAX"  #rename ->   !! is not renamed in final dataset !! -> dont know why
         global_controls <- dplyr::left_join(dax,global_controls,by = c("Date")) #join final
       }else if (input$corona_measurement_granger!=""){
@@ -253,13 +342,10 @@ server <- function(input, output, session) {
       if(input$Controls_GRANGER!=""){
         global_controls <- global_controls_test_US() #same procedure as above
         global_controls$Date <- as.Date(global_controls$Date)
+        colnames(global_controls) <- c("Date","VIX","trend_corona","fin_distress","Credit","Volatility","Safe.assets","Equity.valuation","econ_uncertain")
         dji <- dplyr::filter(stockdata_US(),.data$name %in% c("DJI")&
                                .data$Dates >= min(global_controls$Date) & .data$Dates <= max(global_controls$Date))[c("Dates","Close")]
         colnames(dji)[1]<-"Date"
-
-        # dow <- DOW()
-        # dow$Date <- as.Date(dow$Date, " %b %d, %Y")
-        # dow <- missing_date_imputer(dow,"Close.")
         colnames(dji)[2] <- "DJI"
         global_controls <- dplyr::left_join(dji,global_controls,by = c("Date"))
       }else if (input$corona_measurement_granger!=""){
@@ -276,6 +362,7 @@ server <- function(input, output, session) {
       granger<- granger1
     }
 
+    ## sentiment data
     if (input$senti_yesno_gra == TRUE){
       #res <- aggri_select()
       res <- get_sentiment_granger()
@@ -286,7 +373,7 @@ server <- function(input, output, session) {
     res$created_at <- as.Date(res$created_at)
     granger <- dplyr::left_join(granger,res,by=c("Dates" = "created_at"))
 
-
+    ## select chosen variables from dataframe
     if (input$senti_yesno_gra == TRUE){
       granger <- granger[c("Dates",input$Granger_outcome,colnames(get_sentiment_granger())[2])]
     }else if (input$Controls_GRANGER!=""){
@@ -295,13 +382,6 @@ server <- function(input, output, session) {
       granger <- granger[c("Dates",input$Granger_outcome,input$corona_measurement_granger)]
     }
 
-
-
-
-
-    # ifelse(input$Controls_GRANGER!="",
-    #        granger <- granger[c("Dates",input$Granger_outcome,input$Controls_GRANGER)],
-    #        granger <- granger[c("Dates",input$Granger_outcome,input$corona_measurement_granger)])
 
     granger[is.na(granger)]<-0
     granger
@@ -320,6 +400,7 @@ server <- function(input, output, session) {
 
 
   ################################################################# sql data granger
+  #make a call to our SQL database to filter for the selected sentiment filter
   dates_gra <- reactive({
     if (length(input$date_granger) > 1){
       input$date_granger
@@ -392,19 +473,15 @@ server <- function(input, output, session) {
     df_need
   })
 
+####################################  Granger analyis:
 
-
-
-
-
-
-
+#calculate optimal lags
   optlags <- reactive({
     #library(vars)
     req(is.null(granger_data())==FALSE)
     vars::VARselect(granger_data()[-1],lag.max = 7, type = "const")$selection[["AIC(n)"]]
   })
-
+#test for stationarity and difference if necessary
   dickey_fuller <- reactive({
     data <- granger_data()
     while (tseries::adf.test(data[[2]],k=optlags())$p.value > 0.1 | tseries::adf.test(data[[3]],k=optlags())$p.value > 0.1){
@@ -414,7 +491,7 @@ server <- function(input, output, session) {
     }
     data
   })
-
+#perform granger test
   granger_result <- reactive({
     varobject <- vars::VAR(dickey_fuller()[-1], p = optlags(), type = "const")
     cause <- NULL
@@ -427,15 +504,13 @@ server <- function(input, output, session) {
     granger$Granger
   })
 
+  #print granger output
   output$granger_result <- renderPrint({
     granger_result()})
 
-  # output$stocks_granger <- renderPlot({
-  #   req(input$Granger_outcome)
-  #   ggplot(granger_data(),aes_string("Dates",input$Granger_outcome))+
-  #     geom_line()
-  # })
 
+  #########visualize tab:
+  # plot of the first variable
   output$stocks_granger <- dygraphs::renderDygraph({
 
     plotdata <- xts::xts(granger_data()[input$Granger_outcome],order.by=granger_data()[["Dates"]])
@@ -446,7 +521,7 @@ server <- function(input, output, session) {
   })
 
 
-
+  # plot of the second variable
   output$second_granger <- dygraphs::renderDygraph({
 
     plotdata <- xts::xts(granger_data()[colnames(granger_data())[3]],order.by=granger_data()[["Dates"]])
@@ -456,18 +531,17 @@ server <- function(input, output, session) {
                       main = glue::glue("Plot of the second variable"))%>%
       dygraphs::dyShading(from = min(granger_data()[["Dates"]]), to = max(granger_data()[["Dates"]]), color = "white")
   })
-
+#########background steps tab
+  #text for the lags
   output$grangertext1 <- renderUI({
-
     str1 <- paste("The optimal lag order for the VAR model using the Akaike information criterium (AIC)  is ",optlags()," lags.")
     htmltools::HTML(paste(str1))
   })
-
+#output of optimal lags
   output$optimallags <- renderPrint({
-
     vars::VARselect(granger_data()[-1],lag.max = 7, type = "const")
   })
-
+#sentence for stationarity
   output$grangertext2 <- renderUI({
 
     if (nrow(dickey_fuller()) != nrow(granger_data())){
@@ -479,19 +553,18 @@ server <- function(input, output, session) {
   })
 
 
-  #first variable
+  #dickey fuller test for first variable
   output$dickey_fuller <- renderPrint({
 
     tseries::adf.test(granger_data()[[2]],k=optlags())
   })
-  #second variable
+  #dickey fuller test for second variable
   output$dickey_fuller_second <- renderPrint({
 
     tseries::adf.test(granger_data()[[3]],k=optlags())
   })
-
+ # text for differencing
   output$grangertext3 <- renderUI({
-
     req(nrow(dickey_fuller()) != nrow(granger_data()))
     str3 <- paste("Differencing the series ",nrow(granger_data()) - nrow(dickey_fuller()),"times achieved stationarity:")
   })
@@ -510,20 +583,7 @@ server <- function(input, output, session) {
     tseries::adf.test(dickey_fuller()[[3]],k=optlags())
   })
 
-
-
-  # output$dickey <- renderUI({
-  #   str1 <- paste("The optimal lag order for the VAR model using the Akaike information criterium (AIC)  is ",optlags()," lags")
-  #   if (nrow(dickey_fuller()) != nrow(granger_data())){
-  #     str2 <- paste("The Dickey Fuller test found one of the timeseries to be non-stationary.")
-  #     str3 <- paste("Differencing the series ",nrow(granger_data()) - nrow(dickey_fuller()),"times achieved stationarity")
-  #   } else {
-  #     str2 <-paste("The Dickey Fuller test found both timeseries to be stationary.")
-  #     str3 <-paste("Hence, the granger causality analysis can be performed without tranformations")
-  #   }
-  #   HTML(paste(str1,str2,str3, sep = '<br/>'))
-  # })
-
+#########sentence for result tab
   output$granger_satz <- renderUI({
 
     if(input$direction_granger == TRUE){
@@ -543,9 +603,19 @@ server <- function(input, output, session) {
     htmltools::HTML(paste(str1))
   })
 
+### info text for information tab
   output$info_granger <- renderUI({
     htmltools::HTML(paste(htmltools::h1(htmltools::strong("Granger Causality Analysis"), align="center", style = "font-family: 'Times', serif;
                   font-weight: 30px; font-size: 30px; line-height: 1;"),
+                          htmltools::h2(htmltools::strong("Visualize") ,style = "font-family: 'Times', serif; font-weight: 20px; font-size: 20px; line-height: 1;"),
+                          htmltools::p("On this tab, both variables are plotted for comparison.",style = "font-weight: 18px; font-size: 18px; line-height: 1;"),
+                          htmltools::h2(htmltools::strong("Background-steps") ,style = "font-family: 'Times', serif; font-weight: 20px; font-size: 20px; line-height: 1;"),
+                          htmltools::p("Here, all relevant steps required in order to achieve the results are displayed. This includes, the number of optimal lags,
+                                       repeatedly testing for stationarity and differencing. Note that the content of this tab is basically extra information and can be skipped if one is only interested in the results.",style = "font-weight: 18px; font-size: 18px; line-height: 1;"),
+                          htmltools::h2(htmltools::strong("Results") ,style = "font-family: 'Times', serif; font-weight: 20px; font-size: 20px; line-height: 1;"),
+                          htmltools::p("This tab includes the result of the granger causality test, providing the R-output of the test and the result in form opf a sentence.",style = "font-weight: 18px; font-size: 18px; line-height: 1;"),
+                          htmltools::tags$hr(),
+                          htmltools::h2(htmltools::strong("Important information") ,style = "font-family: 'Times', serif; font-weight: 20px; font-size: 20px; line-height: 1;"),
                           htmltools::p("In this section, the user is able to perform a Granger causality test, which is a statistical hypothesis test for determining whether one time series is useful in forecasting another.
                   The term ", htmltools::em("causality"), " in this context means nothing more than predictive causality and should not be mistaken for ",
                                        htmltools::em("true causality"),". It rather measures the ability of past values of one time series to predict future values of another time series.",htmltools::tags$br(),
@@ -560,23 +630,38 @@ server <- function(input, output, session) {
                           htmltools::p("In order to perform the Granger causality Analysis, built the model using the panel on the left: ",htmltools::tags$br(),
                                        htmltools::div("- select the first variable",htmltools::tags$br(),
                                                       "- select the second variable",htmltools::tags$br(),
-                                                      "- choose the direction of the causality test using the checkbox",htmltools::tags$br(),
-                                                      "- the tab ",htmltools::em("Visualize"),"contains plots of both series for comparison",
-                                                      "- the tab ",htmltools::em("Background-steps")," contains all important steps required in the analysis",htmltools::tags$br(),
-                                                      "- the results can be accessed on the tab ",htmltools::em("Results"), style="margin-left: 1em;font-weight: 18px; font-size: 18px; line-height: 1;"),style = "font-weight: 18px; font-size: 18px; line-height: 1;"),
+                                                      "- choose the direction of the causality test using the checkbox",htmltools::tags$br()
+                                                      # "- the tab ",htmltools::strong(em("Visualize")),"contains plots of both series for comparison",htmltools::tags$br(),
+                                                      # "- the tab ",htmltools::strong(em("Background-steps"))," contains all important steps required in the analysis",htmltools::tags$br(),
+                                                      # "- the results can be accessed on the tab ",htmltools::strong(em("Results"))
+                                                      , style="margin-left: 1em;font-weight: 18px; font-size: 18px; line-height: 1;"),style = "font-weight: 18px; font-size: 18px; line-height: 1;"),
                           htmltools::h2(htmltools::strong("Analysis steps:") ,style = "font-family: 'Times', serif; font-weight: 20px; font-size: 20px; line-height: 1;"),
                           htmltools::p("The following steps are automatically performed after the user selects two time series: ",htmltools::tags$br(),
                                        htmltools::div("1. The optimal number of lags is calculated",htmltools::tags$br(),
                                                       "2. Stationarity is repeatedly tested and the series are differenced until sationarity is achieved",htmltools::tags$br(),
                                                       "3. A VAR model is estimated with the optimal number of lags and the (if necessary) transformed series",htmltools::tags$br(),
-                                                      "4. A granger causality test is performed.",style="margin-left: 1em;font-weight: 18px; font-size: 18px; line-height: 1;"),style = "font-weight: 18px; font-size: 18px; line-height: 1;")))
+                                                      "4. A granger causality test is performed.",
+                                                      style="margin-left: 1em;font-weight: 18px; font-size: 18px; line-height: 1;"),
+                                       style = "font-weight: 18px; font-size: 18px; line-height: 1;")
+
+    ))
   })
 
   ################################################################################################### Regression
-
+##### infotext for regression
   output$info_regression <- renderUI({
     HTML(paste(htmltools::h1(htmltools::strong("Regression Analysis"), align="center", style = "font-family: 'Times', serif;
                   font-weight: 30px; font-size: 30px; line-height: 1;"),
+               htmltools::h2(htmltools::strong("Summary Statistics") ,style = "font-family: 'Times', serif; font-weight: 20px; font-size: 20px; line-height: 1;"),
+               htmltools::p("On this tab, you can find summary statistics for the selected variables, including a correlation plot.",style = "font-weight: 18px; font-size: 18px; line-height: 1;"),
+               htmltools::h2(htmltools::strong("Linear Regression") ,style = "font-family: 'Times', serif; font-weight: 20px; font-size: 20px; line-height: 1;"),
+               htmltools::p("Here, the results of a linear regression using the selected variables is displayed. Significance is indicated at the 0.01, 0.05 and 0.1
+                            level with ***, **, * respectively.",style = "font-weight: 18px; font-size: 18px; line-height: 1;"),
+               htmltools::h2(htmltools::strong("Quantile Regression") ,style = "font-family: 'Times', serif; font-weight: 20px; font-size: 20px; line-height: 1;"),
+               htmltools::p("This tab includes the result of a quantile regression for the chosen quantile, using the selected variables. Significance is indicated at the 0.01, 0.05 and 0.1
+                            level with ***, **, * respectively.",style = "font-weight: 18px; font-size: 18px; line-height: 1;"),
+               htmltools::tags$hr(),
+               htmltools::h2(htmltools::strong("Important information") ,style = "font-family: 'Times', serif; font-weight: 20px; font-size: 20px; line-height: 1;"),
                htmltools::p("In this section, the user is able to perform a simple linear regression and a quantile regression. Here, one can test which variables
                 help to explain the stock prices of a specific company. By adding and dropping the variables, one can observe their potential of adding explanatory
                 power to the regression.
@@ -605,7 +690,7 @@ server <- function(input, output, session) {
                             style = "font-weight: 18px; font-size: 18px; line-height: 1;")))
 
   })
-
+###### check for input in first and second variable( DAX and DJI)
   output$reg_con_check <- renderText({
     ##### date input
     test <- input$Controls
@@ -660,55 +745,51 @@ server <- function(input, output, session) {
                               selected = "Dow Jones Industrial",multiple = FALSE)
     }
   })
-
+### control variable selection
   output$Controls <- renderUI({
     #res <- dataset()
     #res$name <- NULL
     validate(need(correct_path() == T, "Please choose the correct path"))
     if (input$country_regression == "Germany"){
       input <- selectizeInput("Controls","Control variables:",
-                              c("Google-Trends Coronavirus"="coronavirus",
+                              c("Google-Trends Coronavirus"="trend_corona",
                                 "VIX"="VIX",
-                                "Financial Distress Index"="OFR.FSI",
-                                "Economic Uncertainty Index"="WLEMUINDXD",
+                                "Financial Distress Index"="fin_distress",
+                                "Economic Uncertainty Index"="econ_uncertain",
                                 "DAX"="DAX"),selected = "VIX",multiple = TRUE)
       #c(colnames(res[3:length(res)])),multiple = TRUE
     }else{
       input <- selectizeInput("Controls","Control variables:",
-                              c("Google-Trends Coronavirus"="coronavirus",
+                              c("Google-Trends Coronavirus"="trend_corona",
                                 "VIX"="VIX",
-                                "Financial Distress Index"="OFR.FSI",
-                                "Economic Uncertainty Index"="WLEMUINDXD",
+                                "Financial Distress Index"="fin_distress",
+                                "Economic Uncertainty Index"="econ_uncertain",
                                 "DJI"="DJI"),selected = "VIX",multiple = TRUE)
     }
 
   })
-
+####dataset for analysis
   dataset <- reactive({
     validate(need(correct_path() == T, "Please choose the correct path"))
     req(input$country_regression)
     if (input$country_regression == "Germany"){
       data_reg <- dplyr::filter(stockdata_DE(),                                                                               #nur hier nach datum filtern, rest wird draufgemerged
-                                #.data$name %in% (c(COMPONENTS_DE()[["Symbol"]], "GDAXI")[c(COMPONENTS_DE()[["Company.Name"]], "GDAXI") %in% .env$input$Stock_Regression]) &
                                 .data$name %in% .env$input$Stock_Regression &
                                   .data$Dates >= .env$input$date_regression[1] & .data$Dates <= .env$input$date_regression[2])[c("Dates",input$regression_outcome,"name")] #hier später noch CLose flexibel machen
     } else {
       data_reg <- dplyr::filter(stockdata_US(),                                                                               #nur hier nach datum filtern, rest wird draufgemerged
-                                #.data$name %in% (c(COMPONENTS_US()[["Symbol"]], "DJI")[c(COMPONENTS_US()[["Company.Name"]], "DJI") %in% .env$input$Stock_Regression]) &
                                 .data$name %in% .env$input$Stock_Regression &
                                   .data$Dates >= .env$input$date_regression[1] & .data$Dates <= .env$input$date_regression[2])[c("Dates",input$regression_outcome,"name")] #hier später noch CLose flexibel machen
 
     }
-
+#controls
     if (input$country_regression == "Germany"){
       global_controls <- global_controls_test_DE()   #load controls
       global_controls$Date <- as.Date(global_controls$Date) #transform date
+      colnames(global_controls) <- c("Date","VIX","trend_corona","fin_distress","Credit","Volatility","Safe.assets","Equity.valuation","econ_uncertain")
       dax <- dplyr::filter(stockdata_DE(),.data$name %in% c("GDAXI")&
                              .data$Dates >= min(global_controls$Date) & .data$Dates <= max(global_controls$Date))[c("Dates","Close")]
       colnames(dax)[1]<-"Date"
-      # dax <- GDAXI()  #load dax
-      # dax$Date <- as.Date(dax$Date, "%d %b %Y") #transform date
-      # dax <- missing_date_imputer(dax,"Close.") #transform time series by imputing missing values
       colnames(dax)[2] <- "DAX"  #rename ->   !! is not renamed in final dataset !! -> dont know why
       global_controls <- dplyr::left_join(dax,global_controls,by = c("Date")) #join final
       if(input$corona_measurement_regression!=""){
@@ -721,12 +802,10 @@ server <- function(input, output, session) {
     }else {
       global_controls <- global_controls_test_US() #same procedure as above
       global_controls$Date <- as.Date(global_controls$Date)
+      colnames(global_controls) <- c("Date","VIX","trend_corona","fin_distress","Credit","Volatility","Safe.assets","Equity.valuation","econ_uncertain")
       dji <- dplyr::filter(stockdata_US(),.data$name %in% c("DJI")&
                              .data$Dates >= min(global_controls$Date) & .data$Dates <= max(global_controls$Date))[c("Dates","Close")]
       colnames(dji)[1]<-"Date"
-      # dow <- DOW()
-      # dow$Date <- as.Date(dow$Date, " %b %d, %Y")
-      # dow <- missing_date_imputer(dow,"Close.")
       colnames(dji)[2] <- "DJI"
       global_controls <- dplyr::left_join(dji,global_controls,by = c("Date"))
       if(input$corona_measurement_regression!=""){
@@ -743,6 +822,7 @@ server <- function(input, output, session) {
     datareg2
   })
 
+  ###select relevant variables
   df_selected_controls <- reactive({
 
     #req(input$Controls_var | input$corona_measurement_var)
@@ -758,12 +838,6 @@ server <- function(input, output, session) {
     }
     res
   })
-  # df_selected_controls <- reactive({
-  #   #req(input$Controls)
-  #   res <- dataset()
-  #   res <- res[c("Dates",input$regression_outcome,input$Controls,input$corona_measurement_regression)]
-  #   res
-  # })
 
   observeEvent(input$Sentiment_type, {                         #Observe event from input (model choices)
     req(input$Sentiment_type)
@@ -775,85 +849,86 @@ server <- function(input, output, session) {
     updateTabsetPanel(session, "industry_tab", selected = input$industry_sentiment)
   })
 
-  dataset_senti <- reactive({
-    req(input$Sentiment_type)
-    validate(need(correct_path() == T, "Please choose the correct path"))
-    if(input$Sentiment_type == "NoFilter"){
+  # dataset_senti <- reactive({
+  #   req(input$Sentiment_type)
+  #   validate(need(correct_path() == T, "Please choose the correct path"))
+  #   if(input$Sentiment_type == "NoFilter"){
+  #
+  #     res <- En_NoFilter_0_0_yes()   # still fix as it is not clear yet if sql or csv
+  #     #res <- eval(parse(text = paste('En', '_NoFilter_',input$minRetweet,'_',
+  #     #                               input$minminLikes,'_',input$tweet_length,'()', sep='')))
+  #     #input$language
+  #   }else{
+  #     req(input$Stock_reg)
+  #     ticker <- ticker_dict(input$Stock_reg) # dict for a few stock
+  #     res <- eval(parse(text = paste(ticker,'()', sep=''))) # example: ADS.DE()
+  #
+  #   }
+  #
+  #
+  # })
+  # # filter
+  # filtered_df <- reactive({
+  #   validate(need(correct_path() == T, "Please choose the correct path"))
+  #   req(input$Sentiment_type)
+  #   req(input$minRetweet_stocks1)
+  #   req(input$minRetweet_stocks2)
+  #
+  #   if(input$Sentiment_type == "NoFilter"){
+  #
+  #     res <- dataset_senti()
+  #   }else{ # live filtering
+  #     req(input$industry_sentiment)
+  #     res <- dataset_senti()
+  #     if(input$industry_sentiment == "no"){
+  #       res <- dataset_senti()
+  #       if(input$tweet_length_stock1 == "yes"){
+  #
+  #         res <- res %>% filter((retweets_count > as.numeric(input$minRetweet_stocks1)) &
+  #                                 (tweet_length > 81))}
+  #       else{
+  #         res <- res %>% filter((retweets_count > as.numeric(input$minRetweet_stocks1)))
+  #       }
+  #     }#else{
+  #     #res <- dataset_senti()
+  #     #if(input$tweet_length_stock2 == "yes"){
+  #     # res <- res %>% filter((retweets_count > as.numeric(input$minRetweet_stocks2)) &
+  #     #                          (tweet_length > 81))
+  #     #}else{
+  #     #  res <- res %>% filter(retweets_count > as.numeric(input$minRetweet_stocks2))
+  #     #}
+  #     #}
+  #   }
+  # })
+  #
+  # # aggregate dataset to get one sentiment per day
+  # aggri_select <- reactive({
+  #
+  #   if(input$Sentiment_type == "NoFilter"){ # NoFilter files already aggregated
+  #     res <- filtered_df()
+  #     aggregation <- key(input$aggregation)  # select aggregation type: Mean, mean weighted by,...
+  #     res <- res %>% tidyr::gather("id", "aggregation", aggregation)
+  #     res <- res[c("date","aggregation")]
+  #   }else{
+  #     if(input$industry_sentiment == "no"){
+  #       res <- filtered_df()
+  #       res <- aggregate_sentiment(res) # function to aggregate sentiment per day
+  #       res <- res %>% filter(language == input$language1)
+  #       aggregation <- key(input$aggregation1)
+  #       res <- res %>% tidyr::gather("id", "aggregation", aggregation)
+  #       res <- res[c("date","aggregation")]
+  #     }else{
+  #       res <- get_industry_sentiment(COMPONENTS_DE(),input$industry,input$minRetweet_stocks2,
+  #                                     input$tweet_length_stock2)      #function to gather all stock in certain industry
+  #       aggregation <- key(input$aggregation2)                          #--> also calculates aggregation inside function
+  #       res <- res %>% tidyr::gather("id", "aggregation", aggregation)
+  #       res <- res[c("date","aggregation")]
+  #     }
+  #   }
+  #
+  # })
 
-      res <- En_NoFilter_0_0_yes()   # still fix as it is not clear yet if sql or csv
-      #res <- eval(parse(text = paste('En', '_NoFilter_',input$minRetweet,'_',
-      #                               input$minminLikes,'_',input$tweet_length,'()', sep='')))
-      #input$language
-    }else{
-      req(input$Stock_reg)
-      ticker <- ticker_dict(input$Stock_reg) # dict for a few stock
-      res <- eval(parse(text = paste(ticker,'()', sep=''))) # example: ADS.DE()
-
-    }
-
-
-  })
-  # filter
-  filtered_df <- reactive({
-    validate(need(correct_path() == T, "Please choose the correct path"))
-    req(input$Sentiment_type)
-    req(input$minRetweet_stocks1)
-    req(input$minRetweet_stocks2)
-
-    if(input$Sentiment_type == "NoFilter"){
-
-      res <- dataset_senti()
-    }else{ # live filtering
-      req(input$industry_sentiment)
-      res <- dataset_senti()
-      if(input$industry_sentiment == "no"){
-        res <- dataset_senti()
-        if(input$tweet_length_stock1 == "yes"){
-
-          res <- res %>% filter((retweets_count > as.numeric(input$minRetweet_stocks1)) &
-                                  (tweet_length > 81))}
-        else{
-          res <- res %>% filter((retweets_count > as.numeric(input$minRetweet_stocks1)))
-        }
-      }#else{
-      #res <- dataset_senti()
-      #if(input$tweet_length_stock2 == "yes"){
-      # res <- res %>% filter((retweets_count > as.numeric(input$minRetweet_stocks2)) &
-      #                          (tweet_length > 81))
-      #}else{
-      #  res <- res %>% filter(retweets_count > as.numeric(input$minRetweet_stocks2))
-      #}
-      #}
-    }
-  })
-
-  # aggregate dataset to get one sentiment per day
-  aggri_select <- reactive({
-
-    if(input$Sentiment_type == "NoFilter"){ # NoFilter files already aggregated
-      res <- filtered_df()
-      aggregation <- key(input$aggregation)  # select aggregation type: Mean, mean weighted by,...
-      res <- res %>% tidyr::gather("id", "aggregation", aggregation)
-      res <- res[c("date","aggregation")]
-    }else{
-      if(input$industry_sentiment == "no"){
-        res <- filtered_df()
-        res <- aggregate_sentiment(res) # function to aggregate sentiment per day
-        res <- res %>% filter(language == input$language1)
-        aggregation <- key(input$aggregation1)
-        res <- res %>% tidyr::gather("id", "aggregation", aggregation)
-        res <- res[c("date","aggregation")]
-      }else{
-        res <- get_industry_sentiment(COMPONENTS_DE(),input$industry,input$minRetweet_stocks2,
-                                      input$tweet_length_stock2)      #function to gather all stock in certain industry
-        aggregation <- key(input$aggregation2)                          #--> also calculates aggregation inside function
-        res <- res %>% tidyr::gather("id", "aggregation", aggregation)
-        res <- res[c("date","aggregation")]
-      }
-    }
-
-  })
-
+  #reset button for variables
   observeEvent(input$reset_regression,{
     updateSelectizeInput(session,"Controls",selected = "")
     updateSelectizeInput(session,"corona_measurement_regression",selected = "")
@@ -880,6 +955,7 @@ server <- function(input, output, session) {
 
 
   ########################### sql data
+  ### call to our SQL database to load the sentiment for the desired filters
   dates_reg <- reactive({
     if (length(input$date_regression) > 1){
       input$date_regression
@@ -953,7 +1029,7 @@ server <- function(input, output, session) {
 
 
   ####################################################Summary statistics  Regression #####################################################
-
+###table
   df_need_reg <- reactive({
     df_need <- round(psych::describe(final_regression_df())[c(3, 4, 5, 8, 9)], 2)
     test <- nrow(df_need)
@@ -984,9 +1060,7 @@ server <- function(input, output, session) {
                                 font_size = 16)
   }
 
-  # output$correlation_reg <- renderPlot({
-  #   GGally::ggpairs(final_regression_df())
-  # })
+#### correlation plot
   output$correlation_reg <- renderPlot({
     res <- final_regression_df()
     #help_df <- res
@@ -1018,18 +1092,7 @@ server <- function(input, output, session) {
     model
   })
 
-
-  # output$testi_table <- renderPrint ({
-  #   head(dataset())
-  # })
-
-  # output$senti <- renderPrint ({
-  #   head(df_selected_controls())
-  # })
-
-  # output$senti_agg <- renderPrint ({
-  #   head(final_regression_df())
-  # })
+  #### regression table
   reg_table <- reactive({
      test <- regression_result()
      test <- broom::tidy(test)
@@ -1063,17 +1126,13 @@ server <- function(input, output, session) {
                                 font_size = 16)
     }
 
+  ### regression equation
   output$regression_equation <- renderUI({
     str1 <- paste("Linear regression: ",input$regression_outcome,"~",paste(input$Controls,collapse = " + "),"<br/>")
     htmltools::HTML(paste(str1,sep = '<br/>'))
   })
 
-
-  # output$plot_dens_Qreg <- renderPlot({
-  #
-  #   density_plot_reg(dataset())
-  # })
-
+#### quantile regression table
    qreg_table <- reactive({
     test <- broom::tidy(regression_result_Qreg(),se.type="nid")
 
@@ -1109,9 +1168,22 @@ server <- function(input, output, session) {
   ###############################################################################
   ########################   VAR    #############################################
   ###############################################################################
+
+#infotext information var
   output$info_var <- renderUI({
     htmltools::HTML(paste(htmltools::h1(htmltools::strong("VAR-Forecasting"), align="center", style = "font-family: 'Times', serif;
                   font-weight: 30px; font-size: 30px; line-height: 1;"),
+                          htmltools::h2(htmltools::strong("Summary Statistics") ,style = "font-family: 'Times', serif; font-weight: 20px; font-size: 20px; line-height: 1;"),
+                          htmltools::p("On this tab, you can find summary statistics for the selected variables, including a correlation plot.",style = "font-weight: 18px; font-size: 18px; line-height: 1;"),
+                          htmltools::h2(htmltools::strong("Validity") ,style = "font-family: 'Times', serif; font-weight: 20px; font-size: 20px; line-height: 1;"),
+                          htmltools::p("Here, you can verify the predictive performance of the model. Performance metrics are calculated by cutting
+                                       the timeseries by the selected number of days and using this period as a testing-sample. Next to the, metrics for the forecast,
+                                       the fitted values of the complete series are used to calculate the insample performance, in order to check for overfitting.
+                                       In addition, a Breusch-Godfrey LM test is provided to test for autocorrelation in the residuals. For unbiased results,
+                                       the residuals should be uncorrelated.",style = "font-weight: 18px; font-size: 18px; line-height: 1;"),
+                          htmltools::h2(htmltools::strong("Actual Forecast") ,style = "font-family: 'Times', serif; font-weight: 20px; font-size: 20px; line-height: 1;"),
+                          htmltools::p("On this tab, you can observe the actual forecast for the selected number of future days. Again, the Breusch-Godfrey LM test is provided to test for autocorrelation in the residuals.",style = "font-weight: 18px; font-size: 18px; line-height: 1;"),
+                          htmltools::tags$hr(),
                           htmltools::p("In this section, the user is able to calculate forecasts of the stock variable using Vector-Autoregressions (VAR).
              VAR models are especially usefull for forecasting a collection of related variables where no explicit interpretation is required.
              Similar to the concept of Granger causality, it can be observed whether a timeseries is useful in forecasting another.
@@ -1145,6 +1217,7 @@ server <- function(input, output, session) {
   })
   ###################################################### dataset ###############################################################
 
+## first and second variable cant be both DAX or DJI
   output$var_con_check <- renderText({
     ##### date input
     test <- input$Controls_var
@@ -1207,52 +1280,48 @@ server <- function(input, output, session) {
     }
   })
 
-
+###controls select
   output$Controls_var <- renderUI({
     validate(need(correct_path() == T, "Please choose the correct path"))
     if (input$country_regression_var == "Germany"){
       input <- selectizeInput("Controls_var","Control variables:",
-                              c("Google-Trends Coronavirus"="coronavirus",
+                              c("Google-Trends Coronavirus"="trend_corona",
                                 "VIX"="VIX",
-                                "Financial Distress Index"="OFR.FSI",
-                                "Economic Uncertainty Index"="WLEMUINDXD",
+                                "Financial Distress Index"="fin_distress",
+                                "Economic Uncertainty Index"="econ_uncertain",
                                 "DAX"="DAX"),selected = "VIX",multiple = TRUE)
       #c(colnames(res[3:length(res)])),multiple = TRUE
     }else{
       input <- selectizeInput("Controls_var","Control variables:",
-                              c("Google-Trends Coronavirus"="coronavirus",
+                              c("Google-Trends Coronavirus"="trend_corona",
                                 "VIX"="VIX",
-                                "Financial Distress Index"="OFR.FSI",
-                                "Economic Uncertainty Index"="WLEMUINDXD",
+                                "Financial Distress Index"="fin_distress",
+                                "Economic Uncertainty Index"="econ_uncertain",
                                 "DJI"="DJI"),selected = "VIX",multiple = TRUE)
     }
 
   })
 
+  ##dataframe
   dataset_var <- reactive({
     validate(need(correct_path() == T, "Please choose the correct path"))
-    #validate(need(input$senti_yesno_var==TRUE | input$corona_measurement_var != ""|input$Controls_var!="", "Choose the second variable!"))
     if (input$country_regression_var == "Germany"){
       data_reg <- dplyr::filter(stockdata_DE(),                                                                               #nur hier nach datum filtern, rest wird draufgemerged
-                                #.data$name %in% (c(COMPONENTS_DE()[["Symbol"]], "GDAXI")[c(COMPONENTS_DE()[["Company.Name"]], "GDAXI") %in% .env$input$Stock_Regression_var]) &
                                 .data$name %in% .env$input$Stock_Regression_var &
                                   .data$Dates >= .env$input$date_regression_var[1] & .data$Dates <= .env$input$date_regression_var[2])[c("Dates",input$regression_outcome_var,"name")] #hier später noch CLose flexibel machen
     } else {
       data_reg <- dplyr::filter(stockdata_US(),                                                                               #nur hier nach datum filtern, rest wird draufgemerged
-                                #.data$name %in% (c(COMPONENTS_US()[["Symbol"]], "DJI")[c(COMPONENTS_US()[["Company.Name"]], "DJI") %in% .env$input$Stock_Regression_var]) &
                                 .data$name %in% .env$input$Stock_Regression_var &
                                   .data$Dates >= .env$input$date_regression_var[1] & .data$Dates <= .env$input$date_regression_var[2])[c("Dates",input$regression_outcome_var,"name")] #hier später noch CLose flexibel machen
     }
-
+#controls
     if (input$country_regression_var == "Germany"){
       global_controls <- global_controls_test_DE()   #load controls
       global_controls$Date <- as.Date(global_controls$Date) #transform date
+      colnames(global_controls) <- c("Date","VIX","trend_corona","fin_distress","Credit","Volatility","Safe.assets","Equity.valuation","econ_uncertain")
       dax <- dplyr::filter(stockdata_DE(),.data$name %in% c("GDAXI")&
                              .data$Dates >= min(global_controls$Date) & .data$Dates <= max(global_controls$Date))[c("Dates","Close")]
       colnames(dax)[1]<-"Date"
-      # dax <- GDAXI()  #load dax
-      # dax$Date <- as.Date(dax$Date, "%d %b %Y") #transform date
-      # dax <- missing_date_imputer(dax,"Close.") #transform time series by imputing missing values
       colnames(dax)[2] <- "DAX"  #rename ->   !! is not renamed in final dataset !! -> dont know why
       global_controls <- dplyr::left_join(dax,global_controls,by = c("Date")) #join final
       if(input$corona_measurement_var!=""){
@@ -1264,12 +1333,10 @@ server <- function(input, output, session) {
     }else {
       global_controls <- global_controls_test_US() #same procedure as above
       global_controls$Date <- as.Date(global_controls$Date)
+      colnames(global_controls) <- c("Date","VIX","trend_corona","fin_distress","Credit","Volatility","Safe.assets","Equity.valuation","econ_uncertain")
       dji <- dplyr::filter(stockdata_US(),.data$name %in% c("DJI")&
                              .data$Dates >= min(global_controls$Date) & .data$Dates <= max(global_controls$Date))[c("Dates","Close")]
       colnames(dji)[1]<-"Date"
-      # dow <- DOW()
-      # dow$Date <- as.Date(dow$Date, " %b %d, %Y")
-      # dow <- missing_date_imputer(dow,"Close.")
       colnames(dji)[2] <- "DJI"
       global_controls <- dplyr::left_join(dji,global_controls,by = c("Date"))
       if(input$corona_measurement_var!=""){
@@ -1284,16 +1351,16 @@ server <- function(input, output, session) {
     data_reg2
   })
 
-
+#select desired variables
   df_selected_controls_var <- reactive({
     res <- dataset_var()
-    if(input$Controls_var =="" && input$corona_measurement_var==""){
+    if(is.null(input$Controls_var) ==TRUE && input$corona_measurement_var==""){
       res <- res[c("Dates",input$regression_outcome_var)]
-    }else if (input$Controls_var !="" && input$corona_measurement_var!=""){
+    }else if (is.null(input$Controls_var) ==FALSE && input$corona_measurement_var!=""){
       res <- res[c("Dates",input$regression_outcome_var,input$Controls_var,input$corona_measurement_var)]
-    } else if (input$Controls_var !="" && input$corona_measurement_var==""){
+    } else if (is.null(input$Controls_var) ==FALSE && input$corona_measurement_var==""){
       res <- res[c("Dates",input$regression_outcome_var,input$Controls_var)]
-    } else if (input$Controls_var =="" && input$corona_measurement_var!=""){
+    } else if (is.null(input$Controls_var) ==TRUE && input$corona_measurement_var!=""){
       res <- res[c("Dates",input$regression_outcome_var,input$corona_measurement_var)]
     }
     res
@@ -1310,7 +1377,7 @@ server <- function(input, output, session) {
   })
 
 
-
+#reset button for variables
   observeEvent(input$reset_regression_var,{
     updateSelectizeInput(session,"Controls_var",selected = "")
     updateSelectizeInput(session,"corona_measurement_var",selected = "")
@@ -1332,6 +1399,7 @@ server <- function(input, output, session) {
   })
 
   ################################################################# sql data var
+  ### call to our sql database to get sentiment with the respective filter
   dates_var <- reactive({
     if (length(input$date_regression_var) > 1){
       input$date_regression_var
@@ -1405,7 +1473,7 @@ server <- function(input, output, session) {
   })
 
   ####################################################Summary statistics #####################################################
-
+#summary table
   df_need <- reactive({
     df_need <- round(psych::describe(final_regression_df_var()[-1])[c(3, 4, 5, 8, 9)], 2)
     test <- nrow(df_need)
@@ -1431,6 +1499,7 @@ server <- function(input, output, session) {
                                 font_size = 16)
   }
 
+### correlation plot
   output$correlation_var <- renderPlot({
     res <- final_regression_df_var()[-1]
     #help_df <- res
@@ -1447,21 +1516,23 @@ server <- function(input, output, session) {
 
 
 
-  ##################################################   Validity    ######################################################
+  ##################################################   Validity-Tab
+
+  ###load reactive dataframe:
   output$datensatz_var <- renderPrint ({
     head(final_regression_df_var())
   })
-
+  ###for validity cut dataframe at selected number of forecast days
   forecast_data <- reactive({
     final_regression_df_var()[1:(nrow(final_regression_df_var())-input$ahead),-1,drop=FALSE]
   })
-
+### true values for the days that were cut off
   actual_values <- reactive({
     final_regression_df_var()[((nrow(final_regression_df_var())+1)-input$ahead):nrow(final_regression_df_var()),2]
   })
 
 
-
+#test for stationarity and difference if necessary
   stationary <- reactive({
     data <- forecast_data()
     if (tseries::adf.test(data[[1]],k=2)$p.value > 0.1){
@@ -1529,10 +1600,6 @@ server <- function(input, output, session) {
                          forecast_var(),                                                              #forecasted values
                          actual_values())#actual values
       colnames(plot) <- c("a","forecast","actual")
-      # ggplot(plot1) +
-      #   geom_line(aes(a,b),color="red")+
-      #   geom_line(aes(a,c),color="gold")+
-      #   labs(x="Date",y="StockPrice",title = "forecasted vs. actual")
       help <- plot
       plot <- xts::xts(plot[c("forecast","actual")],order.by=plot[["a"]])
       dygraphs::dygraph(plot)%>%
@@ -1543,10 +1610,6 @@ server <- function(input, output, session) {
                          final_regression_df_var()[2])
       colnames(plot) <- c("a","forecast","actual")
       help <- plot
-      # ggplot(plot2) +
-      #   geom_line(aes(a,b))+
-      #   geom_line(aes(a,c))+
-      #   labs(x="Date",y="StockPrice",title = "forecasted vs. actual, full series")
       plot <- xts::xts(plot[c("forecast","actual")],order.by=plot[["a"]])
 
       dygraphs::dygraph(plot) %>%
@@ -1557,7 +1620,7 @@ server <- function(input, output, session) {
 
   })
 
-
+##calculate performance based on fitted values of complete series
   insample_var <- reactive({
     fcast <- stats::predict(var_model(), stationary())
     if(nrow(stationary())!=nrow(forecast_data())){
@@ -1576,10 +1639,6 @@ server <- function(input, output, session) {
     }
     x
   })
-
-
-
-
 
   output$var_metrics <- function(){
     if (ncol(forecast_data()) == 1){
@@ -1608,11 +1667,11 @@ server <- function(input, output, session) {
                                 font_size = 16)
   }
 
-
+#print serial correlation test
   output$serial_test <- renderPrint({
     serial_test()
   })
-
+#print result of correlation test as sentence
   output$var <- renderUI({
     if (ncol(forecast_data()) == 1) {
       str1 <- paste("Box-Pierce test statistic to test for autocorrelation in the AR-residuals:")
@@ -1634,13 +1693,14 @@ server <- function(input, output, session) {
 
 
 
-  ##################################################   actual forecast    ######################################################
+  ##################################################   actual forecast-tab
+  #data-frame
   forecast_data_real <- reactive({
     final_regression_df_var()[,-1,drop=FALSE]
   })
 
 
-
+#test stationarity and difference if required
   stationary_real <- reactive({
     data <- forecast_data_real()
     if (tseries::adf.test(data[[1]],k=2)$p.value > 0.1){
@@ -1668,6 +1728,7 @@ server <- function(input, output, session) {
     model
   })
 
+  ###correlation test for residuals
   serial_test_real <- reactive({
     if (ncol(forecast_data()) == 1) {
       test <- stats::Box.test(var_model_real()$residuals,type= "Box-Pierce" )
@@ -1701,14 +1762,12 @@ server <- function(input, output, session) {
     x
   })
 
+  ### plot the whole series with the forcasted values
   output$plot_forecast_real <- dygraphs::renderDygraph({
 
     plot <- data.frame(c(final_regression_df_var()[["Dates"]],seq(as.Date(tail(final_regression_df_var()$Dates,1))+1,by = "day",length.out = input$ahead)),
                        c(forecast_data_real()[[1]],forecast_var_real()))
     colnames(plot) <- c("a","forecast")
-    # ggplot(plot2) +
-    #   geom_line(aes(a,b))+
-    #   labs(x="Date",y="StockPrice",title = "forecasted series")
     help<-plot
     plot <- xts::xts(plot["forecast"],order.by=plot[["a"]])
 
@@ -1717,11 +1776,11 @@ server <- function(input, output, session) {
       dygraphs::dyShading(from = min(help$a), to = max(help$a), color = "white")
 
   })
-
+#correlation test print
   output$serial_test_real <- renderPrint({
     serial_test_real()
   })
-
+#sentence correlation test
   output$var_real <- renderUI({
     if (ncol(forecast_data()) == 1) {
       str1 <- paste("Box-Pierce test statistic to test for autocorrelation in the AR-residuals:")
@@ -3371,6 +3430,52 @@ server <- function(input, output, session) {
   ###############################################################################
   ###flexible input for stocks: show either german or us companies
   #observe_helpers(withMathJax = TRUE, help_dir = "helpers")
+  output$info_xgb_firstpage <- renderUI({
+    htmltools::HTML(paste(htmltools::h1(htmltools::strong("XGboost"), align="center", style = "font-family: 'Times', serif;
+                  font-weight: 30px; font-size: 30px; line-height: 1;"),
+                          htmltools::p("Machine Learning models have shown to be a potent complement for traditional time series models such as VAR and ARIMA. In
+                                      this project we use the XGboost algorithm. A supervised learning approach requires additional preparation concerning the structure of the dataset before
+                                      the training process can start.",style = "font-weight: 18px; font-size: 18px; line-height: 1;"),
+                          htmltools::p("We restructure the time series dataset such that the value in t predicts the value of our dependent variable in ", htmltools::em("t+1"), ".
+                                      In other words, one needs to ensure that model always uses past values to predict the next time step. In order to exploit the autocorrelation,
+                                      especially in the financial context, one can extend the window of past values by using lags, which the model can use to predict the next value.
+                                      For example, the value of the dependent variable in ", htmltools::em("t+3"), " is predicted with the help of values observed in t+2,t+1 and t.
+                                      In a multivariate setup the model can also use past values of other features to predict ", htmltools::em("y"), ". In addition, one can extract
+                                       feautres from the date. This means the model also has information about quarters,seasons etc. of the year.",style = "font-weight: 18px; font-size: 18px; line-height: 1;"),
+                          htmltools::p("Another, point that requires further attention in a time series dataset is the model evaluation. Here, a traditonal k-fold cross-validation scheme would leak information of the future, which leads to an overly confident model fit. One can prevent this with a
+                                      'walk forward' validation approach. Basically, the model trains on a time frame, which lies past the validation time frame. Figure 1 illustrates this approach."
+                                       ,style = "font-weight: 18px; font-size: 18px; line-height: 1;")
+          #                 withMathJax("$$y_t = \\alpha_0 + \\alpha_1y_{t-1} + \\alpha_2y_{t-1} + ... + \\alpha_my_{t-m} + error_t$$"),
+          #                 htmltools::p("In the next step, lagged values of ", htmltools::em("x"),"are added to the regression: ",style = "font-weight: 18px; font-size: 18px; line-height: 1;"),
+          #                 withMathJax("$$y_t = \\alpha_0 + \\alpha_1y_{t-1} + \\alpha_2y_{t-1} + ... + \\alpha_my_{t-m} + \\beta_1x_{t-1} + \\beta_qx_{t-q} + error_t$$"),
+          #                 htmltools::p("The lagged values of ", htmltools::em("x")," are kept as long as they add explanatory power to the regression according to an F-test.
+          # The null hypothesis that ", htmltools::em("x")," does not Granger cause", htmltools::em("y"), "is accepted if and only if no lagged values of ", htmltools::em("x")," are included.",style = "font-weight: 18px; font-size: 18px; line-height: 1;"),
+          #                 htmltools::h2(htmltools::strong("Instructions:") ,style = "font-family: 'Times', serif; font-weight: 20px; font-size: 20px; line-height: 1;"),
+          #                 htmltools::p("In order to perform the Granger causality Analysis, built the model using the panel on the left: ",htmltools::tags$br(),
+          #                              htmltools::div("- select the first variable",htmltools::tags$br(),
+          #                                             "- select the second variable",htmltools::tags$br(),
+          #                                             "- choose the direction of the causality test using the checkbox",htmltools::tags$br()
+          #                                             # "- the tab ",htmltools::strong(em("Visualize")),"contains plots of both series for comparison",htmltools::tags$br(),
+          #                                             # "- the tab ",htmltools::strong(em("Background-steps"))," contains all important steps required in the analysis",htmltools::tags$br(),
+          #                                             # "- the results can be accessed on the tab ",htmltools::strong(em("Results"))
+          #                                             , style="margin-left: 1em;font-weight: 18px; font-size: 18px; line-height: 1;"),style = "font-weight: 18px; font-size: 18px; line-height: 1;"),
+          #                 htmltools::h2(htmltools::strong("Analysis steps:") ,style = "font-family: 'Times', serif; font-weight: 20px; font-size: 20px; line-height: 1;"),
+          #                 htmltools::p("The following steps are automatically performed after the user selects two time series: ",htmltools::tags$br(),
+          #                              htmltools::div("1. The optimal number of lags is calculated",htmltools::tags$br(),
+          #                                             "2. Stationarity is repeatedly tested and the series are differenced until sationarity is achieved",htmltools::tags$br(),
+          #                                             "3. A VAR model is estimated with the optimal number of lags and the (if necessary) transformed series",htmltools::tags$br(),
+          #                                             "4. A granger causality test is performed.",
+          #                                             style="margin-left: 1em;font-weight: 18px; font-size: 18px; line-height: 1;"),
+          #                              style = "font-weight: 18px; font-size: 18px; line-height: 1;"),
+          #                 htmltools::h2(htmltools::strong("Visualize-Tab") ,style = "font-family: 'Times', serif; font-weight: 20px; font-size: 20px; line-height: 1;"),
+          #                 htmltools::p("  ",style = "font-weight: 18px; font-size: 18px; line-height: 1;"),
+          #                 htmltools::h2(htmltools::strong("Background-steps") ,style = "font-family: 'Times', serif; font-weight: 20px; font-size: 20px; line-height: 1;"),
+          #                 htmltools::p("  ",style = "font-weight: 18px; font-size: 18px; line-height: 1;"),
+          #                 htmltools::h2(htmltools::strong("Results") ,style = "font-family: 'Times', serif; font-weight: 20px; font-size: 20px; line-height: 1;"),
+          #                 htmltools::p("  ",style = "font-weight: 18px; font-size: 18px; line-height: 1;")
+
+    ))
+  })
 
 
   output$stock_regression_xgb <- renderUI({
@@ -3560,11 +3665,13 @@ server <- function(input, output, session) {
 
 
   observeEvent(input$reset_regression_xgb,{
+    updateSelectizeInput(session,"corona_measurement_xgb",selected = "")
     updateSelectizeInput(session,"Controls_xgb",selected = "")
   })
 
   #merge sentiment with control+dep vars
   final_regression_df_xgb <- reactive ({
+    xgb_date_checker()
     if (input$senti_yesno_xgb == TRUE){
       res <- get_sentiment_xgb()
     } else {
@@ -3574,6 +3681,13 @@ server <- function(input, output, session) {
     res_c <- df_selected_controls_xgb()
 
     res <- left_join(res_c,res, by=c("Dates" = "created_at"))
+
+    if(input$senti_yesno_xgb == TRUE){
+    res <- na_replace(res, 0)
+    }else{
+      res
+    }
+
     res_corona <- df_selected_corona_xgb()
     res_corona$date <- as.Date(res_corona$date)
     res <- left_join(res,res_corona,by=c("Dates" = "date"))
@@ -3694,18 +3808,6 @@ server <- function(input, output, session) {
   })
 
 
-  output$xgb_summary <- function(){
-    ##### summary table
-    knitr::kable(df_need_xgb(), caption = glue("Summary statistics"),colnames = NULL) %>%
-      column_spec(1:6, color = "lightgrey") %>%
-      column_spec(1, bold = T, color = "white") %>%
-      row_spec(1, bold = T) %>%
-      kableExtra::kable_styling(c("striped","hover"), full_width = F,
-                                position = "center",
-                                font_size = 16)
-  }
-
-
   df_need_xgb <- reactive({
     ##### calculate summary statistics
     df_need <- round(describe(final_regression_df_xgb()[-1])[c(3, 4, 5, 8, 9)], 2)
@@ -3720,9 +3822,45 @@ server <- function(input, output, session) {
 
   })
 
+
+
+  output$xgb_summary <- function(){
+    ##### summary table
+    knitr::kable(df_need_xgb(), caption = glue("Summary statistics"),col.names = c("MEAN","SD",
+                                                                                   "MEDIAN","MIN","MAX")) %>%
+      column_spec(1:6, color = "lightgrey") %>%
+      column_spec(1, bold = T, color = "white") %>%
+      row_spec(1, bold = T) %>%
+      kableExtra::kable_styling(c("striped","hover"), full_width = F,
+                                position = "center",
+                                font_size = 16)
+  }
+
+
+
+
+
+  ##### ggpairs plot
   output$correlation_xgb <- renderPlot({
-    ##### ggpairs plot
-    ggpairs(final_regression_df_xgb()[-1])
+
+    #### avoid error message before plot is loaded
+    req(input$Controls_xgb)
+
+    res <- final_regression_df_xgb()[-1]
+    ##### remove variables with missing values
+    help_df <- res %>% select_if(~ !any(is.na(.)))
+
+    if(any(is.na(res))){
+      ##### store column names of variables with missing values
+      names_missing <- colnames(res)[ncol(res)]
+      ##### show notification if variable is considered for the plot
+      showNotification(glue("Removed {names_missing} for plot due to missing values"),
+                       type = "message")}
+
+    ggpairs(help_df, upper = list(continuous = wrap(ggally_cor, size = 8)), lower = list(continuous = 'smooth'))
+
+
+    #ggpairs(final_regression_df_xgb()[-1])
   })
 
 
@@ -3755,6 +3893,24 @@ server <- function(input, output, session) {
   })
 
 
+
+  xgb_date_checker <- reactive({
+    ##### date input
+    if(length(input$date_regression_xgb) > 1){
+      ##### calculate the difference of the dates
+      days_inrange <- difftime(as.Date(input$date_regression_xgb[2]) ,as.Date(input$date_regression_xgb[1]) , units = c("days"))
+      if (days_inrange < 30){
+        ##### formulate a validation statement
+        validate("Less than 30 days selected. Please choose more days.")
+
+      }
+      #### also check if no date is selected
+    } else if (is.null(input$date_regression_xgb)){
+      ##### formulate a validation statement
+      validate("Need to select at least one day.")
+    }
+  })
+
   ##### check if the date has at leas 30 days as input
   output$xgb_date_check <- renderText({
     ##### date input
@@ -3778,6 +3934,8 @@ server <- function(input, output, session) {
   output$add_features <- renderUI({
     ##### selection of variables limited to variable selection of user
     res <- final_regression_df_xgb() %>% dplyr::select(-Dates)
+    ##### rename variables
+
     input <- selectInput("var_1","Chose variable to add AR and/or MA features",
                          names(res))
 
@@ -3799,6 +3957,9 @@ server <- function(input, output, session) {
   xchange$df_full3 <- NULL
   xchange$df_full4 <- NULL
   xchange$df_full5 <- NULL
+  xchange$df_full6 <- NULL
+  xchange$df_full7 <- NULL
+  xchange$df_full8 <- NULL
 
   xchange$df1 <- NULL
   xchange$df2 <- NULL
@@ -3810,9 +3971,19 @@ Ma_part1 <- reactive({
     res <- final_regression_df_xgb()
     ##### lag feature columns by one to avoid leakage of information
     res <- lag_cols(res,input$regression_outcome_xgb)
+    ##### remove variables with missing values before stationarity is evaluted: test does not allow NAs
+    help_df <- res %>% select_if(~ !any(is.na(.)))
+
     ##### call function to check for stationarity
     ##### returns differenced dataframe for columns which did not pass the test
-    res <- make_ts_stationary(res)
+    help_df <- make_ts_stationary(help_df)
+    #### store names of columns with NAs in vector for reference in the next step
+    missing_names <- colnames(res)[!complete.cases(t(res))]
+    if(!is.null(missing_names)){
+      res
+    }else{#### join columns back to dataframe
+      res <- left_join(help_df,res[,c("Dates",missing_names)])
+    }
     ##### extract digits from text input
     list_nums <- regmatches(input$ma_select, gregexpr("[[:digit:]]+", input$ma_select))
     ##### convert
@@ -3862,9 +4033,18 @@ Ma_part2 <- reactive({
   res <- final_regression_df_xgb()
   ##### lag feature columns by one to avoid leakage of information
   res <- lag_cols(res,input$regression_outcome_xgb)
+  ##### remove variables with missing values before stationarity is evaluted: test does not allow NAs
+  help_df <- res %>% select_if(~ !any(is.na(.)))
   ##### call function to check for stationarity
   ##### returns differenced dataframe for columns which did not pass the test
-  res <- make_ts_stationary(res)
+  help_df <- make_ts_stationary(help_df)
+  #### store names of columns with NAs in vector for reference in the next step
+  missing_names <- colnames(res)[!complete.cases(t(res))]
+  if(!is.null(missing_names)){
+    res
+  }else{#### join columns back to dataframe
+    res <- left_join(help_df,res[,c("Dates",missing_names)])
+  }
   ##### extract digits from text input
   list_nums <- regmatches(input$ma_select2, gregexpr("[[:digit:]]+", input$ma_select2))
   ##### convert
@@ -3913,9 +4093,18 @@ final_regression_diff <- reactive({
   res <- final_regression_df_xgb()
   ##### lag feature columns by one to avoid leakage of information
   res <- lag_cols(res,input$regression_outcome_xgb)
+  ##### remove variables with missing values before stationarity is evaluted: test does not allow NAs
+  help_df <- res %>% select_if(~ !any(is.na(.)))
   ##### call function to check for stationarity
   ##### returns differenced dataframe for columns which did not pass the test
-  res <- make_ts_stationary(res)
+  help_df <- make_ts_stationary(help_df)
+  #### store names of columns with NAs in vector for reference in the next step
+  missing_names <- colnames(res)[!complete.cases(t(res))]
+  if(!is.null(missing_names)){
+    res
+  }else{#### join columns back to dataframe
+    res <- left_join(help_df,res[,c("Dates",missing_names)])
+  }
   res
 })
 
@@ -3966,6 +4155,21 @@ v_5b <- reactive({
   validate(validate_no_zeros(input$ma_select2))
 })
 
+output$error_text2 <- renderText({ #### show error message
+  v_1a()
+  v_1b()
+  v_2a()
+  v_2b()
+  v_3a()
+  v_3b()
+  v_4a()
+  v_4b()
+  v_5a()
+  v_5b()
+  v_6()
+
+})
+
 #################
 
 ##### init reactive value to keep track when action button is pressed
@@ -3979,7 +4183,23 @@ observeEvent(input$addButton,{
 observe({
   isolate({rv_action_button$i = rv_action_button$i + 1})
 })
-
+#
+# req( correct_path()== T)
+# if (input$country_regression_xgb == "Germany"){
+#   input <- selectizeInput("Controls_xgb","Control variables:",
+#                           c("Google-Trends Coronavirus"="coronavirus",
+#                             "VIX"="VIX",
+#                             "Financial Distress Index"="OFR.FSI",
+#                             "Economic Uncertainty Index"="WLEMUINDXD",
+#                             "DAX"="DAX"),selected = "VIX",multiple = TRUE)
+#   #c(colnames(res[3:length(res)])),multiple = TRUE
+# }else{
+#   input <- selectizeInput("Controls_xgb","Control variables:",
+#                           c("Google-Trends Coronavirus"="coronavirus",
+#                             "VIX"="VIX",
+#                             "Financial Distress Index"="OFR.FSI",
+#                             "Economic Uncertainty Index"="WLEMUINDXD",
+#                             "DJI"="DJI"),selected = "VIX",multiple = TRUE)
 
 observe({
   ##### only observe if action button is 0
@@ -3999,7 +4219,7 @@ observe({
     v_4b()
     v_5a()##### prevent input of zeros
     v_5b()
-    if((input$var_1 == "Close") | (input$var_1 == "Return")){
+    if((input$var_1 == "Adj.Close") | (input$var_1 == "Return") | (input$var_1 == "log_Close")){
       ##### assign the created moving average datasets in isolation
       isolate(c <- Ma_part2())
       isolate(b <- Ma_part1())
@@ -4010,32 +4230,105 @@ observe({
       Ar_part <- AR_creator(final_regression_diff() ,input$var_1,input$num_2)
       #### combine everything to a reactive value
       #### use isolation argument to save dataframe when the user is working on a different variable
-      isolate(xchange$df_full <-  cbind(final_regression_diff(),Ar_part,c,b))}
+      isolate(xchange$df_full <-  cbind(final_regression_diff(),Ar_part,c,b))
+      #### show notification whether selection is stored
+      showNotification("Succesfully stored features!", type = "message")}
 
     else if(input$var_1 == "VIX"){
-
+      # v()
       rv_action_button$i <- 1
       isolate(b <- Ma_part1())
       isolate(c <- Ma_part2())
       Ar_part <- AR_creator(final_regression_diff() ,input$var_1,input$num_2)
-      isolate(xchange$df_full2 <-  cbind(final_regression_diff(),Ar_part,c,b))}
+      isolate(xchange$df_full2 <-  cbind(final_regression_diff(),Ar_part,c,b))
+      showNotification("Succesfully stored features!", type = "message")}
     else if(input$var_1 == "coronavirus"){
-
+      #v()
       rv_action_button$i <- 1
       isolate(b <- Ma_part1())
       isolate(c <- Ma_part2())
       Ar_part <- AR_creator(final_regression_diff() ,input$var_1,input$num_2)
-      isolate(xchange$df_full3 <-  cbind(final_regression_diff(),Ar_part,c,b))}
-    else{
-
+      isolate(xchange$df_full3 <-  cbind(final_regression_diff(),Ar_part,c,b))
+      showNotification("Succesfully stored features!", type = "message")}
+    else if(input$var_1 == "OFR.FSI"){
+      #v()
       rv_action_button$i <- 1
       isolate(b <- Ma_part1())
       isolate(c <- Ma_part2())
       Ar_part <- AR_creator(final_regression_diff() ,input$var_1,input$num_2)
       isolate(xchange$df_full4 <-  cbind(final_regression_diff(),Ar_part,c,b))
-    }
+      showNotification("Succesfully stored features!", type = "message")}
+    else if(input$var_1 == "WLEMUINDXD"){
+      #v()
+      rv_action_button$i <- 1
+      isolate(b <- Ma_part1())
+      isolate(c <- Ma_part2())
+      Ar_part <- AR_creator(final_regression_diff() ,input$var_1,input$num_2)
+      isolate(xchange$df_full5 <-  cbind(final_regression_diff(),Ar_part,c,b))
+      showNotification("Succesfully stored features!", type = "message")}
+    else if(input$var_1 == "DAX" | input$var_1 == "DJI"){
+      #v()
+      rv_action_button$i <- 1
+      isolate(b <- Ma_part1())
+      isolate(c <- Ma_part2())
+      Ar_part <- AR_creator(final_regression_diff() ,input$var_1,input$num_2)
+      isolate(xchange$df_full6 <-  cbind(final_regression_diff(),Ar_part,c,b))
+      showNotification("Succesfully stored features!", type = "message")}
+    else if(input$var_1 == "mean_sentiment_length" | input$var_1 == "mean_sentiment" |
+            input$var_1 == "mean_sentiment_likes" | input$var_1 == "mean_sentiment_rt"){
+      #v()
+      rv_action_button$i <- 1
+      isolate(b <- Ma_part1())
+      isolate(c <- Ma_part2())
+      Ar_part <- AR_creator(final_regression_diff() ,input$var_1,input$num_2)
+      isolate(xchange$df_full7 <-  cbind(final_regression_diff(),Ar_part,c,b))
+      showNotification("Succesfully stored features!", type = "message")}
+    else{
+      #v()
+      rv_action_button$i <- 1
+      isolate(b <- Ma_part1())
+      isolate(c <- Ma_part2())
+      Ar_part <- AR_creator(final_regression_diff() ,input$var_1,input$num_2)
+      isolate(xchange$df_full8 <-  cbind(final_regression_diff(),Ar_part,c,b))
+      showNotification("Succesfully stored features!", type = "message")}
+
   }
 
+})
+
+##### show a pop when user wants to delete the stored dataframes
+modal_confirm <- modalDialog(
+  ####message
+  "Are you sure you want to continue?",
+  title = "Deleting files",
+  #####create action buttons inside of pop up window
+  footer = tagList(
+    actionButton("cancel", "Cancel"),
+    actionButton("ok", "Delete", class = "btn btn-danger")
+  )
+)
+
+
+observeEvent(input$reset_cus,{
+  showModal(modal_confirm)
+
+})
+##### create an observe statement to delete all the saved dataframes (Reset button)
+observeEvent(input$ok, {
+  showNotification("Files deleted")
+  removeModal()
+  xchange$df_full <- NULL
+  xchange$df_full2 <- NULL
+  xchange$df_full3 <- NULL
+  xchange$df_full4 <- NULL
+  xchange$df_full5 <- NULL
+  xchange$df_full6 <- NULL
+  xchange$df_full7 <- NULL
+  xchange$df_full8 <- NULL
+})
+
+observeEvent(input$cancel, {
+  removeModal()
 })
 
 
@@ -4048,52 +4341,28 @@ output$finish_button <- renderUI({
 
 })
 
-##### create an observe statement to delete all the saved dataframes (Reset button)
-  observe({
-    if(input$reset_cus > 0) {
-      xchange$df_full <- NULL
-      xchange$df_full2 <- NULL
-      xchange$df_full3 <- NULL
-      xchange$df_full4 <- NULL
-      xchange$df_full5 <- NULL}
-  })
-
-
-  ###### combine the single dataframes from each variable in on large dataframe
-  ##### start combination based on action button
-  custom_df <- eventReactive(input$finish, {
-    ##### combine in list
-    list_dfs <- c(xchange$df_full,xchange$df_full2,xchange$df_full3,xchange$df_full4)
-    ##### create dataframe from list of dataframes
-    df <- data.frame((sapply(list_dfs,c)))
-    ###### delete duplicates based on row values: This duplicated is created when putting 1 as text input
-    df <- df[!duplicated(as.list(df))]
-    ##### delete duplicates detected by pattern: "."
-    df <- df %>% dplyr::select(-contains("."))
-    ##### create date column
-    df$Dates <- as.Date(df$Dates,origin = "1970-01-01")
-    ##### delete wrong date columns
-    cols <- setdiff(colnames(df), "date")
-    df <- df[,cols]
-    ##### add corona dummy if user selects "yes"
-    if(input$corona_dummy == "yes"){
-      df <- corona_dummy(df)
-    }else{
-      df
-    }
-    df
-  })
-
+# ###### combine the single dataframes from each variable in on large dataframe
+# ##### start combination based on action button
+custom_df <- eventReactive(input$finish, {
+  ##### combine the dataframes in a list
+  list_dfs <- c(xchange$df_full,xchange$df_full2,xchange$df_full3,xchange$df_full4,
+                xchange$df_full5,xchange$df_full6,xchange$df_full7)
+  #### call function for preprocessing
+  df <- prep_custom(list_dfs)
+  df
+})
 
   output$tableCustom <- DT::renderDataTable({
     #### create datable based on final dataset created by the user
     DT::datatable(custom_df(),options = list(
+      scrollX = T,
+      autoWidth = T,
       initComplete = JS(
         "function(settings, json) {",
         "$(this.api().table().header()).css({'background-color': '#000', 'color': '#fff'});",
         "}")
     ), rownames = F
-    ) %>% DT::formatStyle(columns = c(1), width='85px')
+    ) %>% DT::formatStyle(columns = c(1))
   })
 
 
@@ -4138,46 +4407,32 @@ output$finish_button <- renderUI({
   #                                                           lineWidth = '80%')
 ########################### Validity tab #######################################
 
+  ####### create dataframe for the model
   df_xgb_train <- reactive({
-    if(input$lag_tabs == "default"){ ##### deafult dataset is based on automatic AR/MA creation
+    if(input$lag_tabs == "default"){ ##### If user selected the default dataframe
+      ##### read in original dataset, which is created on the first tab
       res <- final_regression_df_xgb()
-      ##### lag feature columns by one to avoid leakage of information
-      res <- lag_cols(res,input$regression_outcome_xgb)
-      ##### call function to check for stationarity
-      ##### returns differenced dataframe for columns which did not pass the test
-      res <- make_ts_stationary(res)
-      ##### call function to split data based on input:
-      ##### df,forecast period, type for forcast dataframe, variable
-      ##### returns a list with train, forecast, date,and dependent variable
-      list_dfs <- split_data_for(res,input$n_ahead,input$ftpye,input$regression_outcome_xgb)
-      ##### call function to create AR and MA features
-      res <- ARMA_creator(res,input$regression_outcome_xgb)
-      ##### remove duplicate rows
-      cols <- setdiff(colnames(res),colnames(list_dfs$df_train))
-      res <- res[,c("date",cols)]
-      ##### join AR MA features on dataframe and back to list element
-      list_dfs$df_train <- left_join(list_dfs$df_train,res)
-    }else{ ##### dataframe when user created his/her own dataframe
+      ##### call function to pre-process and split
+      list_dfs <- default_prep(res,input$regression_outcome_xgb,input$n_ahead,input$ftpye,1)
+    }else{
+      ##### call the created custom dataframe
       res <- custom_df()
-      ##### create train and forecast dataset
+      ##### does not need much more pre-procession
+      ##### split function can be directly called
       list_dfs <- split_data_for(res,input$n_ahead,input$ftpye,input$regression_outcome_xgb)
     }
-      ##### create the selected features also for the forecast dataset
-      ##### xgboost cannot predict a dataframe with a differenct column structure
+    ##### expand the created features either custom or by default to forecast dataframe
     res <- ARMA_creator_for(list_dfs$df_forecast,list_dfs$df_train)
 
     #rename with columns from train
     list_dfs$df_forecast <- res
-
     list_dfs
   })
 
 
-
-
 ###### create reactive model
 model_xgbi <- eventReactive(input$run,{
-
+#scale(dat)
     req(input$model_spec)
     if(input$model_spec == "default"){ ##### model trained on default parameters
       res <- df_xgb_train()
@@ -4297,26 +4552,17 @@ model_xgbi <- eventReactive(input$run,{
 
 
 
-
 ######################### Prediction
 
 prediction_xgb <-  eventReactive(input$pred,{
 
     ##### load dataframe
     res <- df_xgb_train()
-    ##### rename dependent variable as y in train and forecast dataset
-    colnames(res$df_forecast)[which(names(res$df_forecast) == input$regression_outcome_xgb)] <- "y"
-    colnames(res$df_train)[which(names(res$df_train) == input$regression_outcome_xgb)] <- "y"
-
-    ##### load model
-    model <- model_xgbi()[[1]]
-    ##### predict
-    preds <- model %>%
-      parsnip::fit(formula = y ~ .,data = res$df_train[,c(-1)]) %>%
-      predict(new_data = res$df_forecast[,c(-1)])
-
+    ##### call function to generate predicitons
+    preds <- pred_output(res,input$regression_outcome_xgb,model_xgbi()[[1]])
     #### load original df
     df_orig <- final_regression_df_xgb()
+
     #### if dependent variable was differenced apply cumsum to restore original values
     if(adf.test(df_orig[,2],k=2)$p.value > 0.1){
       preds <- cumsum(preds) + df_orig[(nrow(res$df_train)),2]
@@ -4337,7 +4583,7 @@ observeEvent(input$run, {
 output$model_fit <- function(){
 
   if(rv_prev_input$prev_input[1] != input$n_ahead){ #### if model parameters are not in line
-    return()                                        #### remove
+    return()
   }else{
     ##### load dataframe
     res <- df_xgb_train()
@@ -4350,19 +4596,12 @@ output$model_fit <- function(){
     fits <- predict(model_xgboost,res$df_train[,c(-1)])
 
     #########calculate metrics
-    diff <- (fits[,1]-res$df_train[,"y"])
-    mean_diff <- mean(diff[,1]^2)
-    rsme <- sqrt(mean_diff)
-    mean_abs <- mean(abs(diff[,1]))
-    diff_per <- ((res$df_train[,"y"]-fits[,1])/res$df_train[,"y"])
-    diff_per <- diff_per[!is.infinite(rowSums(diff_per)),]
-    mape <- mean(abs(diff_per)*100)
+    out <- metrics_out(res,fits)
     #########
-
     ##### collect metrics in dataframe
-    df_need <- data.frame(c(rsme,
-                            mean_abs,
-                            mape),
+    df_need <- data.frame(c(out$rsme,
+                            out$mean_abs,
+                            out$mape),
                           row.names = c("RMSE","MAE","MAPE"))
     colnames(df_need)<- "value"
     knitr::kable(df_need, caption = glue("Performance metrics"),colnames = NULL) %>%
@@ -4376,44 +4615,97 @@ output$model_fit <- function(){
 }
 
 
-output$xgb_metrics <- function(){
-  ####load prediction
-  preds <- prediction_xgb()
-  #### load prepared dataframe
-  res <- df_xgb_train()
-  #### load original values to compare prediction
-  df_orig <- final_regression_df_xgb()
-  #### select correct time horizon for observed values
-  y <- df_orig  %>% filter(Dates >= min(res$f_dates) & Dates <= max(res$f_dates))
+output$serial_out_xgb <- function(){
+  ###### enable action buttons (this is the last calcualtion when run button is pressed)
+  shinyjs::enable("run")
+  shinyjs::hide("text1")
+  shinyjs::enable("pred")
+  shinyjs::hide("text2")
+  ######
+  if(rv_prev_input$prev_input[1] != input$n_ahead){ #### if model parameters are not in line -> remove
+    return()
+  }else{
 
-   #########calculate metrics
-  diff <- (preds[,1]-y[,2])
-  mean_diff <- mean(diff[,1]^2)
-  rsme <- sqrt(mean_diff)
-  mean_abs <- mean(abs(diff[,1]))
-  diff_per <- ((y[,2]-preds[,1])/y[,2])
-  mape <- mean(abs(diff_per[,1])*100)
-  #########
+    res <- df_xgb_train()
 
-  ##### collect metrics in dataframe
-  df_need <- data.frame(c(rsme,
-                          mean_abs,
-                          mape),
-                        row.names = c("RMSE","MAE","MAPE"))
-  colnames(df_need)<- "value"
-  knitr::kable(df_need, caption = glue("Performance metrics"),colnames = NULL) %>%
-    column_spec(1:2, color = "lightgrey") %>%
-    column_spec(1, bold = T, color = "white") %>%
-    row_spec(1, bold = T) %>%
-    kableExtra::kable_styling(c("striped","hover"), full_width = F,
-                              position = "center",
-                              font_size = 16)
+    colnames(res$df_train)[which(names(res$df_train) == input$regression_outcome_xgb)] <- "y"
 
+    model_xgboost <- model_xgbi()[[1]] %>%
+      fit(formula = y ~ .,data = res$df_train[,c(-1)])
+
+    fits <- predict(model_xgboost,res$df_train[,c(-1)])
+
+    resids <- (res$df_train$y - fits)
+    m <- Box.test(resids, lag = 12, type="Lj")
+    m
+
+    df_need <- data.frame(c(round(m$statistic,5),
+                            round(m$p.value,5),
+                            m$method),
+                          row.names = c("statistic","p.value","method"))
+    colnames(df_need)<- "Summary"
+
+    knitr::kable(df_need, caption = glue("Performance metrics"),colnames = NULL) %>%
+      column_spec(1:2, color = "lightgrey") %>%
+      column_spec(1, bold = T, color = "white") %>%
+      row_spec(1, bold = T) %>%
+      kableExtra::kable_styling(c("striped","hover"), full_width = F,
+                                position = "center",
+                                font_size = 16)
+
+  }
 }
 
 
-box_test <- reactive({
+#
+#
+# xgb_metrics_1 <- eventReactive(input$pred,{
+#
+#   ####load prediction
+#   preds <- prediction_xgb()
+#   #### load prepared dataframe
+#   res <- df_xgb_train()
+#   #### load original values to compare prediction
+#   df_orig <- final_regression_df_xgb()
+#   #### select correct time horizon for observed values
+#   y <- df_orig  %>% filter(Dates >= min(res$f_dates) & Dates <= max(res$f_dates))
+#
+#    #########calculate metrics
+#   out <- metrics_out_final(preds,y)
+#   #########
+#
+#   ##### collect metrics in dataframe
+#   df_need <- data.frame(c(out$rsme,
+#                           out$mean_abs,
+#                           out$mape),
+#                         row.names = c("RMSE","MAE","MAPE"))
+#
+#   df_need
+# })
+#
+# output$xgb_metrics <- renderTable({
+#
+#   df_need <- xgb_metrics_1()
+#   colnames(df_need)<- "value"
+#   knitr::kable(df_need, caption = glue("Performance metrics"),colnames = NULL) %>%
+#     column_spec(1:2, color = "lightgrey") %>%
+#     column_spec(1, bold = T, color = "white") %>%
+#     row_spec(1, bold = T) %>%
+#     kableExtra::kable_styling(c("striped","hover"), full_width = F,
+#                               position = "center",
+#                               font_size = 16)
+#
+#
+# })
+#
 
+
+
+box_test <- reactive({
+  shinyjs::enable("run")
+  shinyjs::hide("text1")
+  shinyjs::enable("pred")
+  shinyjs::hide("text2")
   ##### load dataframe
   res <- df_xgb_train()
   ##### rename variable
@@ -4426,44 +4718,9 @@ box_test <- reactive({
   ##### calculate residuals
   resids <- (res$df_train$y - fits)
   ##### check for autocorrelation
-  m <- stats::Box.test(resids, lag = 12, type="Box-Pierce")
+  m <- stats::Box.test(resids, lag = 12, type="Lj")
   m
 })
-
-output$serial_out_xgb <- function(){
-
-  ###### enable action buttons (this is the last calcualtion when run button is pressed)
-  shinyjs::enable("run")
-  shinyjs::hide("text1")
-  shinyjs::enable("pred")
-  shinyjs::hide("text2")
-  ######
-
-
-  if(rv_prev_input$prev_input[1] != input$n_ahead){ #### if model parameters are not in line -> remove
-    return()
-  }else{
-
-    # load test
-    m <- box_test()
-    ##### collect in dataframe
-    df_need <- data.frame(c(round(m$statistic,5),
-                            round(m$p.value,5),
-                            m$method),
-                          row.names = c("statistic","p.value","method"))
-    colnames(df_need)<- "Summary"
-    #### table output
-    knitr::kable(df_need, caption = glue("Performance metrics"),colnames = NULL) %>%
-      column_spec(1:2, color = "lightgrey") %>%
-      column_spec(1, bold = T, color = "white") %>%
-      row_spec(1, bold = T) %>%
-      kableExtra::kable_styling(c("striped","hover"), full_width = F,
-                                position = "center",
-                                font_size = 16)
-
-
-  }
-}
 
 #### create a dynamic text output to summarize test
 output$test_text_xgb <- renderUI({
@@ -4487,63 +4744,27 @@ output$forecast_xgb <- renderDygraph({
   res <- df_xgb_train()
   #### load predictions
   preds <- prediction_xgb()
-  #### create zoo object
-  preds <- preds %>%
-    zoo::zoo(seq(from = as.Date(min(res$f_dates)), to = as.Date(max(res$f_dates)), by = "day"))
 
-  ##### select plot based on input
-  if(input$forecast_plot_choice == "Full"){
-    ##### create zoo object for orig values
-    ts <- full_df %>% pull(input$regression_outcome_xgb) %>%
-      zoo::zoo(seq(from = as.Date(min(full_df$Dates)), to = as.Date(max(full_df$Dates)), by = "day"))
-
-    ##### create dygraph
-    {cbind(actuals=ts, predicted=preds)} %>% dygraphs::dygraph() %>%
-      dygraphs::dyEvent(as.Date(min(res$f_dates)), "Start of prediction", labelLoc = "bottom",color = "red") %>%  dyOptions(colors = c("white","green"))
-
-  }else if(input$forecast_plot_choice == "Forecasted"){ #### zoomed graph
-    #### create zoo object for prediction horizion
-    ts <- full_df %>% pull(input$regression_outcome_xgb) %>%
-      zoo::zoo(seq(from = as.Date(min(res$f_dates)), to = as.Date(max(res$f_dates)), by = "day"))
-    #####create graph
-    {cbind(actuals=ts, predicted=preds)} %>% dygraphs::dygraph() %>%  dygraphs::dyOptions(colors = c("white","green"))
-  }
-  #
-  # }else{
-  #   colnames(res$df_train)[which(names(res$df_train) == input$regression_outcome_xgb)] <- "y"
-  #
-  #   model_xgboost <-  model_xgbi()[[1]] %>%
-  #     fit(formula = y ~ .,data = res$df_train[,c(-1)])
-  #   plot <- xgb.importance(model=model_xgboost$fit) %>% xgb.ggplot.importance(
-  #     top_n=20, measure=NULL, rel_to_first = F)
-  #   plot
-  # }
+  plot <-  forcast_plot_xgb(res,preds,full_df,input$forecast_plot_choice,input$regression_outcome_xgb,
+                            input$Stock_Regression_xgb)
+  plot
 
 })
 
-############################ Actual forecast tab ###############################
 
-##### this preparation only differes in the way that the complete dataset is used for
+
+
+#
+# ############################ Actual forecast tab ###############################
+#
+# ##### this preparation only differes in the way that the complete dataset is used for
 # training the model
 df_xgb_train_for <- reactive({
   if(input$lag_tabs == "default"){ ##### deafult dataset is based on automatic AR/MA creation
     res <- final_regression_df_xgb()
-    ##### lag feature columns by one to avoid leakage of information
-    res <- lag_cols(res,input$regression_outcome_xgb)
-    ##### call function to check for stationarity
-    ##### returns differenced dataframe for columns which did not pass the test
-    res <- make_ts_stationary(res)
-    ##### call function to split data based on input:
-    ##### df,forecast period, type for forecast dataframe, variable
-    ##### returns a list with train, forecast dataframe
-    list_dfs <- split_data_for_ahead(res,input$n_ahead2,input$ftpye2)
-    ##### call function to create AR and MA features
-    res <- ARMA_creator(res,input$regression_outcome_xgb)
-    ##### remove duplicate rows
-    cols <- setdiff(colnames(res),colnames(list_dfs$df_train))
-    res <- res[,c("date",cols)]
-    ##### join AR MA features on dataframe and back to list element
-    list_dfs$df_train <- left_join(list_dfs$df_train,res)
+    ##### call function to pre-process and use the full dataset
+    list_dfs <- default_prep(res,input$regression_outcome_xgb,input$n_ahead2,input$ftpye2,2)
+
   }else{##### dataframe when user created his/her own dataframe
     res <- custom_df()
     ##### create train and forecast dataset
@@ -4559,11 +4780,11 @@ df_xgb_train_for <- reactive({
   list_dfs
 })
 
-
-####### create logic when action buttons are activated
-####### Goal: prevent user from prediciting when the inputs have changed
-######          --> force user to rerun model when parameters are changed
-
+#
+# ####### create logic when action buttons are activated
+# ####### Goal: prevent user from prediciting when the inputs have changed
+# ######          --> force user to rerun model when parameters are changed
+#
 ##### init random value
 rv_disable_act <- reactiveValues(i = 1)
 ##### set to zero if user runs model
@@ -4657,19 +4878,14 @@ observeEvent(input$mod_spec_for, {
       model3
     }
   })
-
- #################### Prediction
+#
+#  #################### Prediction
 
   prediction_xgb_actual <-  eventReactive(input$pred2,{
     ##### load dataframe
     res <- df_xgb_train_for()
-    ##### rename dependent variable as y in train and forecast dataset
-    colnames(res$df_forecast)[which(names(res$df_forecast) == input$regression_outcome_xgb)] <- "y"
-    colnames(res$df_train)[which(names(res$df_train) == input$regression_outcome_xgb)] <- "y"
-    ##### predict
-    preds <- model_xgbi2()[[1]]  %>%
-      parsnip::fit(formula = y ~ .,data = res$df_train[,c(-1)]) %>%
-      stats::predict(new_data = res$df_forecast[,c(-1)])
+    preds <- pred_output(res,input$regression_outcome_xgb,model_xgbi2()[[1]])
+
 
     #### load original df
     df_orig <- final_regression_df_xgb()
@@ -4685,7 +4901,7 @@ observeEvent(input$mod_spec_for, {
   observeEvent(input$run2, {
     shinyjs::disable("run2")
     shinyjs::show("text1_act")
-    shinyjs::disable("pred_act")
+    shinyjs::disable("pred2")
     shinyjs::hide("text2_act")
 
   })
@@ -4707,19 +4923,13 @@ observeEvent(input$mod_spec_for, {
       fits <- predict(model_xgboost,res$df_train[,c(-1)])
 
       #########calculate metrics
-      diff <- (fits[,1]-res$df_train[,"y"])
-      mean_diff <- mean(diff[,1]^2)
-      rsme <- sqrt(mean_diff)
-      mean_abs <- mean(abs(diff[,1]))
-      diff_per <- ((res$df_train[,"y"]-fits[,1])/res$df_train[,"y"])
-      diff_per <- diff_per[!is.infinite(rowSums(diff_per)),]
-      mape <- mean(abs(diff_per)*100)
+      out <- metrics_out(res,fits)
       #########
 
       ##### collect metrics in dataframe
-      df_need <- data.frame(c(rsme,
-                              mean_abs,
-                              mape),
+      df_need <- data.frame(c(out$rsme,
+                              out$mean_abs,
+                              out$mape),
                             row.names = c("RMSE","MAE","MAPE"))
       colnames(df_need)<- "value"
       knitr::kable(df_need, caption = glue("Performance metrics"),colnames = NULL) %>%
@@ -4747,12 +4957,12 @@ observeEvent(input$mod_spec_for, {
     ##### calculate residuals
     resids <- (res$df_train$y - fits)
     ##### check for autocorrelation
-    m <- stats::Box.test(resids, lag = 12, type="Box-Pierce")
+    m <- stats::Box.test(resids, lag = 12, type="Lj")
     m
   })
 
 
-  output$serial_out_xgb <- function(){
+  output$serial_out_xgb_for <- function(){
 
     ###### enable action buttons (this is the last calcualtion when run button is pressed)
     shinyjs::enable("run2")
@@ -4767,7 +4977,15 @@ observeEvent(input$mod_spec_for, {
     }else{
 
       # load test
-      m <- box_test_act()
+      res <- df_xgb_train_for()
+      colnames(res$df_train)[which(names(res$df_train) == input$regression_outcome_xgb)] <- "y"
+      model_xgboost <- model_xgbi2()[[1]] %>%
+        fit(formula = y ~ .,data = res$df_train[,c(-1)])
+      fits <- predict(model_xgboost,res$df_train[,c(-1)])
+
+      resids <- (res$df_train$y - fits)
+      m <- Box.test(resids, lag = 12, type="Lj")
+
       ##### collect in dataframe
       df_need <- data.frame(c(round(m$statistic,5),
                               round(m$p.value,5),
@@ -4810,17 +5028,9 @@ observeEvent(input$mod_spec_for, {
     #### load predictions
     preds <- prediction_xgb_actual()
     #### create zoo object
-    preds <- preds %>%
-      zoo::zoo(seq(from = as.Date(max(full_df$Dates)) +1,
-                   to = as.Date(max(full_df$Dates)) + input$n_ahead2, by = "day"))
-
-    ts <- full_df %>% pull(Close) %>%
-      zoo::zoo(seq(from = as.Date(min(full_df$Dates)), to = as.Date(max(full_df$Dates)), by = "day"))
-
-    {cbind(actuals=ts, predicted=preds)} %>% dygraphs::dygraph() %>%
-      dyEvent(as.Date(max(full_df$Dates)), "Start forecast", labelLoc = "bottom",color = "red") %>%  dyOptions(colors = c("white","green"))
-    #%>% dyCSS("C:/Users/simon/Desktop/WS_20_21/Git_tracked_Sentiment_App/DSP_Sentiment_Covid_App/test_simon/SimonApp/css/dygraph.css")
-
+    plot <-  forcast_plot_xgb_2(res,preds,full_df,input$regression_outcome_xgb,
+                              input$Stock_Regression_xgb,input$n_ahead2)
+    plot
 
   })
 

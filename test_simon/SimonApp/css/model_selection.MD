@@ -1,14 +1,14 @@
-1. Default
+###1. Default
 The default model contains fixed hyperparamter. By opening the custom tab one can
 inspect the default values.
 <br>
-2. Custom
+###2. Custom
 The custom model allows for an individual choice of hyperparameter.
 Be aware!
 The following hyperparameter increase the time of computation:
 ``tree_depth`` ``trees`` ``mtry``
 <br>
-3. Hyperparameter tuning
+###3. Hyperparameter tuning
 This model allows for basic hyperparamter tuning. In this case
 the model is tuned via grid search. The following variables are tuned
 over the samples of the data:

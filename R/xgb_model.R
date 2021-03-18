@@ -6,7 +6,7 @@ model_xgb <- function(res){
 
   names(res)[2] <- "y"
 
-  slidng_eval_window <- rsample::sliding_period(res,index = date,"month",lookback = 4  , assess_stop = 1,step = 1)
+  slidng_eval_window <- rsample::sliding_period(res,index = date,"month",lookback = 13  , assess_stop = 1,step = 4)
 
   res$date <- NULL
 
@@ -15,12 +15,12 @@ model_xgb <- function(res){
 
   model_xgboost <- parsnip::boost_tree(
     mode = "regression",
-    mtry = 20,
+    mtry = 30,
     trees = 200,
-    min_n = 3,
-    tree_depth = 8,
-    learn_rate = 0.01,
-    loss_reduction = 0.01,
+    min_n = 25,
+    tree_depth = 7,
+    learn_rate = 0.02,
+    loss_reduction = 0.0009,
     sample_size = 0.7) %>%
     parsnip::set_engine(engine = "xgboost", objective = "reg:squarederror")
 
@@ -66,7 +66,7 @@ model_xgb_custom <- function(res,mtry,trees,min_n,tree_depth,learn_rate,loss_red
 
   names(res)[2] <- "y"
 
-  slidng_eval_window <- rsample::sliding_period(res,index = date,"month",lookback = 5  , assess_stop = 1,step = 2)
+  slidng_eval_window <- rsample::sliding_period(res,index = date,"month",lookback = 13  , assess_stop = 1,step = 4)
 
   res$date <- NULL
 
@@ -123,7 +123,7 @@ model_xgb_hyp <- function(res,trees_hyp,grid_size){
 
   names(res)[2] <- "y"
 
-  slidng_eval_window <- rsample::sliding_period(res,index = date,"month",lookback = 5  , assess_stop = 1,step = 2)
+  slidng_eval_window <- rsample::sliding_period(res,index = date,"month",lookback = 13  , assess_stop = 1,step = 4)
 
   res$date <- NULL
 

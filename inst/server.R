@@ -1067,8 +1067,9 @@ server <- function(input, output, session) {
     help_df <- res %>% select_if(~ !any(is.na(.)))
     if(any(is.na(res))){
       names_missing <- colnames(res)[ncol(res)]
-      showNotification(glue("Removed {names_missing} for plot due to missing values"),
-                       type = "message")}
+      # showNotification(glue("Removed {names_missing} for plot due to missing values"),
+      #                  type = "message")
+      }
 
     GGally::ggpairs(help_df, upper = list(continuous = wrap(ggally_cor, size = 8)), lower = list(continuous = 'smooth'))
     #ggpairs(final_regression_df_var()[-1])
@@ -1506,8 +1507,9 @@ server <- function(input, output, session) {
     help_df <- res %>% select_if(~ !any(is.na(.)))
     if(any(is.na(res))){
       names_missing <- colnames(res)[ncol(res)]
-      showNotification(glue("Removed {names_missing} for plot due to missing values"),
-                       type = "message")}
+      # showNotification(glue("Removed {names_missing} for plot due to missing values"),
+      #                  type = "message")
+      }
 
    GGally::ggpairs(help_df, upper = list(continuous = wrap(ggally_cor, size = 8)), lower = list(continuous = 'smooth'))
     #ggpairs(final_regression_df_var()[-1])
@@ -3865,8 +3867,9 @@ server <- function(input, output, session) {
       ##### store column names of variables with missing values
       names_missing <- colnames(res)[ncol(res)]
       ##### show notification if variable is considered for the plot
-      showNotification(glue("Removed {names_missing} for plot due to missing values"),
-                       type = "message")}
+      # showNotification(glue("Removed {names_missing} for plot due to missing values"),
+      #                  type = "message")
+      }
 
     ggpairs(help_df, upper = list(continuous = wrap(ggally_cor, size = 8)), lower = list(continuous = 'smooth'))
 
@@ -4574,9 +4577,9 @@ prediction_xgb <-  eventReactive(input$pred,{
     #### load original df
     df_orig <- final_regression_df_xgb()
 
-    #### if dependent variable was differenced apply cumsum to restore original values
+    ### if dependent variable was differenced apply cumsum to restore original values
     if(adf.test(df_orig[,2],k=2)$p.value > 0.1){
-      preds <- cumsum(preds) + df_orig[(nrow(res$df_train)),2]
+      preds <- cumsum(preds) + df_orig[(nrow(res$df_train)-1),2]
     }
     preds
   })
@@ -4902,7 +4905,7 @@ observeEvent(input$mod_spec_for, {
     df_orig <- final_regression_df_xgb()
     #### if dependent variable was differenced apply cumsum to restore original values
     if(adf.test(df_orig[,2],k=2)$p.value > 0.1){
-      preds <- cumsum(preds) + df_orig[(nrow(res$df_train)),2]
+      preds <- cumsum(preds) + df_orig[(nrow(res$df_train)-1),2]
     }
     preds
   })

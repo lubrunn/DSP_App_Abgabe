@@ -38,7 +38,7 @@ stock_plotter <- function(df, input_metric, input_comp, input_roll){
       ### when 1 cimmpany selceted change label to company name
       {if (length(input_comp) == 1) dygraphs::dySeries(.,label = input_metric) else .} %>%
       #### when mutiple comapnies slecte and adj. close selcted scael the data
-      {if (length(input_comp) > 1 & input_metric == "Adj.Close") dygraphs::dyRebase(.,value = 100) else . } %>%
+      {if (length(input_comp) > 1 & input_metric %in% c("Adj.Close", "log_Close")) dygraphs::dyRebase(.,value = 100) else . } %>%
       dygraphs::dyOptions(axisLineWidth = 2) %>%
       dygraphs::dyLegend() %>%
       dygraphs::dyShading(from = min(df_dates), to = max(df_dates), color = "white") %>%

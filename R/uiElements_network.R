@@ -128,7 +128,10 @@ network_sidebar <- sidebarPanel(width = 4,
                                                min = 10, value = 50) %>%
                                     shinyhelper::helper(type = "inline",
                                                         title = "",
-                                                        content = c("This sets the minimum number of times a single word needs to occur within the filtered dataset."),
+                                                        content = c("This sets the minimum number of times a single word needs to occur within
+                                                                    the filtered dataset. The minimum threshold is 10 or 0.1% of the numebr of tweets.
+                                                                    Values below these thresholds will default to the threshold for the normal
+                                                                    search. For the username search the values can be set as low as 1."),
                                                         size = "s"),
 
 
@@ -141,7 +144,9 @@ network_sidebar <- sidebarPanel(width = 4,
                                                  step = 0.01) %>%
                                       shinyhelper::helper(type = "inline",
                                                           title = "",
-                                                          content = c("This sets the minimum correlation two words need to have."),
+                                                          content = c("This sets the minimum correlation two words need to have.
+                                                                       Values below 0.15 will default to 0.15. For username search this
+                                                                      minimum threshold is at 0.1."),
                                                           size = "s")
 
                                   ),
@@ -154,7 +159,10 @@ network_sidebar <- sidebarPanel(width = 4,
                                                  min = 50, value = 50)%>%
                                       shinyhelper::helper(type = "inline",
                                                           title = "",
-                                                          content = c("This sets the minimum number of times a bigram needs to occur within the filtered dataset."),
+                                                          content = c("This sets the minimum number of times a bigram needs to occur within
+                                                                    the filtered dataset. The minimum threshold is 10 or 0.1% of the numebr of tweets.
+                                                                    Values below these thresholds will default to the threshold for the normal
+                                                                    search. For the username search the values can be set as low as 1."),
                                                           size = "s"),
                                   )
                                 ),

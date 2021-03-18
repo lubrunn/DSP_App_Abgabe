@@ -120,7 +120,42 @@ server <- function(input, output, session) {
 
   ##################################################################################### Granger
 
+  output$gra_con_check <- renderText({
+    ##### date input
+    test <- input$Controls_GRANGER
+    if(("DAX" %in% test)==TRUE) {
+      if (input$Stock_Granger == "GDAXI"){
+        ##### formulate a validation statement
+        validate("Index control not feasible if Index chosen as dependent variable")
+      }
+    }else if(("DJI" %in% test)==TRUE) {
+      if (input$Stock_Granger == "DJI"){
+        ##### formulate a validation statement
+        validate("Index control not feasible if Index chosen as dependent variable")
+      }
+    }
 
+
+  })
+
+
+  ##### check if the date has at leas 30 days as input
+  output$gra_date_check <- renderText({
+    ##### date input
+    if(length(input$date_granger) > 1){
+      ##### calculate the difference of the dates
+      days_inrange <- difftime(as.Date(input$date_granger[2]) ,as.Date(input$date_granger[1]) , units = c("days"))
+      if (days_inrange < 30){
+        ##### formulate a validation statement
+        validate("Less than 30 days selected. Please choose more days.")
+
+      }
+      #### also check if no date is selected
+    } else if (is.null(input$date_granger)){
+      ##### formulate a validation statement
+      validate("Need to select at least one day.")
+    }
+  })
 
 
   output$Stock_Granger <- renderUI({
@@ -406,7 +441,8 @@ server <- function(input, output, session) {
     plotdata <- xts::xts(granger_data()[input$Granger_outcome],order.by=granger_data()[["Dates"]])
     dygraphs::dygraph(plotdata,
                       ylab = colnames(granger_data()[2]),
-                      main = glue::glue("Plot of the first variable"))
+                      main = glue::glue("Plot of the first variable"))%>%
+      dygraphs::dyShading(from = min(granger_data()[["Dates"]]), to = max(granger_data()[["Dates"]]), color = "white")
   })
 
 
@@ -417,7 +453,8 @@ server <- function(input, output, session) {
 
     dygraphs::dygraph(plotdata,
                       ylab = colnames(granger_data()[3]),
-                      main = glue::glue("Plot of the second variable"))
+                      main = glue::glue("Plot of the second variable"))%>%
+      dygraphs::dyShading(from = min(granger_data()[["Dates"]]), to = max(granger_data()[["Dates"]]), color = "white")
   })
 
   output$grangertext1 <- renderUI({
@@ -491,9 +528,9 @@ server <- function(input, output, session) {
 
     if(input$direction_granger == TRUE){
       if (granger_result()["p.value"] < 0.1){
-        str1 <- paste(htmltools::em(colnames(granger_data())[3]), " granger causes ",htmltools::em(input$Granger_outcome),"of",input$Stock_Granger)
+        str1 <- paste(htmltools::em(colnames(granger_data())[3]), " granger causes ",htmltools::em(input$Granger_outcome))
       } else {
-        str1 <- paste(htmltools::em(colnames(granger_data())[3]), " does not granger cause ",htmltools::em(input$Granger_outcome),"of",input$Stock_Granger)
+        str1 <- paste(htmltools::em(colnames(granger_data())[3]), " does not granger cause ",htmltools::em(input$Granger_outcome))
       }
     } else {
       if (granger_result()["p.value"] < 0.1){
@@ -569,6 +606,42 @@ server <- function(input, output, session) {
 
   })
 
+  output$reg_con_check <- renderText({
+    ##### date input
+    test <- input$Controls
+    if(("DAX" %in% test)==TRUE) {
+      if (input$Stock_Regression == "GDAXI"){
+        ##### formulate a validation statement
+        validate("Index control not feasible if Index chosen as dependent variable")
+      }
+    }else if(("DJI" %in% test)==TRUE) {
+      if (input$Stock_Regression == "DJI"){
+        ##### formulate a validation statement
+        validate("Index control not feasible if Index chosen as dependent variable")
+      }
+    }
+
+
+  })
+
+
+  ##### check if the date has at leas 30 days as input
+  output$reg_date_check <- renderText({
+    ##### date input
+    if(length(input$date_regression) > 1){
+      ##### calculate the difference of the dates
+      days_inrange <- difftime(as.Date(input$date_regression[2]) ,as.Date(input$date_regression[1]) , units = c("days"))
+      if (days_inrange < 30){
+        ##### formulate a validation statement
+        validate("Less than 30 days selected. Please choose more days.")
+
+      }
+      #### also check if no date is selected
+    } else if (is.null(input$date_regression)){
+      ##### formulate a validation statement
+      validate("Need to select at least one day.")
+    }
+  })
 
 
 
@@ -598,7 +671,7 @@ server <- function(input, output, session) {
                                 "VIX"="VIX",
                                 "Financial Distress Index"="OFR.FSI",
                                 "Economic Uncertainty Index"="WLEMUINDXD",
-                                "DAX"="DAX"),selected = "VIX",multiple = FALSE)
+                                "DAX"="DAX"),selected = "VIX",multiple = TRUE)
       #c(colnames(res[3:length(res)])),multiple = TRUE
     }else{
       input <- selectizeInput("Controls","Control variables:",
@@ -606,13 +679,14 @@ server <- function(input, output, session) {
                                 "VIX"="VIX",
                                 "Financial Distress Index"="OFR.FSI",
                                 "Economic Uncertainty Index"="WLEMUINDXD",
-                                "DJI"="DJI"),selected = "VIX",multiple = FALSE)
+                                "DJI"="DJI"),selected = "VIX",multiple = TRUE)
     }
 
   })
 
   dataset <- reactive({
     validate(need(correct_path() == T, "Please choose the correct path"))
+    req(input$country_regression)
     if (input$country_regression == "Germany"){
       data_reg <- dplyr::filter(stockdata_DE(),                                                                               #nur hier nach datum filtern, rest wird draufgemerged
                                 #.data$name %in% (c(COMPONENTS_DE()[["Symbol"]], "GDAXI")[c(COMPONENTS_DE()[["Company.Name"]], "GDAXI") %in% .env$input$Stock_Regression]) &
@@ -670,6 +744,7 @@ server <- function(input, output, session) {
   })
 
   df_selected_controls <- reactive({
+
     #req(input$Controls_var | input$corona_measurement_var)
     res <- dataset()
     if(is.null(input$Controls)==TRUE && input$corona_measurement_regression==""){
@@ -888,13 +963,18 @@ server <- function(input, output, session) {
     } else{
       df_need <- df_need
     }
+    names(df_need) <- names(df_need) %>% toupper()
+
     df_need
+
 
   })
 
 
   output$reg_summary <- function(){
     #colnames(df_need)<- "value"
+    #names(df_need) <- names(df_need) %>% toupper()
+
     knitr::kable(df_need_reg(),colnames = NULL) %>%
       column_spec(1:6, color = "lightgrey") %>%
       column_spec(1, bold = T, color = "white") %>%
@@ -904,8 +984,20 @@ server <- function(input, output, session) {
                                 font_size = 16)
   }
 
+  # output$correlation_reg <- renderPlot({
+  #   GGally::ggpairs(final_regression_df())
+  # })
   output$correlation_reg <- renderPlot({
-    GGally::ggpairs(final_regression_df())
+    res <- final_regression_df()
+    #help_df <- res
+    help_df <- res %>% select_if(~ !any(is.na(.)))
+    if(any(is.na(res))){
+      names_missing <- colnames(res)[ncol(res)]
+      showNotification(glue("Removed {names_missing} for plot due to missing values"),
+                       type = "message")}
+
+    GGally::ggpairs(help_df, upper = list(continuous = wrap(ggally_cor, size = 8)), lower = list(continuous = 'smooth'))
+    #ggpairs(final_regression_df_var()[-1])
   })
 
 
@@ -922,7 +1014,8 @@ server <- function(input, output, session) {
   regression_result_Qreg <- reactive({
     req(ncol(final_regression_df())>=2)
     model <- quantreg::rq(stats::reformulate(".",input$regression_outcome),tau = input$Quantiles,data = final_regression_df())
-    summary(model,se = "ker")
+    #summary(model,se = "ker")
+    model
   })
 
 
@@ -937,12 +1030,41 @@ server <- function(input, output, session) {
   # output$senti_agg <- renderPrint ({
   #   head(final_regression_df())
   # })
+  reg_table <- reactive({
+    test <- regression_result()
+    test <- broom::tidy(test)
+    colnames(test)<-c("variable","estimate","std.error","test-statistic","p-value")
+    test[5] <- round(test[5],4)
+    real<- test
+    test[5]<- "help"
+    for (i in 1:nrow(test)){
+      if (real[i,"p-value"]<0.01){
+        test[i,"p-value"]<- paste0(real[i,"p-value"],'***')
+      }else if (real[i,"p-value"]<0.05){
+        test[i,"p-value"]<- paste0(real[i,"p-value"],'**')
+      } else if (real[i,"p-value"]<0.05){
+        test[i,"p-value"]<- paste0(real[i,"p-value"],'*')
+      } else {
+        test[i,"p-value"]<- paste0(real[i,"p-value"])
+      }
+    }
 
-  output$regression_result <- renderPrint({
-    regression_result()})
+    test
+  })
+
+  output$regression_result <- function(){
+
+    knitr::kable(reg_table(),colnames = NULL) %>%
+      column_spec(1:5, color = "lightgrey") %>%
+      column_spec(1, bold = T, color = "white") %>%
+      row_spec(1, bold = T) %>%
+      kableExtra::kable_styling(c("striped","hover"), full_width = F,
+                                position = "center",
+                                font_size = 16)
+  }
 
   output$regression_equation <- renderUI({
-    str1 <- paste("Linear regression: ",input$regression_outcome,"of ",input$Stock_Regression,"~",paste(input$Controls,collapse = " + "),"<br/>")
+    str1 <- paste("Linear regression: ",input$regression_outcome,"~",paste(input$Controls,collapse = " + "),"<br/>")
     htmltools::HTML(paste(str1,sep = '<br/>'))
   })
 
@@ -952,8 +1074,37 @@ server <- function(input, output, session) {
   #   density_plot_reg(dataset())
   # })
 
-  output$regression_result_Qreg <- renderPrint({
-    regression_result_Qreg()})
+  qreg_table <- reactive({
+    test <- broom::tidy(regression_result_Qreg(),se.type="nid")
+
+    colnames(test)<-c("variable","estimate","std.error","test-statistic","p-value","quantile")
+    test[5] <- round(test[5],4)
+    real<- test
+    test[5]<- "help"
+    for (i in 1:nrow(test)){
+      if (real[i,"p-value"]<0.01){
+        test[i,"p-value"]<- paste0(real[i,"p-value"],'***')
+      }else if (real[i,"p-value"]<0.05){
+        test[i,"p-value"]<- paste0(real[i,"p-value"],'**')
+      } else if (real[i,"p-value"]<0.05){
+        test[i,"p-value"]<- paste0(real[i,"p-value"],'*')
+      } else {
+        test[i,"p-value"]<- paste0(real[i,"p-value"])
+      }
+    }
+
+    test
+  })
+  output$regression_result_Qreg <- function(){
+    knitr::kable(qreg_table(),colnames = NULL) %>%
+      column_spec(1:6, color = "lightgrey") %>%
+      column_spec(1, bold = T, color = "white") %>%
+      row_spec(1, bold = T) %>%
+      kableExtra::kable_styling(c("striped","hover"), full_width = F,
+                                position = "center",
+                                font_size = 16)
+  }
+
 
   ###############################################################################
   ########################   VAR    #############################################
@@ -993,6 +1144,53 @@ server <- function(input, output, session) {
                           style = "font-weight: 18px; font-size: 18px; line-height: 1;")))
   })
   ###################################################### dataset ###############################################################
+
+  output$var_con_check <- renderText({
+    ##### date input
+    test <- input$Controls_var
+    if(("DAX" %in% test)==TRUE) {
+      if (input$Stock_Regression_var == "GDAXI"){
+        ##### formulate a validation statement
+        validate("Index control not feasible if Index chosen as dependent variable")
+      }
+    }else if(("DJI" %in% test)==TRUE) {
+      if (input$Stock_Regression_var == "DJI"){
+        ##### formulate a validation statement
+        validate("Index control not feasible if Index chosen as dependent variable")
+      }
+    }
+
+
+  })
+
+
+
+
+
+
+  ##### check if the date has at leas 30 days as input
+  output$var_date_check <- renderText({
+    ##### date input
+    if(length(input$date_regression_var) > 1){
+      ##### calculate the difference of the dates
+      days_inrange <- difftime(as.Date(input$date_regression_var[2]) ,as.Date(input$date_regression_var[1]) , units = c("days"))
+      if (days_inrange < 30){
+        ##### formulate a validation statement
+        validate("Less than 30 days selected. Please choose more days.")
+
+      }
+      #### also check if no date is selected
+    } else if (is.null(input$date_regression_var)){
+      ##### formulate a validation statement
+      validate("Need to select at least one day.")
+    }
+  })
+
+
+
+
+
+
   ###flexible input for stocks: show either german or us companies
   output$stock_regression_var <- renderUI({
     validate(need(correct_path() == T, "Please choose the correct path"))
@@ -1018,7 +1216,7 @@ server <- function(input, output, session) {
                                 "VIX"="VIX",
                                 "Financial Distress Index"="OFR.FSI",
                                 "Economic Uncertainty Index"="WLEMUINDXD",
-                                "DAX"="DAX"),selected = "VIX",multiple = FALSE)
+                                "DAX"="DAX"),selected = "VIX",multiple = TRUE)
       #c(colnames(res[3:length(res)])),multiple = TRUE
     }else{
       input <- selectizeInput("Controls_var","Control variables:",
@@ -1026,13 +1224,14 @@ server <- function(input, output, session) {
                                 "VIX"="VIX",
                                 "Financial Distress Index"="OFR.FSI",
                                 "Economic Uncertainty Index"="WLEMUINDXD",
-                                "DJI"="DJI"),selected = "VIX",multiple = FALSE)
+                                "DJI"="DJI"),selected = "VIX",multiple = TRUE)
     }
 
   })
 
   dataset_var <- reactive({
     validate(need(correct_path() == T, "Please choose the correct path"))
+    #validate(need(input$senti_yesno_var==TRUE | input$corona_measurement_var != ""|input$Controls_var!="", "Choose the second variable!"))
     if (input$country_regression_var == "Germany"){
       data_reg <- dplyr::filter(stockdata_DE(),                                                                               #nur hier nach datum filtern, rest wird draufgemerged
                                 #.data$name %in% (c(COMPONENTS_DE()[["Symbol"]], "GDAXI")[c(COMPONENTS_DE()[["Company.Name"]], "GDAXI") %in% .env$input$Stock_Regression_var]) &
@@ -1088,13 +1287,13 @@ server <- function(input, output, session) {
 
   df_selected_controls_var <- reactive({
     res <- dataset_var()
-    if(is.null(input$Controls_var)==TRUE && input$corona_measurement_var==""){
+    if(input$Controls_var =="" && input$corona_measurement_var==""){
       res <- res[c("Dates",input$regression_outcome_var)]
-    }else if (is.null(input$Controls_var)==FALSE && input$corona_measurement_var!=""){
+    }else if (input$Controls_var !="" && input$corona_measurement_var!=""){
       res <- res[c("Dates",input$regression_outcome_var,input$Controls_var,input$corona_measurement_var)]
-    } else if (is.null(input$Controls_var)==FALSE && input$corona_measurement_var==""){
+    } else if (input$Controls_var !="" && input$corona_measurement_var==""){
       res <- res[c("Dates",input$regression_outcome_var,input$Controls_var)]
-    } else if (is.null(input$Controls_var)==TRUE && input$corona_measurement_var!=""){
+    } else if (input$Controls_var =="" && input$corona_measurement_var!=""){
       res <- res[c("Dates",input$regression_outcome_var,input$corona_measurement_var)]
     }
     res
@@ -1223,7 +1422,7 @@ server <- function(input, output, session) {
 
   output$var_summary <- function(){
     #colnames(df_need)<- "value"
-    knitr::kable(df_need(), caption = glue("Summary statistics"),colnames = NULL) %>%
+    knitr::kable(df_need(),colnames = NULL) %>%
       column_spec(1:6, color = "lightgrey") %>%
       column_spec(1, bold = T, color = "white") %>%
       row_spec(1, bold = T) %>%
@@ -1233,8 +1432,19 @@ server <- function(input, output, session) {
   }
 
   output$correlation_var <- renderPlot({
-    GGally::ggpairs(final_regression_df_var()[-1])
+    res <- final_regression_df_var()[-1]
+    #help_df <- res
+    help_df <- res %>% select_if(~ !any(is.na(.)))
+    if(any(is.na(res))){
+      names_missing <- colnames(res)[ncol(res)]
+      showNotification(glue("Removed {names_missing} for plot due to missing values"),
+                       type = "message")}
+
+    GGally::ggpairs(help_df, upper = list(continuous = wrap(ggally_cor, size = 8)), lower = list(continuous = 'smooth'))
+    #ggpairs(final_regression_df_var()[-1])
   })
+
+
 
 
   ##################################################   Validity    ######################################################
@@ -1323,13 +1533,16 @@ server <- function(input, output, session) {
       #   geom_line(aes(a,b),color="red")+
       #   geom_line(aes(a,c),color="gold")+
       #   labs(x="Date",y="StockPrice",title = "forecasted vs. actual")
+      help <- plot
       plot <- xts::xts(plot[c("forecast","actual")],order.by=plot[["a"]])
-      dygraphs::dygraph(plot)
+      dygraphs::dygraph(plot)%>%
+        dygraphs::dyShading(from = min(help$a), to = max(help$a), color = "white")
     }else{
       plot <- data.frame(final_regression_df_var()$Dates,
                          c(forecast_data()[[1]],forecast_var()),
                          final_regression_df_var()[2])
       colnames(plot) <- c("a","forecast","actual")
+      help <- plot
       # ggplot(plot2) +
       #   geom_line(aes(a,b))+
       #   geom_line(aes(a,c))+
@@ -1337,7 +1550,8 @@ server <- function(input, output, session) {
       plot <- xts::xts(plot[c("forecast","actual")],order.by=plot[["a"]])
 
       dygraphs::dygraph(plot) %>%
-        dyEvent(final_regression_df_var()$Dates[(nrow(forecast_data()))], "Start of prediction", labelLoc = "bottom")
+        dyEvent(final_regression_df_var()$Dates[(nrow(forecast_data()))], "Start of prediction", labelLoc = "bottom")%>%
+        dygraphs::dyShading(from = min(help$a), to = max(help$a), color = "white")
 
     }
 
@@ -1371,10 +1585,13 @@ server <- function(input, output, session) {
     if (ncol(forecast_data()) == 1){
       test <- c("Not available for ARIMA","Not available for ARIMA","Not available for ARIMA")
     }else{
-      test <- c(sqrt(mean((insample_var()-forecast_data()[1:(nrow(forecast_data())-2),1])^2)),
-                mean(abs(insample_var()-forecast_data()[1:(nrow(forecast_data())-2),1])),
-                mean(abs((forecast_data()[1:(nrow(forecast_data())-2),1]-insample_var())/actual_values()) * 100))
+      forecast_data <- forecast_data()[1:length(insample_var()),1]
+
+      test <- c(sqrt(mean((insample_var()-forecast_data)^2)),
+                mean(abs(insample_var()-forecast_data)),
+                mean(abs((forecast_data-insample_var())/forecast_data * 100)))
     }
+
     df_need <- data.frame(c(sqrt(mean((forecast_var()-actual_values())^2)),
                             mean(abs(forecast_var()-actual_values())),
                             mean(abs((actual_values()-forecast_var())/actual_values()) * 100)),
@@ -1382,8 +1599,8 @@ server <- function(input, output, session) {
 
     colnames(df_need)<- "forecast"
     df_need$insample <- test
-    knitr::kable(df_need, caption = glue("Performance metrics"),colnames = NULL) %>%
-      column_spec(1:2, color = "lightgrey") %>%
+    knitr::kable(df_need,colnames = NULL) %>%
+      column_spec(1:3, color = "lightgrey") %>%
       column_spec(1, bold = T, color = "white") %>%
       row_spec(1, bold = T) %>%
       kableExtra::kable_styling(c("striped","hover"), full_width = F,
@@ -1488,14 +1705,16 @@ server <- function(input, output, session) {
 
     plot <- data.frame(c(final_regression_df_var()[["Dates"]],seq(as.Date(tail(final_regression_df_var()$Dates,1))+1,by = "day",length.out = input$ahead)),
                        c(forecast_data_real()[[1]],forecast_var_real()))
-    colnames(plot) <- c("a","b")
+    colnames(plot) <- c("a","forecast")
     # ggplot(plot2) +
     #   geom_line(aes(a,b))+
     #   labs(x="Date",y="StockPrice",title = "forecasted series")
-    plot <- xts::xts(plot["b"],order.by=plot[["a"]])
+    help<-plot
+    plot <- xts::xts(plot["forecast"],order.by=plot[["a"]])
 
     dygraphs::dygraph(plot) %>%
-      dyEvent(max(final_regression_df_var()$Dates), "Start of prediction", labelLoc = "bottom")
+      dyEvent(max(final_regression_df_var()$Dates), "Start of prediction", labelLoc = "bottom")%>%
+      dygraphs::dyShading(from = min(help$a), to = max(help$a), color = "white")
 
   })
 
@@ -1548,7 +1767,7 @@ server <- function(input, output, session) {
       "comp_instr",
       "Select a company",
       "Here you can either select company specific tweets or tweets that were randomly scraped
-                              without any search term"
+                              without any search term."
     )$
     step(
       "date_instr",
@@ -1560,7 +1779,7 @@ server <- function(input, output, session) {
       "desc_filter_instr",
       "Filters",
       "Here you may choose to filter the tweets according to minimum number of retweets or likes a tweet needs to have.
-      You can also display only 'Long Tweets' which are tweets with at least 80 characters"
+      You can also display only 'Long Tweets' which are tweets with at least 80 characters."
     )$
     step(
       "metric_desc_instr",
@@ -1568,7 +1787,12 @@ server <- function(input, output, session) {
       "In this section you can select a metric to display in the time series plots. Sentiment is also available as weighted metrics.
       You can choose between the mean, the standard deviation and the median. You can also choose to show the number of tweets per day.
       Multiple selections are possible. Once multiple metrics are selected all values get scaled with mean 0 and SD 1 in order to allow
-      for plotting on a similar scale"
+      for plotting on a similar scale."
+    )$
+    step(
+      "twitter_7day",
+      "Moving Average",
+      "Here you can choose to see the plots with the 7 day moving averages."
     )$
     step(
       "time_series1_instr",
@@ -1581,8 +1805,7 @@ server <- function(input, output, session) {
       "plot_saver_button",
       "Save button",
       "You can temporarily store a plot in the area below the first plot. This may help you with comparing plots from different companies
-      or comparing different metrics without overcrowding the plot. Note that both plots are connected, meaning that the zooming and date range
-      selection is applied to both plots."
+      or comparing different metrics without overcrowding the plot."
     )$
     step(
       "time_series2_instr",
@@ -1627,8 +1850,9 @@ server <- function(input, output, session) {
       el = "stock_instr",
       title = "Stocks",
       description = "Here you can select any stock from the DAX or DJI or the indeces themselves. You may choose to show either the
-      returns or the adjusted closing prices. Multiple selection are possible. Once more than one stock is selected and the metric
-      'Adjusted Close' is selected the values will be automatically be set to base value of 100 at the start of the period."
+      returns, the adjusted closing prices or the log transformed closing prices. Multiple selection are possible. Once more than one
+      stock is selected and one of the metrics
+      for the closing prices is selected the values will automatically be set to base value of 100 at the start of the period."
     )$
     step(
       "stock_roll_instr",
@@ -1638,8 +1862,8 @@ server <- function(input, output, session) {
     step(
       "stocks_comp_plot_instr",
       "Stock Plot",
-      "Here the stock values are depicted. Note that you can zoom in and out (through double click) of the plot. All plots in this tab are
-      connected which means that the zooming in one plot is also automatically applied to the other plots."
+      "Here the stock values are depicted. Note that you can zoom in and out (through double click) of the plot. In this tab all plots are
+      connected which means that zooming in one plot will also affect the others."
     )$
     step(
       "twitter_comp_instr",
@@ -1703,14 +1927,15 @@ server <- function(input, output, session) {
       "Here we tell you the number of total umber of tweets for the current selection as well the the number of unique words/bigrams.
       Note that it can happen that 0 words/bigrams are found despite the info showing a positive amount of tweets
       for the current selection. This is due to the pre-processing of the data where we set an abosulte minimum frequency requirement of 5 and 2 (or
-      1% and 0.1% of total tweets per day depending on which is higher) occurences per day for words and bigrams respectively. We also filter out
-      the company name itself as it would be overrepresented and would make frequencies of other words less visible."
+      1% and 0.1% of total tweets per day depending on which is higher) occurences per day for words and bigrams respectively. "
     )$
     step(
       "expl_plots_instr",
       "Outputs",
-      "Here the bar plot or wordcloud are shown. Note that the wordcloud can have a bug that it disappears when resizing the window. This bug can be avoided
-      by installing the github version of the wordcloud2 package with : devtools::install_github('lchiffon/wordcloud2')",
+      "Here the bar plot or wordcloud are shown. Note that the wordcloud can disappear when selecting a too large size. Simply resize in that case.
+      Also, if the package for the worcloud is not installed from github but from cran the wordcloud may disappear when resizing the window (a
+      known bug).
+      Hence, we recommend using the github version of the wordcloud2 package (devtools::install_github('lchiffon/wordcloud2')).",
       position = "bottom"
     )
 
@@ -1727,7 +1952,7 @@ server <- function(input, output, session) {
     step(
       el = "tweet_net_instr",
       title = "Tweets",
-      description = "Here you have similar controls for selecting tweets as beofre. However, now you can select and arbitaray number of minimum
+      description = "Here you have similar controls for selecting tweets as before. However, now you can select and arbitaray number of minimum
       likes, retweets and can also filter for specific sentiments. However, a maximum of only 2 days can analysed at a time."
     )$
     step(
@@ -1771,7 +1996,7 @@ server <- function(input, output, session) {
     step(
       "placeholder",
       "Network plot",
-      "Here the network will appear once it has been computed after the button has been pressed"
+      "Here the network will appear once it has been computed after the button has been pressed."
     )$
     step(
       "data_table_instr",
@@ -1866,6 +2091,8 @@ server <- function(input, output, session) {
       con
     }
   }
+
+
 
 
 
@@ -2165,7 +2392,8 @@ server <- function(input, output, session) {
       p <-  time_series_plotter2(df, input$metric, input$value, num_tweets = F,
                                  input$dates_desc[1], input$dates_desc[2],
                                  input_title = input_title,
-                                 group = "twitter_desc")
+                                 group = "twitter_desc",
+                                 input_roll = input$roll_twitter)
 
       ### need to have data
       validate(need(!is.null(p), "No data available for current selection" ))
@@ -2175,7 +2403,8 @@ server <- function(input, output, session) {
       p <- time_series_plotter2(df, input$metric, input$value, num_tweets = T,
                                 input$dates_desc[1], input$dates_desc[2],
                                 input_title = input_title,
-                                group = "twitter_desc")
+                                group = "twitter_desc",
+                                input_roll = input$roll_twitter)
 
       ### need to have data
       validate(need(!is.null(p), "No data available for current selection" ))
@@ -2214,13 +2443,15 @@ server <- function(input, output, session) {
                                              input$dates_desc[1], input$dates_desc[2], r,
                                              date_range = F,
                                              input_title = input_title,
-                                             group = "twitter_desc")
+                                             group = "twitter_desc",
+                                             input_roll = input$roll_twitter)
     } else { ## in case where number of tweets should be included in plot
       save_plot$plot <- time_series_plotter2(df, input$metric, input$value, num_tweets = T,
                                              input$dates_desc[1], input$dates_desc[2], r,
                                              date_range = F,
                                              input_title = input_title,
-                                             group = "twitter_desc")
+                                             group = "twitter_desc",
+                                             input_roll = input$roll_twitter)
     }
 
   })
@@ -2251,7 +2482,7 @@ server <- function(input, output, session) {
 
 
 
-    browser()
+
     # for case no company selected
     if (input$comp == "NoFilter"){
       file_path <- file.path(glue("Twitter/plot_data/{lang}_NoFilter/{querry_histo()}"))
@@ -2259,6 +2490,7 @@ server <- function(input, output, session) {
       shinyFeedback::feedbackDanger("histo_plot", !exists, "Please make sure you picked the correct path. The \n
                                 file cannot be found in the current directory")
       req(exists)
+
       df_need <- data.table::fread(file_path,
                                    select = 1:3)
 
@@ -2389,16 +2621,16 @@ server <- function(input, output, session) {
 
 
     if (input$comp != "NoFilter") {
+
       folder <- file.path("Companies")
       file_name <- glue("term_freq_{input$comp}_all_rt_{input$rt}_li_{input$likes}_lo_{long}.csv")
       file_path <- file.path("Twitter/term_freq",folder, subfolder, file_name)
       # read file
-      dt <- data.table::fread(file_path, select = c("date_variable",
-                                                    "language_variable",
-                                                    "word",
-                                                    "N",
-                                                    "emo"),
-                              colClasses = c("date_variable" = "Date"))
+
+      dt <- data.table::fread(file_path)
+
+
+      dt$date_variable <- as.Date(dt$date_variable)
 
       #### drop duplicates
       dt <- unique(dt)
@@ -2416,12 +2648,15 @@ server <- function(input, output, session) {
       file_name <- glue("{add_on}_{lang}_NoFilter_rt_{input$rt}_li_{input$likes}_lo_{long}.csv")
       file_path <- file.path("Twitter/term_freq",folder, subfolder, file_name)
       # read file
-      dt <- data.table::fread(file_path, select = c("date",
-                                                    "language",
-                                                    "word",
-                                                    "N",
-                                                    "emo"),
-                              colClasses = c("date" = "Date"))
+
+      dt <- data.table::fread(file_path)
+      dt <-dt[,c("date",
+                 "language",
+                 "word",
+                 "N",
+                 "emo")]
+      dt$date <- as.Date(dt$date)
+
 
       #### drop duplicates
       dt <- unique(dt)
@@ -2461,6 +2696,7 @@ server <- function(input, output, session) {
     } else {
       input_word_freq_filter <- input$word_freq_filter
     }
+
     df <- word_freq_data_wrangler(data_expl(), dates_desc()[1], dates_desc()[2],
                                   input$emo, emoji_words,
                                   input_word_freq_filter,
@@ -2487,6 +2723,7 @@ server <- function(input, output, session) {
 
     df <- df_filterer(word_freq_df() , input$n_freq)
 
+
     term_freq_bar_plot(df)
 
 
@@ -2505,7 +2742,11 @@ server <- function(input, output, session) {
     #### account for empty df
     validate(need(!is.null(word_freq_df()), "No data available for current selection"))
 
-    df <- df_filterer(word_freq_df(), input$n_freq_wc)
+    ### set max n_freq_wc to number of unique words/bigrams
+
+    n_freq_wc <- min(number_words(), input$n_freq_wc)
+
+    df <- df_filterer(word_freq_df(), n_freq_wc)
 
 
 
@@ -2513,7 +2754,16 @@ server <- function(input, output, session) {
 
   })
 
+  number_words <- reactive({
+    #### number of unqiue words/bigrams
+    number_words <-  unique_words(word_freq_df())
 
+    if (is.null(number_words)){
+      number_words <- 0
+    }
+
+    number_words
+  })
 
   ####################################### number unique words
   output$number_words <- reactive({
@@ -2527,34 +2777,16 @@ server <- function(input, output, session) {
       filter(between(created_at, as.Date(dates_desc()[1]), as.Date(dates_desc()[2])) &
                language == tolower(input$lang))
     # get number of total tweets
-    number_tweets <- round(sum(df_need$N))
+    number_tweets <- round(sum(df_need$N, na.rm = T))
 
 
-    #### number of unqiue words/bigrams
-    number_words <-  unique_words(word_freq_df())
-
-    if (is.null(number_words)){
-      number_words <- 0
-    }
+    number_words <- number_words()
 
     HTML(glue("Number of unique {tolower(input$ngram_sel)}s available for current selection: {number_words} <br>
          Number of tweets for current selection: {number_tweets}"))
 
   })
 
-
-
-
-  ############################## time series bigram plot
-  # output$word_freq_time_series <- plotly::renderPlotly({
-  #   req(length(input$dates_desc) > 1)
-  #   df <- word_freq_data_wrangler(data_expl(), dates_desc()[1], dates_desc()[2],
-  #                                 input$emo, emoji_words,
-  #                                 input$word_freq_filter, input$lang,
-  #                                 input$comp)
-  #
-  #    word_filter_time_series_plotter(df)
-  # })
 
 
 
@@ -2705,7 +2937,6 @@ server <- function(input, output, session) {
 
 
 
-
     if (initial.ok < input$cancel_net) {
       initial.ok <<- initial.ok + 1
       validate(need(initial.ok == 0, message = "The computation has been aborted."))
@@ -2730,6 +2961,7 @@ server <- function(input, output, session) {
       initial.ok <<- initial.ok + 1
       validate(need(initial.ok == 0, message = "The computation has been aborted."))
     }
+
 
 
 
@@ -3152,6 +3384,7 @@ server <- function(input, output, session) {
   })
 
 
+
   ###############################################################################
   ########################   XGboost    #########################################
   ###############################################################################
@@ -3185,7 +3418,7 @@ server <- function(input, output, session) {
                                 "VIX"="VIX",
                                 "Financial Distress Index"="OFR.FSI",
                                 "Economic Uncertainty Index"="WLEMUINDXD",
-                                "DAX"="DAX"),selected = "VIX",multiple = FALSE)
+                                "DAX"="DAX"),selected = "VIX",multiple = TRUE)
       #c(colnames(res[3:length(res)])),multiple = TRUE
     }else{
       input <- selectizeInput("Controls_xgb","Control variables:",
@@ -3193,7 +3426,7 @@ server <- function(input, output, session) {
                                 "VIX"="VIX",
                                 "Financial Distress Index"="OFR.FSI",
                                 "Economic Uncertainty Index"="WLEMUINDXD",
-                                "DJI"="DJI"),selected = "VIX",multiple = FALSE)
+                                "DJI"="DJI"),selected = "VIX",multiple = TRUE)
     }
 
   })

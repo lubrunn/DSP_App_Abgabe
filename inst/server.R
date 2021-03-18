@@ -3528,11 +3528,13 @@ server <- function(input, output, session) {
 
 
   observeEvent(input$reset_regression_xgb,{
+    updateSelectizeInput(session,"corona_measurement_xgb",selected = "")
     updateSelectizeInput(session,"Controls_xgb",selected = "")
   })
 
   #merge sentiment with control+dep vars
   final_regression_df_xgb <- reactive ({
+    xgb_date_checker()
     if (input$senti_yesno_xgb == TRUE){
       res <- get_sentiment_xgb()
     } else {
@@ -3542,6 +3544,13 @@ server <- function(input, output, session) {
     res_c <- df_selected_controls_xgb()
 
     res <- left_join(res_c,res, by=c("Dates" = "created_at"))
+
+    if(input$senti_yesno_xgb == TRUE){
+    res <- na_replace(res, 0)
+    }else{
+      res
+    }
+
     res_corona <- df_selected_corona_xgb()
     res_corona$date <- as.Date(res_corona$date)
     res <- left_join(res,res_corona,by=c("Dates" = "date"))
@@ -3662,18 +3671,6 @@ server <- function(input, output, session) {
   })
 
 
-  output$xgb_summary <- function(){
-    ##### summary table
-    knitr::kable(df_need_xgb(), caption = glue("Summary statistics"),colnames = NULL) %>%
-      column_spec(1:6, color = "lightgrey") %>%
-      column_spec(1, bold = T, color = "white") %>%
-      row_spec(1, bold = T) %>%
-      kableExtra::kable_styling(c("striped","hover"), full_width = F,
-                                position = "center",
-                                font_size = 16)
-  }
-
-
   df_need_xgb <- reactive({
     ##### calculate summary statistics
     df_need <- round(describe(final_regression_df_xgb()[-1])[c(3, 4, 5, 8, 9)], 2)
@@ -3688,9 +3685,45 @@ server <- function(input, output, session) {
 
   })
 
+
+
+  output$xgb_summary <- function(){
+    ##### summary table
+    knitr::kable(df_need_xgb(), caption = glue("Summary statistics"),col.names = c("MEAN","SD",
+                                                                                   "MEDIAN","MIN","MAX")) %>%
+      column_spec(1:6, color = "lightgrey") %>%
+      column_spec(1, bold = T, color = "white") %>%
+      row_spec(1, bold = T) %>%
+      kableExtra::kable_styling(c("striped","hover"), full_width = F,
+                                position = "center",
+                                font_size = 16)
+  }
+
+
+
+
+
+  ##### ggpairs plot
   output$correlation_xgb <- renderPlot({
-    ##### ggpairs plot
-    ggpairs(final_regression_df_xgb()[-1])
+
+    #### avoid error message before plot is loaded
+    req(input$Controls_xgb)
+
+    res <- final_regression_df_xgb()[-1]
+    ##### remove variables with missing values
+    help_df <- res %>% select_if(~ !any(is.na(.)))
+
+    if(any(is.na(res))){
+      ##### store column names of variables with missing values
+      names_missing <- colnames(res)[ncol(res)]
+      ##### show notification if variable is considered for the plot
+      showNotification(glue("Removed {names_missing} for plot due to missing values"),
+                       type = "message")}
+
+    ggpairs(help_df, upper = list(continuous = wrap(ggally_cor, size = 8)), lower = list(continuous = 'smooth'))
+
+
+    #ggpairs(final_regression_df_xgb()[-1])
   })
 
 
@@ -3723,6 +3756,24 @@ server <- function(input, output, session) {
   })
 
 
+
+  xgb_date_checker <- reactive({
+    ##### date input
+    if(length(input$date_regression_xgb) > 1){
+      ##### calculate the difference of the dates
+      days_inrange <- difftime(as.Date(input$date_regression_xgb[2]) ,as.Date(input$date_regression_xgb[1]) , units = c("days"))
+      if (days_inrange < 30){
+        ##### formulate a validation statement
+        validate("Less than 30 days selected. Please choose more days.")
+
+      }
+      #### also check if no date is selected
+    } else if (is.null(input$date_regression_xgb)){
+      ##### formulate a validation statement
+      validate("Need to select at least one day.")
+    }
+  })
+
   ##### check if the date has at leas 30 days as input
   output$xgb_date_check <- renderText({
     ##### date input
@@ -3746,6 +3797,8 @@ server <- function(input, output, session) {
   output$add_features <- renderUI({
     ##### selection of variables limited to variable selection of user
     res <- final_regression_df_xgb() %>% dplyr::select(-Dates)
+    ##### rename variables
+
     input <- selectInput("var_1","Chose variable to add AR and/or MA features",
                          names(res))
 
@@ -3767,6 +3820,9 @@ server <- function(input, output, session) {
   xchange$df_full3 <- NULL
   xchange$df_full4 <- NULL
   xchange$df_full5 <- NULL
+  xchange$df_full6 <- NULL
+  xchange$df_full7 <- NULL
+  xchange$df_full8 <- NULL
 
   xchange$df1 <- NULL
   xchange$df2 <- NULL
@@ -3778,9 +3834,19 @@ Ma_part1 <- reactive({
     res <- final_regression_df_xgb()
     ##### lag feature columns by one to avoid leakage of information
     res <- lag_cols(res,input$regression_outcome_xgb)
+    ##### remove variables with missing values before stationarity is evaluted: test does not allow NAs
+    help_df <- res %>% select_if(~ !any(is.na(.)))
+
     ##### call function to check for stationarity
     ##### returns differenced dataframe for columns which did not pass the test
-    res <- make_ts_stationary(res)
+    help_df <- make_ts_stationary(help_df)
+    #### store names of columns with NAs in vector for reference in the next step
+    missing_names <- colnames(res)[!complete.cases(t(res))]
+    if(!is.null(missing_names)){
+      res
+    }else{#### join columns back to dataframe
+      res <- left_join(help_df,res[,c("Dates",missing_names)])
+    }
     ##### extract digits from text input
     list_nums <- regmatches(input$ma_select, gregexpr("[[:digit:]]+", input$ma_select))
     ##### convert
@@ -3830,9 +3896,18 @@ Ma_part2 <- reactive({
   res <- final_regression_df_xgb()
   ##### lag feature columns by one to avoid leakage of information
   res <- lag_cols(res,input$regression_outcome_xgb)
+  ##### remove variables with missing values before stationarity is evaluted: test does not allow NAs
+  help_df <- res %>% select_if(~ !any(is.na(.)))
   ##### call function to check for stationarity
   ##### returns differenced dataframe for columns which did not pass the test
-  res <- make_ts_stationary(res)
+  help_df <- make_ts_stationary(help_df)
+  #### store names of columns with NAs in vector for reference in the next step
+  missing_names <- colnames(res)[!complete.cases(t(res))]
+  if(!is.null(missing_names)){
+    res
+  }else{#### join columns back to dataframe
+    res <- left_join(help_df,res[,c("Dates",missing_names)])
+  }
   ##### extract digits from text input
   list_nums <- regmatches(input$ma_select2, gregexpr("[[:digit:]]+", input$ma_select2))
   ##### convert
@@ -3881,9 +3956,18 @@ final_regression_diff <- reactive({
   res <- final_regression_df_xgb()
   ##### lag feature columns by one to avoid leakage of information
   res <- lag_cols(res,input$regression_outcome_xgb)
+  ##### remove variables with missing values before stationarity is evaluted: test does not allow NAs
+  help_df <- res %>% select_if(~ !any(is.na(.)))
   ##### call function to check for stationarity
   ##### returns differenced dataframe for columns which did not pass the test
-  res <- make_ts_stationary(res)
+  help_df <- make_ts_stationary(help_df)
+  #### store names of columns with NAs in vector for reference in the next step
+  missing_names <- colnames(res)[!complete.cases(t(res))]
+  if(!is.null(missing_names)){
+    res
+  }else{#### join columns back to dataframe
+    res <- left_join(help_df,res[,c("Dates",missing_names)])
+  }
   res
 })
 
@@ -3934,6 +4018,21 @@ v_5b <- reactive({
   validate(validate_no_zeros(input$ma_select2))
 })
 
+output$error_text2 <- renderText({ #### show error message
+  v_1a()
+  v_1b()
+  v_2a()
+  v_2b()
+  v_3a()
+  v_3b()
+  v_4a()
+  v_4b()
+  v_5a()
+  v_5b()
+  v_6()
+
+})
+
 #################
 
 ##### init reactive value to keep track when action button is pressed
@@ -3947,7 +4046,23 @@ observeEvent(input$addButton,{
 observe({
   isolate({rv_action_button$i = rv_action_button$i + 1})
 })
-
+#
+# req( correct_path()== T)
+# if (input$country_regression_xgb == "Germany"){
+#   input <- selectizeInput("Controls_xgb","Control variables:",
+#                           c("Google-Trends Coronavirus"="coronavirus",
+#                             "VIX"="VIX",
+#                             "Financial Distress Index"="OFR.FSI",
+#                             "Economic Uncertainty Index"="WLEMUINDXD",
+#                             "DAX"="DAX"),selected = "VIX",multiple = TRUE)
+#   #c(colnames(res[3:length(res)])),multiple = TRUE
+# }else{
+#   input <- selectizeInput("Controls_xgb","Control variables:",
+#                           c("Google-Trends Coronavirus"="coronavirus",
+#                             "VIX"="VIX",
+#                             "Financial Distress Index"="OFR.FSI",
+#                             "Economic Uncertainty Index"="WLEMUINDXD",
+#                             "DJI"="DJI"),selected = "VIX",multiple = TRUE)
 
 observe({
   ##### only observe if action button is 0
@@ -3967,7 +4082,7 @@ observe({
     v_4b()
     v_5a()##### prevent input of zeros
     v_5b()
-    if((input$var_1 == "Close") | (input$var_1 == "Return")){
+    if((input$var_1 == "Adj.Close") | (input$var_1 == "Return") | (input$var_1 == "log_Close")){
       ##### assign the created moving average datasets in isolation
       isolate(c <- Ma_part2())
       isolate(b <- Ma_part1())
@@ -3978,32 +4093,105 @@ observe({
       Ar_part <- AR_creator(final_regression_diff() ,input$var_1,input$num_2)
       #### combine everything to a reactive value
       #### use isolation argument to save dataframe when the user is working on a different variable
-      isolate(xchange$df_full <-  cbind(final_regression_diff(),Ar_part,c,b))}
+      isolate(xchange$df_full <-  cbind(final_regression_diff(),Ar_part,c,b))
+      #### show notification whether selection is stored
+      showNotification("Succesfully stored features!", type = "message")}
 
     else if(input$var_1 == "VIX"){
-
+      # v()
       rv_action_button$i <- 1
       isolate(b <- Ma_part1())
       isolate(c <- Ma_part2())
       Ar_part <- AR_creator(final_regression_diff() ,input$var_1,input$num_2)
-      isolate(xchange$df_full2 <-  cbind(final_regression_diff(),Ar_part,c,b))}
+      isolate(xchange$df_full2 <-  cbind(final_regression_diff(),Ar_part,c,b))
+      showNotification("Succesfully stored features!", type = "message")}
     else if(input$var_1 == "coronavirus"){
-
+      #v()
       rv_action_button$i <- 1
       isolate(b <- Ma_part1())
       isolate(c <- Ma_part2())
       Ar_part <- AR_creator(final_regression_diff() ,input$var_1,input$num_2)
-      isolate(xchange$df_full3 <-  cbind(final_regression_diff(),Ar_part,c,b))}
-    else{
-
+      isolate(xchange$df_full3 <-  cbind(final_regression_diff(),Ar_part,c,b))
+      showNotification("Succesfully stored features!", type = "message")}
+    else if(input$var_1 == "OFR.FSI"){
+      #v()
       rv_action_button$i <- 1
       isolate(b <- Ma_part1())
       isolate(c <- Ma_part2())
       Ar_part <- AR_creator(final_regression_diff() ,input$var_1,input$num_2)
       isolate(xchange$df_full4 <-  cbind(final_regression_diff(),Ar_part,c,b))
-    }
+      showNotification("Succesfully stored features!", type = "message")}
+    else if(input$var_1 == "WLEMUINDXD"){
+      #v()
+      rv_action_button$i <- 1
+      isolate(b <- Ma_part1())
+      isolate(c <- Ma_part2())
+      Ar_part <- AR_creator(final_regression_diff() ,input$var_1,input$num_2)
+      isolate(xchange$df_full5 <-  cbind(final_regression_diff(),Ar_part,c,b))
+      showNotification("Succesfully stored features!", type = "message")}
+    else if(input$var_1 == "DAX" | input$var_1 == "DJI"){
+      #v()
+      rv_action_button$i <- 1
+      isolate(b <- Ma_part1())
+      isolate(c <- Ma_part2())
+      Ar_part <- AR_creator(final_regression_diff() ,input$var_1,input$num_2)
+      isolate(xchange$df_full6 <-  cbind(final_regression_diff(),Ar_part,c,b))
+      showNotification("Succesfully stored features!", type = "message")}
+    else if(input$var_1 == "mean_sentiment_length" | input$var_1 == "mean_sentiment" |
+            input$var_1 == "mean_sentiment_likes" | input$var_1 == "mean_sentiment_rt"){
+      #v()
+      rv_action_button$i <- 1
+      isolate(b <- Ma_part1())
+      isolate(c <- Ma_part2())
+      Ar_part <- AR_creator(final_regression_diff() ,input$var_1,input$num_2)
+      isolate(xchange$df_full7 <-  cbind(final_regression_diff(),Ar_part,c,b))
+      showNotification("Succesfully stored features!", type = "message")}
+    else{
+      #v()
+      rv_action_button$i <- 1
+      isolate(b <- Ma_part1())
+      isolate(c <- Ma_part2())
+      Ar_part <- AR_creator(final_regression_diff() ,input$var_1,input$num_2)
+      isolate(xchange$df_full8 <-  cbind(final_regression_diff(),Ar_part,c,b))
+      showNotification("Succesfully stored features!", type = "message")}
+
   }
 
+})
+
+##### show a pop when user wants to delete the stored dataframes
+modal_confirm <- modalDialog(
+  ####message
+  "Are you sure you want to continue?",
+  title = "Deleting files",
+  #####create action buttons inside of pop up window
+  footer = tagList(
+    actionButton("cancel", "Cancel"),
+    actionButton("ok", "Delete", class = "btn btn-danger")
+  )
+)
+
+
+observeEvent(input$reset_cus,{
+  showModal(modal_confirm)
+
+})
+##### create an observe statement to delete all the saved dataframes (Reset button)
+observeEvent(input$ok, {
+  showNotification("Files deleted")
+  removeModal()
+  xchange$df_full <- NULL
+  xchange$df_full2 <- NULL
+  xchange$df_full3 <- NULL
+  xchange$df_full4 <- NULL
+  xchange$df_full5 <- NULL
+  xchange$df_full6 <- NULL
+  xchange$df_full7 <- NULL
+  xchange$df_full8 <- NULL
+})
+
+observeEvent(input$cancel, {
+  removeModal()
 })
 
 
@@ -4016,52 +4204,28 @@ output$finish_button <- renderUI({
 
 })
 
-##### create an observe statement to delete all the saved dataframes (Reset button)
-  observe({
-    if(input$reset_cus > 0) {
-      xchange$df_full <- NULL
-      xchange$df_full2 <- NULL
-      xchange$df_full3 <- NULL
-      xchange$df_full4 <- NULL
-      xchange$df_full5 <- NULL}
-  })
-
-
-  ###### combine the single dataframes from each variable in on large dataframe
-  ##### start combination based on action button
-  custom_df <- eventReactive(input$finish, {
-    ##### combine in list
-    list_dfs <- c(xchange$df_full,xchange$df_full2,xchange$df_full3,xchange$df_full4)
-    ##### create dataframe from list of dataframes
-    df <- data.frame((sapply(list_dfs,c)))
-    ###### delete duplicates based on row values: This duplicated is created when putting 1 as text input
-    df <- df[!duplicated(as.list(df))]
-    ##### delete duplicates detected by pattern: "."
-    df <- df %>% dplyr::select(-contains("."))
-    ##### create date column
-    df$Dates <- as.Date(df$Dates,origin = "1970-01-01")
-    ##### delete wrong date columns
-    cols <- setdiff(colnames(df), "date")
-    df <- df[,cols]
-    ##### add corona dummy if user selects "yes"
-    if(input$corona_dummy == "yes"){
-      df <- corona_dummy(df)
-    }else{
-      df
-    }
-    df
-  })
-
+# ###### combine the single dataframes from each variable in on large dataframe
+# ##### start combination based on action button
+custom_df <- eventReactive(input$finish, {
+  ##### combine the dataframes in a list
+  list_dfs <- c(xchange$df_full,xchange$df_full2,xchange$df_full3,xchange$df_full4,
+                xchange$df_full5,xchange$df_full6,xchange$df_full7)
+  #### call function for preprocessing
+  df <- prep_custom(list_dfs)
+  df
+})
 
   output$tableCustom <- DT::renderDataTable({
     #### create datable based on final dataset created by the user
     DT::datatable(custom_df(),options = list(
+      scrollX = T,
+      autoWidth = T,
       initComplete = JS(
         "function(settings, json) {",
         "$(this.api().table().header()).css({'background-color': '#000', 'color': '#fff'});",
         "}")
     ), rownames = F
-    ) %>% DT::formatStyle(columns = c(1), width='85px')
+    ) %>% DT::formatStyle(columns = c(1))
   })
 
 
@@ -4106,41 +4270,27 @@ output$finish_button <- renderUI({
   #                                                           lineWidth = '80%')
 ########################### Validity tab #######################################
 
+  ####### create dataframe for the model
   df_xgb_train <- reactive({
-    if(input$lag_tabs == "default"){ ##### deafult dataset is based on automatic AR/MA creation
+    if(input$lag_tabs == "default"){ ##### If user selected the default dataframe
+      ##### read in original dataset, which is created on the first tab
       res <- final_regression_df_xgb()
-      ##### lag feature columns by one to avoid leakage of information
-      res <- lag_cols(res,input$regression_outcome_xgb)
-      ##### call function to check for stationarity
-      ##### returns differenced dataframe for columns which did not pass the test
-      res <- make_ts_stationary(res)
-      ##### call function to split data based on input:
-      ##### df,forecast period, type for forcast dataframe, variable
-      ##### returns a list with train, forecast, date,and dependent variable
-      list_dfs <- split_data_for(res,input$n_ahead,input$ftpye,input$regression_outcome_xgb)
-      ##### call function to create AR and MA features
-      res <- ARMA_creator(res,input$regression_outcome_xgb)
-      ##### remove duplicate rows
-      cols <- setdiff(colnames(res),colnames(list_dfs$df_train))
-      res <- res[,c("date",cols)]
-      ##### join AR MA features on dataframe and back to list element
-      list_dfs$df_train <- left_join(list_dfs$df_train,res)
-    }else{ ##### dataframe when user created his/her own dataframe
+      ##### call function to pre-process and split
+      list_dfs <- default_prep(res,input$regression_outcome_xgb,input$n_ahead,input$ftpye,1)
+    }else{
+      ##### call the created custom dataframe
       res <- custom_df()
-      ##### create train and forecast dataset
+      ##### does not need much more pre-procession
+      ##### split function can be directly called
       list_dfs <- split_data_for(res,input$n_ahead,input$ftpye,input$regression_outcome_xgb)
     }
-      ##### create the selected features also for the forecast dataset
-      ##### xgboost cannot predict a dataframe with a differenct column structure
+    ##### expand the created features either custom or by default to forecast dataframe
     res <- ARMA_creator_for(list_dfs$df_forecast,list_dfs$df_train)
 
     #rename with columns from train
     list_dfs$df_forecast <- res
-
     list_dfs
   })
-
-
 
 
 ###### create reactive model
@@ -4272,19 +4422,11 @@ prediction_xgb <-  eventReactive(input$pred,{
 
     ##### load dataframe
     res <- df_xgb_train()
-    ##### rename dependent variable as y in train and forecast dataset
-    colnames(res$df_forecast)[which(names(res$df_forecast) == input$regression_outcome_xgb)] <- "y"
-    colnames(res$df_train)[which(names(res$df_train) == input$regression_outcome_xgb)] <- "y"
-
-    ##### load model
-    model <- model_xgbi()[[1]]
-    ##### predict
-    preds <- model %>%
-      parsnip::fit(formula = y ~ .,data = res$df_train[,c(-1)]) %>%
-      predict(new_data = res$df_forecast[,c(-1)])
-
+    ##### call function to generate predicitons
+    preds <- pred_output(res,input$regression_outcome_xgb,model_xgbi()[[1]])
     #### load original df
     df_orig <- final_regression_df_xgb()
+
     #### if dependent variable was differenced apply cumsum to restore original values
     if(adf.test(df_orig[,2],k=2)$p.value > 0.1){
       preds <- cumsum(preds) + df_orig[(nrow(res$df_train)),2]
@@ -4318,19 +4460,12 @@ output$model_fit <- function(){
     fits <- predict(model_xgboost,res$df_train[,c(-1)])
 
     #########calculate metrics
-    diff <- (fits[,1]-res$df_train[,"y"])
-    mean_diff <- mean(diff[,1]^2)
-    rsme <- sqrt(mean_diff)
-    mean_abs <- mean(abs(diff[,1]))
-    diff_per <- ((res$df_train[,"y"]-fits[,1])/res$df_train[,"y"])
-    diff_per <- diff_per[!is.infinite(rowSums(diff_per)),]
-    mape <- mean(abs(diff_per)*100)
+    out <- metrics_out(res,fits)
     #########
-
     ##### collect metrics in dataframe
-    df_need <- data.frame(c(rsme,
-                            mean_abs,
-                            mape),
+    df_need <- data.frame(c(out$rsme,
+                            out$mean_abs,
+                            out$mape),
                           row.names = c("RMSE","MAE","MAPE"))
     colnames(df_need)<- "value"
     knitr::kable(df_need, caption = glue("Performance metrics"),colnames = NULL) %>%
@@ -4344,7 +4479,52 @@ output$model_fit <- function(){
 }
 
 
+output$serial_out_xgb <- function(){
+  ###### enable action buttons (this is the last calcualtion when run button is pressed)
+  shinyjs::enable("run")
+  shinyjs::hide("text1")
+  shinyjs::enable("pred")
+  shinyjs::hide("text2")
+  ######
+  if(rv_prev_input$prev_input[1] != input$n_ahead){ #### if model parameters are not in line -> remove
+    return()
+  }else{
+
+    res <- df_xgb_train()
+
+    colnames(res$df_train)[which(names(res$df_train) == input$regression_outcome_xgb)] <- "y"
+
+    model_xgboost <- model_xgbi()[[1]] %>%
+      fit(formula = y ~ .,data = res$df_train[,c(-1)])
+
+    fits <- predict(model_xgboost,res$df_train[,c(-1)])
+
+    resids <- (res$df_train$y - fits)
+    m <- Box.test(resids, lag = 12, type="Lj")
+    m
+
+    df_need <- data.frame(c(round(m$statistic,5),
+                            round(m$p.value,5),
+                            m$method),
+                          row.names = c("statistic","p.value","method"))
+    colnames(df_need)<- "Summary"
+
+    knitr::kable(df_need, caption = glue("Performance metrics"),colnames = NULL) %>%
+      column_spec(1:2, color = "lightgrey") %>%
+      column_spec(1, bold = T, color = "white") %>%
+      row_spec(1, bold = T) %>%
+      kableExtra::kable_styling(c("striped","hover"), full_width = F,
+                                position = "center",
+                                font_size = 16)
+
+  }
+}
+
+
+
+
 output$xgb_metrics <- function(){
+
   ####load prediction
   preds <- prediction_xgb()
   #### load prepared dataframe
@@ -4355,18 +4535,13 @@ output$xgb_metrics <- function(){
   y <- df_orig  %>% filter(Dates >= min(res$f_dates) & Dates <= max(res$f_dates))
 
    #########calculate metrics
-  diff <- (preds[,1]-y[,2])
-  mean_diff <- mean(diff[,1]^2)
-  rsme <- sqrt(mean_diff)
-  mean_abs <- mean(abs(diff[,1]))
-  diff_per <- ((y[,2]-preds[,1])/y[,2])
-  mape <- mean(abs(diff_per[,1])*100)
+  out <- metrics_out_final(preds,y)
   #########
 
   ##### collect metrics in dataframe
-  df_need <- data.frame(c(rsme,
-                          mean_abs,
-                          mape),
+  df_need <- data.frame(c(out$rsme,
+                          out$mean_abs,
+                          out$mape),
                         row.names = c("RMSE","MAE","MAPE"))
   colnames(df_need)<- "value"
   knitr::kable(df_need, caption = glue("Performance metrics"),colnames = NULL) %>%
@@ -4381,7 +4556,10 @@ output$xgb_metrics <- function(){
 
 
 box_test <- reactive({
-
+  shinyjs::enable("run")
+  shinyjs::hide("text1")
+  shinyjs::enable("pred")
+  shinyjs::hide("text2")
   ##### load dataframe
   res <- df_xgb_train()
   ##### rename variable
@@ -4394,44 +4572,9 @@ box_test <- reactive({
   ##### calculate residuals
   resids <- (res$df_train$y - fits)
   ##### check for autocorrelation
-  m <- stats::Box.test(resids, lag = 12, type="Box-Pierce")
+  m <- stats::Box.test(resids, lag = 12, type="Lj")
   m
 })
-
-output$serial_out_xgb <- function(){
-
-  ###### enable action buttons (this is the last calcualtion when run button is pressed)
-  shinyjs::enable("run")
-  shinyjs::hide("text1")
-  shinyjs::enable("pred")
-  shinyjs::hide("text2")
-  ######
-
-
-  if(rv_prev_input$prev_input[1] != input$n_ahead){ #### if model parameters are not in line -> remove
-    return()
-  }else{
-
-    # load test
-    m <- box_test()
-    ##### collect in dataframe
-    df_need <- data.frame(c(round(m$statistic,5),
-                            round(m$p.value,5),
-                            m$method),
-                          row.names = c("statistic","p.value","method"))
-    colnames(df_need)<- "Summary"
-    #### table output
-    knitr::kable(df_need, caption = glue("Performance metrics"),colnames = NULL) %>%
-      column_spec(1:2, color = "lightgrey") %>%
-      column_spec(1, bold = T, color = "white") %>%
-      row_spec(1, bold = T) %>%
-      kableExtra::kable_styling(c("striped","hover"), full_width = F,
-                                position = "center",
-                                font_size = 16)
-
-
-  }
-}
 
 #### create a dynamic text output to summarize test
 output$test_text_xgb <- renderUI({
@@ -4455,342 +4598,319 @@ output$forecast_xgb <- renderDygraph({
   res <- df_xgb_train()
   #### load predictions
   preds <- prediction_xgb()
-  #### create zoo object
-  preds <- preds %>%
-    zoo::zoo(seq(from = as.Date(min(res$f_dates)), to = as.Date(max(res$f_dates)), by = "day"))
 
-  ##### select plot based on input
-  if(input$forecast_plot_choice == "Full"){
-    ##### create zoo object for orig values
-    ts <- full_df %>% pull(input$regression_outcome_xgb) %>%
-      zoo::zoo(seq(from = as.Date(min(full_df$Dates)), to = as.Date(max(full_df$Dates)), by = "day"))
-
-    ##### create dygraph
-    {cbind(actuals=ts, predicted=preds)} %>% dygraphs::dygraph() %>%
-      dygraphs::dyEvent(as.Date(min(res$f_dates)), "Start of prediction", labelLoc = "bottom",color = "red") %>%  dyOptions(colors = c("white","green"))
-
-  }else if(input$forecast_plot_choice == "Forecasted"){ #### zoomed graph
-    #### create zoo object for prediction horizion
-    ts <- full_df %>% pull(input$regression_outcome_xgb) %>%
-      zoo::zoo(seq(from = as.Date(min(res$f_dates)), to = as.Date(max(res$f_dates)), by = "day"))
-    #####create graph
-    {cbind(actuals=ts, predicted=preds)} %>% dygraphs::dygraph() %>%  dygraphs::dyOptions(colors = c("white","green"))
-  }
-  #
-  # }else{
-  #   colnames(res$df_train)[which(names(res$df_train) == input$regression_outcome_xgb)] <- "y"
-  #
-  #   model_xgboost <-  model_xgbi()[[1]] %>%
-  #     fit(formula = y ~ .,data = res$df_train[,c(-1)])
-  #   plot <- xgb.importance(model=model_xgboost$fit) %>% xgb.ggplot.importance(
-  #     top_n=20, measure=NULL, rel_to_first = F)
-  #   plot
-  # }
+  plot <-  forcast_plot_xgb(res,preds,full_df,input$forecast_plot_choice,input$regression_outcome_xgb,
+                            input$Stock_Regression_xgb)
+  plot
 
 })
 
-############################ Actual forecast tab ###############################
-
-##### this preparation only differes in the way that the complete dataset is used for
-# training the model
-df_xgb_train_for <- reactive({
-  if(input$lag_tabs == "default"){ ##### deafult dataset is based on automatic AR/MA creation
-    res <- final_regression_df_xgb()
-    ##### lag feature columns by one to avoid leakage of information
-    res <- lag_cols(res,input$regression_outcome_xgb)
-    ##### call function to check for stationarity
-    ##### returns differenced dataframe for columns which did not pass the test
-    res <- make_ts_stationary(res)
-    ##### call function to split data based on input:
-    ##### df,forecast period, type for forecast dataframe, variable
-    ##### returns a list with train, forecast dataframe
-    list_dfs <- split_data_for_ahead(res,input$n_ahead2,input$ftpye2)
-    ##### call function to create AR and MA features
-    res <- ARMA_creator(res,input$regression_outcome_xgb)
-    ##### remove duplicate rows
-    cols <- setdiff(colnames(res),colnames(list_dfs$df_train))
-    res <- res[,c("date",cols)]
-    ##### join AR MA features on dataframe and back to list element
-    list_dfs$df_train <- left_join(list_dfs$df_train,res)
-  }else{##### dataframe when user created his/her own dataframe
-    res <- custom_df()
-    ##### create train and forecast dataset
-    list_dfs <- split_data_for_ahead(res,input$n_ahead2,input$ftpye2)
-  }
-  ##### create the selected features also for the forecast dataset
-  ##### xgboost cannot predict a dataframe with a differenct column structure
-  res <- ARMA_creator_for(list_dfs$df_forecast,list_dfs$df_train)
-
-  #rename with columns from train
-  list_dfs$df_forecast <- res
-
-  list_dfs
-})
 
 
-####### create logic when action buttons are activated
-####### Goal: prevent user from prediciting when the inputs have changed
-######          --> force user to rerun model when parameters are changed
 
-##### init random value
-rv_disable_act <- reactiveValues(i = 1)
-##### set to zero if user runs model
-observeEvent(input$run2,{
-  rv_disable_act$i <- 0
-})
-##### keep track of value
-observe({
-  isolate({rv_disable_act$i = rv_disable_act$i + 1})
-})
-##### enable prediction button after model was created
-observe({
-  if(rv_disable_act$i == 0){
-    shinyjs::enable("pred2")}
-  else{ ##### disable
-    shinyjs::disable("pred2")
-    shinyjs::show("text2_act")
-
-  }
-})
-
-##### create a reactive value to track if the selected forecast changes
-rv_prev_input_act <- reactiveValues(prev_input = NULL)
-##### observe input
-observeEvent(input$n_ahead2, {
-  ###### compare if previous and current selection differ. If yes disable prediction
-  rv_prev_input_act$prev_input <- c(rv_prev_input_act$prev_input , input$n_ahead2)
-  if(rv_prev_input_act$prev_input[1] != input$n_ahead2){
-    rv_disable_act$i <- 1
-  }
-})
-
-#### create the same logic for the model selection
-#### prevent that user can predict if he/she changes a different model set up
-rv_disable_2_act <- reactiveValues(i = 1)
-
-observeEvent(input$run2,{
-  rv_disable_2_act$i <- 0
-})
-
-observe({
-  isolate({rv_disable_2_act$i = rv_disable_2_act$i + 1})
-})
-
-observe({
-  if(rv_disable_2_act$i == 0){
-    shinyjs::enable("pred2")}
-  else{
-    shinyjs::disable("pred2")
-    shinyjs::show("text2_act")
-
-  }
-})
-
-rv_prev_input_2_act <- reactiveValues(prev_input = NULL)
-#### observe if user changes the model
-observeEvent(input$mod_spec_for, {
-  ##### prevent prediction if model changes by setting reactive value to 1
-  rv_prev_input_2_act$prev_input <- c(rv_prev_input_2_act$prev_input , input$mod_spec_for)
-  if((rv_prev_input_2_act$prev_input[1] != input$mod_spec_for)){
-    rv_disable_2_act$i <- 1
-  } else{
-    ##### enable if pre-model calculation selection is in line again
-    if(rv_prev_input_act$prev_input[1] == input$n_ahead2){
-      rv_disable_2_act$i <- 0}
-    else{
-      rv_disable_2_act$i <- 1
-    }
-  }
-})
-
-
-###### create reactive model
-  model_xgbi2 <- eventReactive(input$run2,{
-    req(input$model_spec_for)
-    if(input$model_spec_for == "default"){ ##### model trained on default parameters
-      res <- df_xgb_train_for()
-      ##### call function model_xgb
-      model1 <- model_xgb(res$df_train)
-      model1
-    }else if(input$model_spec_for == "custom"){ ##### model trained on custom parameters
-      res <- df_xgb_train_for()
-      ##### call function model_xgb
-      model2 <- model_xgb_custom(res$df_train,input$mtry1,input$trees1,input$min_n1,input$tree_depth1,
-                                 input$learn_rate1,input$loss_reduction1,input$sample_size1)
-      model2
-    }else{ ##### model preforms hyperparameter tuning
-      res <- df_xgb_train_for()
-      ##### call function model_xgb
-      model3 <- model_xgb_hyp(res$df_train,input$trees_hyp1,input$grid_size1)
-      model3
-    }
-  })
-
- #################### Prediction
-
-  prediction_xgb_actual <-  eventReactive(input$pred2,{
-    ##### load dataframe
-    res <- df_xgb_train_for()
-    ##### rename dependent variable as y in train and forecast dataset
-    colnames(res$df_forecast)[which(names(res$df_forecast) == input$regression_outcome_xgb)] <- "y"
-    colnames(res$df_train)[which(names(res$df_train) == input$regression_outcome_xgb)] <- "y"
-    ##### predict
-    preds <- model_xgbi2()[[1]]  %>%
-      parsnip::fit(formula = y ~ .,data = res$df_train[,c(-1)]) %>%
-      stats::predict(new_data = res$df_forecast[,c(-1)])
-
-    #### load original df
-    df_orig <- final_regression_df_xgb()
-    #### if dependent variable was differenced apply cumsum to restore original values
-    if(adf.test(df_orig[,2],k=2)$p.value > 0.1){
-      preds <- cumsum(preds) + df_orig[(nrow(res$df_train)),2]
-    }
-    preds
-  })
-
-
-  ##### disable run and prediction button while model trains
-  observeEvent(input$run2, {
-    shinyjs::disable("run2")
-    shinyjs::show("text1_act")
-    shinyjs::disable("pred_act")
-    shinyjs::hide("text2_act")
-
-  })
-
-
-  output$model_fit_act <- function(){
-
-    if(rv_prev_input_act$prev_input[1] != input$n_ahead2){ #### if model parameters are not in line
-      return()                                        #### remove
-    }else{
-      ##### load dataframe
-      res <- df_xgb_train_for()
-      #### rename variable
-      colnames(res$df_train)[which(names(res$df_train) == input$regression_outcome_xgb)] <- "y"
-      #### fit model
-      model_xgboost <-  model_xgbi2()[[1]] %>%
-        parsnip::fit(formula = y ~ .,data = res$df_train[,c(-1)])
-      #### get fitted values
-      fits <- predict(model_xgboost,res$df_train[,c(-1)])
-
-      #########calculate metrics
-      diff <- (fits[,1]-res$df_train[,"y"])
-      mean_diff <- mean(diff[,1]^2)
-      rsme <- sqrt(mean_diff)
-      mean_abs <- mean(abs(diff[,1]))
-      diff_per <- ((res$df_train[,"y"]-fits[,1])/res$df_train[,"y"])
-      diff_per <- diff_per[!is.infinite(rowSums(diff_per)),]
-      mape <- mean(abs(diff_per)*100)
-      #########
-
-      ##### collect metrics in dataframe
-      df_need <- data.frame(c(rsme,
-                              mean_abs,
-                              mape),
-                            row.names = c("RMSE","MAE","MAPE"))
-      colnames(df_need)<- "value"
-      knitr::kable(df_need, caption = glue("Performance metrics"),colnames = NULL) %>%
-        column_spec(1:2, color = "lightgrey") %>%
-        column_spec(1, bold = T, color = "white") %>%
-        row_spec(1, bold = T) %>%
-        kableExtra::kable_styling(c("striped","hover"), full_width = F,
-                                  position = "center",
-                                  font_size = 16)
-    }
-  }
-
-
-  box_test_act <- reactive({
-
-    ##### load dataframe
-    res <- df_xgb_train_for()
-    ##### rename variable
-    colnames(res$df_train)[which(names(res$df_train) == input$regression_outcome_xgb)] <- "y"
-    ##### fit model
-    model_xgboost <- model_xgbi2()[[1]] %>%
-      parsnip::fit(formula = y ~ .,data = res$df_train[,c(-1)])
-    ##### predict trainings dataset
-    fits <- predict(model_xgboost,res$df_train[,c(-1)])
-    ##### calculate residuals
-    resids <- (res$df_train$y - fits)
-    ##### check for autocorrelation
-    m <- stats::Box.test(resids, lag = 12, type="Box-Pierce")
-    m
-  })
-
-
-  output$serial_out_xgb <- function(){
-
-    ###### enable action buttons (this is the last calcualtion when run button is pressed)
-    shinyjs::enable("run2")
-    shinyjs::hide("text1_act")
-    shinyjs::enable("pred2")
-    shinyjs::hide("text2_act")
-    ######
-
-
-    if(rv_prev_input_act$prev_input[1] != input$n_ahead2){ #### if model parameters are not in line -> remove
-      return()
-    }else{
-
-      # load test
-      m <- box_test_act()
-      ##### collect in dataframe
-      df_need <- data.frame(c(round(m$statistic,5),
-                              round(m$p.value,5),
-                              m$method),
-                            row.names = c("statistic","p.value","method"))
-      colnames(df_need)<- "Summary"
-      #### table output
-      knitr::kable(df_need, caption = glue("Performance metrics"),colnames = NULL) %>%
-        column_spec(1:2, color = "lightgrey") %>%
-        column_spec(1, bold = T, color = "white") %>%
-        row_spec(1, bold = T) %>%
-        kableExtra::kable_styling(c("striped","hover"), full_width = F,
-                                  position = "center",
-                                  font_size = 16)
-
-
-    }
-  }
-
-
-  #### create a dynamic text output to summarize test
-  output$test_text_xgb_act <- renderUI({
-    str1 <- paste("Box-Pierce test statistic to test for autocorrelation in the AR-residuals:")
-    ####check p value
-    if (box_test_act()$p.value > 0.1){
-      str2 <- paste("The hypothesis of serially uncorrelated residuals cannot be rejected.")
-    } else{
-      str2 <- paste("The hypothesis of serially uncorrelated residuals can be rejected.")
-    }
-    ##### wrap text in html output
-    htmltools::HTML(paste(str1,str2, sep = '<br/>'))
-  })
-
-
-  output$plot_1_xgb_actual <- renderDygraph({
-    ##### load original dataframe
-    full_df <- final_regression_df_xgb()
-    ##### load prepared dataframe
-    res <- df_xgb_train_for()
-    #### load predictions
-    preds <- prediction_xgb_actual()
-    #### create zoo object
-    preds <- preds %>%
-      zoo::zoo(seq(from = as.Date(max(full_df$Dates)) +1,
-                   to = as.Date(max(full_df$Dates)) + input$n_ahead2, by = "day"))
-
-    ts <- full_df %>% pull(Close) %>%
-      zoo::zoo(seq(from = as.Date(min(full_df$Dates)), to = as.Date(max(full_df$Dates)), by = "day"))
-
-    {cbind(actuals=ts, predicted=preds)} %>% dygraphs::dygraph() %>%
-      dyEvent(as.Date(max(full_df$Dates)), "Start forecast", labelLoc = "bottom",color = "red") %>%  dyOptions(colors = c("white","green"))
-    #%>% dyCSS("C:/Users/simon/Desktop/WS_20_21/Git_tracked_Sentiment_App/DSP_Sentiment_Covid_App/test_simon/SimonApp/css/dygraph.css")
-
-
-  })
+#
+# ############################ Actual forecast tab ###############################
+#
+# ##### this preparation only differes in the way that the complete dataset is used for
+# # training the model
+# df_xgb_train_for <- reactive({
+#   if(input$lag_tabs == "default"){ ##### deafult dataset is based on automatic AR/MA creation
+#     res <- final_regression_df_xgb()
+#     ##### lag feature columns by one to avoid leakage of information
+#     res <- lag_cols(res,input$regression_outcome_xgb)
+#     ##### call function to check for stationarity
+#     ##### returns differenced dataframe for columns which did not pass the test
+#     res <- make_ts_stationary(res)
+#     ##### call function to split data based on input:
+#     ##### df,forecast period, type for forecast dataframe, variable
+#     ##### returns a list with train, forecast dataframe
+#     list_dfs <- split_data_for_ahead(res,input$n_ahead2,input$ftpye2)
+#     ##### call function to create AR and MA features
+#     res <- ARMA_creator(res,input$regression_outcome_xgb)
+#     ##### remove duplicate rows
+#     cols <- setdiff(colnames(res),colnames(list_dfs$df_train))
+#     res <- res[,c("date",cols)]
+#     ##### join AR MA features on dataframe and back to list element
+#     list_dfs$df_train <- left_join(list_dfs$df_train,res)
+#   }else{##### dataframe when user created his/her own dataframe
+#     res <- custom_df()
+#     ##### create train and forecast dataset
+#     list_dfs <- split_data_for_ahead(res,input$n_ahead2,input$ftpye2)
+#   }
+#   ##### create the selected features also for the forecast dataset
+#   ##### xgboost cannot predict a dataframe with a differenct column structure
+#   res <- ARMA_creator_for(list_dfs$df_forecast,list_dfs$df_train)
+#
+#   #rename with columns from train
+#   list_dfs$df_forecast <- res
+#
+#   list_dfs
+# })
+#
+#
+# ####### create logic when action buttons are activated
+# ####### Goal: prevent user from prediciting when the inputs have changed
+# ######          --> force user to rerun model when parameters are changed
+#
+# ##### init random value
+# rv_disable_act <- reactiveValues(i = 1)
+# ##### set to zero if user runs model
+# observeEvent(input$run2,{
+#   rv_disable_act$i <- 0
+# })
+# ##### keep track of value
+# observe({
+#   isolate({rv_disable_act$i = rv_disable_act$i + 1})
+# })
+# ##### enable prediction button after model was created
+# observe({
+#   if(rv_disable_act$i == 0){
+#     shinyjs::enable("pred2")}
+#   else{ ##### disable
+#     shinyjs::disable("pred2")
+#     shinyjs::show("text2_act")
+#
+#   }
+# })
+#
+# ##### create a reactive value to track if the selected forecast changes
+# rv_prev_input_act <- reactiveValues(prev_input = NULL)
+# ##### observe input
+# observeEvent(input$n_ahead2, {
+#   ###### compare if previous and current selection differ. If yes disable prediction
+#   rv_prev_input_act$prev_input <- c(rv_prev_input_act$prev_input , input$n_ahead2)
+#   if(rv_prev_input_act$prev_input[1] != input$n_ahead2){
+#     rv_disable_act$i <- 1
+#   }
+# })
+#
+# #### create the same logic for the model selection
+# #### prevent that user can predict if he/she changes a different model set up
+# rv_disable_2_act <- reactiveValues(i = 1)
+#
+# observeEvent(input$run2,{
+#   rv_disable_2_act$i <- 0
+# })
+#
+# observe({
+#   isolate({rv_disable_2_act$i = rv_disable_2_act$i + 1})
+# })
+#
+# observe({
+#   if(rv_disable_2_act$i == 0){
+#     shinyjs::enable("pred2")}
+#   else{
+#     shinyjs::disable("pred2")
+#     shinyjs::show("text2_act")
+#
+#   }
+# })
+#
+# rv_prev_input_2_act <- reactiveValues(prev_input = NULL)
+# #### observe if user changes the model
+# observeEvent(input$mod_spec_for, {
+#   ##### prevent prediction if model changes by setting reactive value to 1
+#   rv_prev_input_2_act$prev_input <- c(rv_prev_input_2_act$prev_input , input$mod_spec_for)
+#   if((rv_prev_input_2_act$prev_input[1] != input$mod_spec_for)){
+#     rv_disable_2_act$i <- 1
+#   } else{
+#     ##### enable if pre-model calculation selection is in line again
+#     if(rv_prev_input_act$prev_input[1] == input$n_ahead2){
+#       rv_disable_2_act$i <- 0}
+#     else{
+#       rv_disable_2_act$i <- 1
+#     }
+#   }
+# })
+#
+#
+# ###### create reactive model
+#   model_xgbi2 <- eventReactive(input$run2,{
+#     req(input$model_spec_for)
+#     if(input$model_spec_for == "default"){ ##### model trained on default parameters
+#       res <- df_xgb_train_for()
+#       ##### call function model_xgb
+#       model1 <- model_xgb(res$df_train)
+#       model1
+#     }else if(input$model_spec_for == "custom"){ ##### model trained on custom parameters
+#       res <- df_xgb_train_for()
+#       ##### call function model_xgb
+#       model2 <- model_xgb_custom(res$df_train,input$mtry1,input$trees1,input$min_n1,input$tree_depth1,
+#                                  input$learn_rate1,input$loss_reduction1,input$sample_size1)
+#       model2
+#     }else{ ##### model preforms hyperparameter tuning
+#       res <- df_xgb_train_for()
+#       ##### call function model_xgb
+#       model3 <- model_xgb_hyp(res$df_train,input$trees_hyp1,input$grid_size1)
+#       model3
+#     }
+#   })
+#
+#  #################### Prediction
+#
+#   prediction_xgb_actual <-  eventReactive(input$pred2,{
+#     ##### load dataframe
+#     res <- df_xgb_train_for()
+#     ##### rename dependent variable as y in train and forecast dataset
+#     colnames(res$df_forecast)[which(names(res$df_forecast) == input$regression_outcome_xgb)] <- "y"
+#     colnames(res$df_train)[which(names(res$df_train) == input$regression_outcome_xgb)] <- "y"
+#     ##### predict
+#     preds <- model_xgbi2()[[1]]  %>%
+#       parsnip::fit(formula = y ~ .,data = res$df_train[,c(-1)]) %>%
+#       stats::predict(new_data = res$df_forecast[,c(-1)])
+#
+#     #### load original df
+#     df_orig <- final_regression_df_xgb()
+#     #### if dependent variable was differenced apply cumsum to restore original values
+#     if(adf.test(df_orig[,2],k=2)$p.value > 0.1){
+#       preds <- cumsum(preds) + df_orig[(nrow(res$df_train)),2]
+#     }
+#     preds
+#   })
+#
+#
+#   ##### disable run and prediction button while model trains
+#   observeEvent(input$run2, {
+#     shinyjs::disable("run2")
+#     shinyjs::show("text1_act")
+#     shinyjs::disable("pred_act")
+#     shinyjs::hide("text2_act")
+#
+#   })
+#
+#
+#   output$model_fit_act <- function(){
+#
+#     if(rv_prev_input_act$prev_input[1] != input$n_ahead2){ #### if model parameters are not in line
+#       return()                                        #### remove
+#     }else{
+#       ##### load dataframe
+#       res <- df_xgb_train_for()
+#       #### rename variable
+#       colnames(res$df_train)[which(names(res$df_train) == input$regression_outcome_xgb)] <- "y"
+#       #### fit model
+#       model_xgboost <-  model_xgbi2()[[1]] %>%
+#         parsnip::fit(formula = y ~ .,data = res$df_train[,c(-1)])
+#       #### get fitted values
+#       fits <- predict(model_xgboost,res$df_train[,c(-1)])
+#
+#       #########calculate metrics
+#       diff <- (fits[,1]-res$df_train[,"y"])
+#       mean_diff <- mean(diff[,1]^2)
+#       rsme <- sqrt(mean_diff)
+#       mean_abs <- mean(abs(diff[,1]))
+#       diff_per <- ((res$df_train[,"y"]-fits[,1])/res$df_train[,"y"])
+#       diff_per <- diff_per[!is.infinite(rowSums(diff_per)),]
+#       mape <- mean(abs(diff_per)*100)
+#       #########
+#
+#       ##### collect metrics in dataframe
+#       df_need <- data.frame(c(rsme,
+#                               mean_abs,
+#                               mape),
+#                             row.names = c("RMSE","MAE","MAPE"))
+#       colnames(df_need)<- "value"
+#       knitr::kable(df_need, caption = glue("Performance metrics"),colnames = NULL) %>%
+#         column_spec(1:2, color = "lightgrey") %>%
+#         column_spec(1, bold = T, color = "white") %>%
+#         row_spec(1, bold = T) %>%
+#         kableExtra::kable_styling(c("striped","hover"), full_width = F,
+#                                   position = "center",
+#                                   font_size = 16)
+#     }
+#   }
+#
+#
+#   box_test_act <- reactive({
+#
+#     ##### load dataframe
+#     res <- df_xgb_train_for()
+#     ##### rename variable
+#     colnames(res$df_train)[which(names(res$df_train) == input$regression_outcome_xgb)] <- "y"
+#     ##### fit model
+#     model_xgboost <- model_xgbi2()[[1]] %>%
+#       parsnip::fit(formula = y ~ .,data = res$df_train[,c(-1)])
+#     ##### predict trainings dataset
+#     fits <- predict(model_xgboost,res$df_train[,c(-1)])
+#     ##### calculate residuals
+#     resids <- (res$df_train$y - fits)
+#     ##### check for autocorrelation
+#     m <- stats::Box.test(resids, lag = 12, type="Box-Pierce")
+#     m
+#   })
+#
+#
+#   output$serial_out_xgb <- function(){
+#
+#     ###### enable action buttons (this is the last calcualtion when run button is pressed)
+#     shinyjs::enable("run2")
+#     shinyjs::hide("text1_act")
+#     shinyjs::enable("pred2")
+#     shinyjs::hide("text2_act")
+#     ######
+#
+#
+#     if(rv_prev_input_act$prev_input[1] != input$n_ahead2){ #### if model parameters are not in line -> remove
+#       return()
+#     }else{
+#
+#       # load test
+#       m <- box_test_act()
+#       ##### collect in dataframe
+#       df_need <- data.frame(c(round(m$statistic,5),
+#                               round(m$p.value,5),
+#                               m$method),
+#                             row.names = c("statistic","p.value","method"))
+#       colnames(df_need)<- "Summary"
+#       #### table output
+#       knitr::kable(df_need, caption = glue("Performance metrics"),colnames = NULL) %>%
+#         column_spec(1:2, color = "lightgrey") %>%
+#         column_spec(1, bold = T, color = "white") %>%
+#         row_spec(1, bold = T) %>%
+#         kableExtra::kable_styling(c("striped","hover"), full_width = F,
+#                                   position = "center",
+#                                   font_size = 16)
+#
+#
+#     }
+#   }
+#
+#
+#   #### create a dynamic text output to summarize test
+#   output$test_text_xgb_act <- renderUI({
+#     str1 <- paste("Box-Pierce test statistic to test for autocorrelation in the AR-residuals:")
+#     ####check p value
+#     if (box_test_act()$p.value > 0.1){
+#       str2 <- paste("The hypothesis of serially uncorrelated residuals cannot be rejected.")
+#     } else{
+#       str2 <- paste("The hypothesis of serially uncorrelated residuals can be rejected.")
+#     }
+#     ##### wrap text in html output
+#     htmltools::HTML(paste(str1,str2, sep = '<br/>'))
+#   })
+#
+#
+#   output$plot_1_xgb_actual <- renderDygraph({
+#     ##### load original dataframe
+#     full_df <- final_regression_df_xgb()
+#     ##### load prepared dataframe
+#     res <- df_xgb_train_for()
+#     #### load predictions
+#     preds <- prediction_xgb_actual()
+#     #### create zoo object
+#     preds <- preds %>%
+#       zoo::zoo(seq(from = as.Date(max(full_df$Dates)) +1,
+#                    to = as.Date(max(full_df$Dates)) + input$n_ahead2, by = "day"))
+#
+#     ts <- full_df %>% pull(Close) %>%
+#       zoo::zoo(seq(from = as.Date(min(full_df$Dates)), to = as.Date(max(full_df$Dates)), by = "day"))
+#
+#     {cbind(actuals=ts, predicted=preds)} %>% dygraphs::dygraph() %>%
+#       dyEvent(as.Date(max(full_df$Dates)), "Start forecast", labelLoc = "bottom",color = "red") %>%  dyOptions(colors = c("white","green"))
+#     #%>% dyCSS("C:/Users/simon/Desktop/WS_20_21/Git_tracked_Sentiment_App/DSP_Sentiment_Covid_App/test_simon/SimonApp/css/dygraph.css")
+#
+#
+#   })
 
 
 

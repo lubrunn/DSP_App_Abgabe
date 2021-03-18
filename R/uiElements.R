@@ -774,9 +774,13 @@ tabs_custom_xgb <- function(){
     id = "regression_tabs_xgb",
     tabPanel("Model specifcation",
              tags$h4("Choose dependent variable:"),
-             radioButtons("country_regression_xgb","Which country?",c("Germany","USA"),selected = "Germany"),
+             shinyWidgets::radioGroupButtons("country_regression_xgb","Which country?",c("Germany","USA"),
+                                             status = "primary",checkIcon = list(yes = icon("ok",lib = "glyphicon"),
+                                                                                 no = icon("remove",lib = "glyphicon")),size = "sm"),
              uiOutput("stock_regression_xgb"),
-             radioButtons("regression_outcome_xgb","variable:",c("Adjusted Close"="Adj.Close","Return"="Return","log Adj. Close"="log_Close")),
+             shinyWidgets::radioGroupButtons("regression_outcome_xgb","variable:",c("Adjusted Close"="Adj.Close","Return"="Return","log Adj. Close"="log_Close"),
+                                             status = "primary",checkIcon = list(yes = icon("ok",lib = "glyphicon"),
+                                                                                                                                                                                                     no = icon("remove",lib = "glyphicon")),size = "sm"),
              tags$hr(),
              tags$h4("Choose control variables:"),
              switchInput("senti_yesno_xgb","Include Sentiment?",onLabel="Yes",offLabel="No"),
@@ -818,13 +822,18 @@ numeric_features <- function(){
     id = "tabs_for_xgb",
     type = "hidden",
     tabPanel("1",
+             tags$h4("Choose additional features:"),
              #selectInput("var_1", "Chose variable to add AR and/or MA features", choices = ""),
              uiOutput("add_features"),
-             # corona variablen auch in add_features
-             numericInput("num_1","Chose length of moving average",min=0,value = 2),
+             textInput("ma_select", "Select list/value of moving averages" ,placeholder = "e.g. 10,20,100,..."),
+             textInput("ma_select2", "Select list/value of exponential moving averages", placeholder = "e.g. 10,20,100,..."),
+
+             #radioButtons("ma_type","Select a type of moving average", choices = c("mean","exponential")),
+             #numericInput("num_1","Chose length of moving average",min=0,value = 2),
              numericInput("num_2","Chose Autoregressive lags for",min=0,value = 1),
+             #radioButtons("corona_dummy","1st lockdown dummy",choices = c("yes","no")),
              actionButton("addButton", "Upload"),
-             actionButton("finish", "Finish"),
+             uiOutput("finish_button"),
              actionButton("reset_cus", "Reset")
 
 
@@ -899,8 +908,12 @@ custom_lag_tab <- function(){
     type = "hidden",
     tabPanel("default"),
     tabPanel("custom",
+             tags$br(),
+             tags$hr(),
+             tags$h4("Inspect autocorrelation:"),
              selectInput("correlation_type", "Chose type of correlation plot:", choices = c("ACF","PACF"), selected = ""),
              uiOutput("correlation_plot_choice"),
+             tags$br(),
              numeric_features()
              # actionButton("reset_arma", "clear selected")
 

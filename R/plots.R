@@ -30,20 +30,20 @@ density_plot_reg <- function(filtered_df) {
 #' @export
 #' @rdname correlation
 acf_plot_xgb <- function(df,variable){
-  
+
   var <- df[,variable]
-  ggAcf(var) + ggtitle(paste("Autocorrelation Function for",variable))  
-  
+  ggAcf(var) + ggtitle(paste("Autocorrelation Function for",variable))
+
 }
 
 #' @export
 #' @rdname correlation
 
 pacf_plot_xgb <- function(df,variable){
-  
+
   var <- df[,variable]
-  ggPacf(var) + ggtitle(paste("Partial autocorrelation Function for",variable))  
-  
+  ggPacf(var) + ggtitle(paste("Partial autocorrelation Function for",variable))
+
 }
 
 
@@ -51,40 +51,44 @@ pacf_plot_xgb <- function(df,variable){
 #' @rdname ts
 
 forcast_plot_xgb <- function(res,preds,full_df,plot_type,variable,stock){
-  
+
+  last_obs <- tail(res$df_train[,variable], 1)
+
+  preds <- rbind(last_obs,preds)
+  browser()
 preds <- preds %>%
-  zoo(seq(from = as.Date(min(res$f_dates)), to = as.Date(max(res$f_dates)), by = "day"))
+  zoo::zoo(seq(from = as.Date(min(res$f_dates)) -1, to = as.Date(max(res$f_dates)), by = "day"))
 names(preds)[1] <- "predicted"
 if(plot_type == "Full"){
-  
+
   ts <- full_df %>% pull(variable) %>%
-    zoo(seq(from = as.Date(min(full_df$Dates)), to = as.Date(max(full_df$Dates)), by = "day"))
-  
-  {cbind(actual=ts, predicted=preds)} %>% dygraph(main = glue("Forecast for {stock}"), 
-                                                   ylab = variable) %>%  
+    zoo::zoo(seq(from = as.Date(min(full_df$Dates)), to = as.Date(max(full_df$Dates)), by = "day"))
+
+  {cbind(actual=ts, predicted=preds)} %>% dygraph(main = glue("Forecast for {stock}"),
+                                                   ylab = variable) %>%
     dygraphs::dyOptions(axisLineWidth = 2) %>%
     dygraphs::dyLegend() %>%
-    dygraphs::dyShading(from = as.Date(min(full_df$Dates)), to = as.Date(max(full_df$Dates)), color = "white") %>% 
+    dygraphs::dyShading(from = as.Date(min(full_df$Dates)), to = as.Date(max(full_df$Dates)), color = "white") %>%
   dyEvent(as.Date(max(res$df_train$date)), "Start forecast", labelLoc = "bottom",color = "red")
-  
 
-  
+
+
 }else if(plot_type == "Forecasted"){
   ts <- full_df %>% pull(variable) %>%
-    zoo(seq(from = as.Date(min(res$f_dates)), to = as.Date(max(res$f_dates)), by = "day"))
-  
-  {cbind(actual=ts, predicted=preds)} %>% dygraph(main = glue("Forecast for {stock}"), 
-                                                  ylab = variable) %>%  
+    zoo::zoo(seq(from = as.Date(min(res$f_dates)), to = as.Date(max(res$f_dates)), by = "day"))
+
+  {cbind(actual=ts, predicted=preds)} %>% dygraph(main = glue("Forecast for {stock}"),
+                                                  ylab = variable) %>%
     dygraphs::dyOptions(axisLineWidth = 2) %>%
     dygraphs::dyLegend() %>%
-    dygraphs::dyShading(from = as.Date(min(res$f_dates)), to = as.Date(max(res$f_dates)), color = "white") %>% 
+    dygraphs::dyShading(from = as.Date(min(res$f_dates)), to = as.Date(max(res$f_dates)), color = "white") %>%
     dyEvent(as.Date(max(res$df_train$date)), "Start forecast", labelLoc = "bottom",color = "red")
-  
+
 }
-  
+
 # }else{
 #   colnames(res$df_train)[which(names(res$df_train) == input$regression_outcome_xgb)] <- "y"
-#   
+#
 #   model_xgboost <-  model_xgbi()[[1]] %>%
 #     fit(formula = y ~ .,data = res$df_train[,c(-1)])
 #   plot <- xgb.importance(model=model_xgboost$fit) %>% xgb.ggplot.importance(
@@ -94,4 +98,35 @@ if(plot_type == "Full"){
 
 }
 
-
+#
+# #### create zoo object
+# preds <- preds %>%
+#   zoo::zoo(seq(from = as.Date(min(res$f_dates)), to = as.Date(max(res$f_dates)), by = "day"))
+#
+# ##### select plot based on input
+# if(input$forecast_plot_choice == "Full"){
+#   ##### create zoo object for orig values
+#   ts <- full_df %>% pull(input$regression_outcome_xgb) %>%
+#     zoo::zoo(seq(from = as.Date(min(full_df$Dates)), to = as.Date(max(full_df$Dates)), by = "day"))
+#
+#   ##### create dygraph
+#   {cbind(actuals=ts, predicted=preds)} %>% dygraphs::dygraph() %>%
+#     dygraphs::dyEvent(as.Date(min(res$f_dates)), "Start of prediction", labelLoc = "bottom",color = "red") %>%  dyOptions(colors = c("white","green"))
+#
+# }else if(input$forecast_plot_choice == "Forecasted"){ #### zoomed graph
+#   #### create zoo object for prediction horizion
+#   ts <- full_df %>% pull(input$regression_outcome_xgb) %>%
+#     zoo::zoo(seq(from = as.Date(min(res$f_dates)), to = as.Date(max(res$f_dates)), by = "day"))
+#   #####create graph
+#   {cbind(actuals=ts, predicted=preds)} %>% dygraphs::dygraph() %>%  dygraphs::dyOptions(colors = c("white","green"))
+# }
+# #
+# # }else{
+# #   colnames(res$df_train)[which(names(res$df_train) == input$regression_outcome_xgb)] <- "y"
+# #
+# #   model_xgboost <-  model_xgbi()[[1]] %>%
+# #     fit(formula = y ~ .,data = res$df_train[,c(-1)])
+# #   plot <- xgb.importance(model=model_xgboost$fit) %>% xgb.ggplot.importance(
+# #     top_n=20, measure=NULL, rel_to_first = F)
+# #   plot
+# # }

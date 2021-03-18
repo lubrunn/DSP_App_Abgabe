@@ -64,27 +64,30 @@ MA_creator <- function(df,variable,avg_len){
 # input variable for "Close"
 ARMA_creator <- function(res,variable){
 
-   names(res)[1] <- "date"
+  names(res)[1] <- "date"
 
-   help_df <- res %>% dplyr::select(-date)
+  help_df <- res %>% dplyr::select(-date)
 
-   list_var <- names(help_df)
+  help_df <- help_df %>% select_if(~ !any(is.na(.)))
 
-   optlags <- NULL
-                                  #or just rename to y
-   for(i in list_var[-1]){      #insert here
-     lag <- vars::VARselect(help_df[,c(variable,i)],lag.max = 10, type = "const")$selection[["AIC(n)"]]
-     optlags <- c(optlags,lag)
-   }
-                            # insert here
-   lag <- vars::VARselect(help_df[,variable],lag.max = 10, type = "const")$selection[["AIC(n)"]]
+  list_var <- names(help_df)
 
-   optlags <- c(optlags,lag)
+  optlags <- NULL
 
-   list_ma <- rep(5,each=ncol(help_df))
 
-   bb <- mapply(c,optlags, list_var, SIMPLIFY = T)
-   cc <- mapply(c,list_ma, list_var, SIMPLIFY = T)
+  for(i in list_var[-1]){
+    lag <- VARselect(help_df[,c(variable,i)],lag.max = 10, type = "const")$selection[["AIC(n)"]]
+    optlags <- c(optlags,lag)
+  }
+  # insert here
+  lag <- VARselect(help_df[,variable],lag.max = 10, type = "const")$selection[["AIC(n)"]]
+
+  optlags <- c(optlags,lag)
+
+  list_ma <- rep(5,each=ncol(help_df))
+
+  bb <- mapply(c,optlags, list_var, SIMPLIFY = T)
+  cc <- mapply(c,list_ma, list_var, SIMPLIFY = T)
 
 
 
@@ -98,9 +101,11 @@ ARMA_creator <- function(res,variable){
   }
 
   return(res)
+
 }
 #' @export
 #' @rdname xgboost_prep
+
 ARMA_creator_for <- function(res,res_pre){
 
   res_pre <- res_pre[1:nrow(res),]

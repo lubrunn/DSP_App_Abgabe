@@ -126,12 +126,12 @@ server <- function(input, output, session) {
   output$Stock_Granger <- renderUI({
     validate(need(correct_path() == T, "Please choose the correct path"))
     if (input$country_granger == "Germany"){
-      input <- selectizeInput("Stock_Granger","Choose dependent variable:",
+      input <- selectizeInput("Stock_Granger","Choose company or Index:",
                               #c(COMPONENTS_DE()[["Company.Name"]],"GDAXI"),
                               company_terms_stock_ger,
                               selected = "DAX",multiple = FALSE)
     } else {
-      input <- selectizeInput("Stock_Granger","Choose dependent variable:",
+      input <- selectizeInput("Stock_Granger","Choose company or Index:",
                               #c(COMPONENTS_US()[["Company.Name"]],"DJI"),
                               company_terms_stock_us,
                               selected = "Dow Jones Industrial",multiple = FALSE)
@@ -143,11 +143,20 @@ server <- function(input, output, session) {
   output$ControlsGranger <- renderUI({
     if (input$country_granger == "Germany"){
       input <- selectizeInput("Controls_GRANGER","Choose control variables:",
-                              c(colnames(global_controls_test_DE())[-1],"DAX"),selected = "VIX",multiple = FALSE)
+                              c("Google-Trends Coronavirus"="coronavirus",
+                                "VIX"="VIX",
+                                "Financial Distress Index"="OFR.FSI",
+                                "Economic Uncertainty Index"="WLEMUINDXD",
+                                "DAX"="DAX"),selected = "VIX",multiple = FALSE)
+      #c(colnames(global_controls_test_DE())[-1],"DAX"),selected = "VIX",multiple = FALSE)
       #c(colnames(res[3:length(res)])),multiple = TRUE
     }else{
       input <- selectizeInput("Controls_GRANGER","Choose control variables:",
-                              c(colnames(global_controls_test_US())[-1],"DJI"),selected = "VIX",multiple = FALSE)
+                              c("Google-Trends Coronavirus"="coronavirus",
+                                "VIX"="VIX",
+                                "Financial Distress Index"="OFR.FSI",
+                                "Economic Uncertainty Index"="WLEMUINDXD",
+                                "DJI"="DJI"),selected = "VIX",multiple = FALSE)
     }
   })
 
@@ -173,6 +182,7 @@ server <- function(input, output, session) {
 
   granger_data <- reactive({
     validate(need(correct_path() == T, "Please choose the correct path"))
+    validate(need(input$senti_yesno_gra==TRUE | input$corona_measurement_granger != ""|input$Controls_GRANGER!="", "Choose the second variable!"))
     req(input$Stock_Granger)
     if (input$country_granger == "Germany"){
       granger1 <- dplyr::filter(stockdata_DE(),
@@ -253,12 +263,14 @@ server <- function(input, output, session) {
 
 
 
+
     # ifelse(input$Controls_GRANGER!="",
     #        granger <- granger[c("Dates",input$Granger_outcome,input$Controls_GRANGER)],
     #        granger <- granger[c("Dates",input$Granger_outcome,input$corona_measurement_granger)])
 
     granger[is.na(granger)]<-0
     granger
+
   })
 
   observeEvent(input$Sentiment_type_gra, {                         #Observe event from input (model choices)
@@ -390,27 +402,37 @@ server <- function(input, output, session) {
   # })
 
   output$stocks_granger <- dygraphs::renderDygraph({
+
     plotdata <- xts::xts(granger_data()[input$Granger_outcome],order.by=granger_data()[["Dates"]])
-    dygraphs::dygraph(plotdata)
+    dygraphs::dygraph(plotdata,
+                      ylab = colnames(granger_data()[2]),
+                      main = glue::glue("Plot of the first variable"))
   })
+
 
 
   output$second_granger <- dygraphs::renderDygraph({
+
     plotdata <- xts::xts(granger_data()[colnames(granger_data())[3]],order.by=granger_data()[["Dates"]])
 
-    dygraphs::dygraph(plotdata)
+    dygraphs::dygraph(plotdata,
+                      ylab = colnames(granger_data()[3]),
+                      main = glue::glue("Plot of the second variable"))
   })
 
   output$grangertext1 <- renderUI({
+
     str1 <- paste("The optimal lag order for the VAR model using the Akaike information criterium (AIC)  is ",optlags()," lags.")
     htmltools::HTML(paste(str1))
   })
 
   output$optimallags <- renderPrint({
+
     vars::VARselect(granger_data()[-1],lag.max = 7, type = "const")
   })
 
   output$grangertext2 <- renderUI({
+
     if (nrow(dickey_fuller()) != nrow(granger_data())){
       str2 <- paste("The Dickey Fuller test found one of the timeseries to be non-stationary:")
     }else{
@@ -422,14 +444,17 @@ server <- function(input, output, session) {
 
   #first variable
   output$dickey_fuller <- renderPrint({
+
     tseries::adf.test(granger_data()[[2]],k=optlags())
   })
   #second variable
   output$dickey_fuller_second <- renderPrint({
+
     tseries::adf.test(granger_data()[[3]],k=optlags())
   })
 
   output$grangertext3 <- renderUI({
+
     req(nrow(dickey_fuller()) != nrow(granger_data()))
     str3 <- paste("Differencing the series ",nrow(granger_data()) - nrow(dickey_fuller()),"times achieved stationarity:")
   })
@@ -437,11 +462,13 @@ server <- function(input, output, session) {
 
   #first variable after differencing
   output$dickey_fuller_diff <- renderPrint({
+
     req(nrow(dickey_fuller()) != nrow(granger_data()))
     tseries::adf.test(dickey_fuller()[[2]],k=optlags())
   })
   #second variable after differencing
   output$dickey_fuller_second_diff <- renderPrint({
+
     req(nrow(dickey_fuller()) != nrow(granger_data()))
     tseries::adf.test(dickey_fuller()[[3]],k=optlags())
   })
@@ -461,6 +488,7 @@ server <- function(input, output, session) {
   # })
 
   output$granger_satz <- renderUI({
+
     if(input$direction_granger == TRUE){
       if (granger_result()["p.value"] < 0.1){
         str1 <- paste(htmltools::em(colnames(granger_data())[3]), " granger causes ",htmltools::em(input$Granger_outcome),"of",input$Stock_Granger)
@@ -548,12 +576,12 @@ server <- function(input, output, session) {
   output$stock_regression <- renderUI({
     validate(need(correct_path() == T, "Please choose the correct path"))
     if (input$country_regression == "Germany"){
-      input <- selectizeInput("Stock_Regression","Choose dependent variable:",
+      input <- selectizeInput("Stock_Regression","Choose company or Index:",
                               #c(COMPONENTS_DE()[["Company.Name"]],"GDAXI"),
                               company_terms_stock_ger,
                               selected = "DAX",multiple = FALSE)
     } else {
-      input <- selectizeInput("Stock_Regression","Choose dependent variable:",
+      input <- selectizeInput("Stock_Regression","Choose company or Index:",
                               #c(COMPONENTS_US()[["Company.Name"]],"DJI"),
                               company_terms_stock_us,
                               selected = "Dow Jones Industrial",multiple = FALSE)
@@ -565,12 +593,20 @@ server <- function(input, output, session) {
     #res$name <- NULL
     validate(need(correct_path() == T, "Please choose the correct path"))
     if (input$country_regression == "Germany"){
-      input <- selectizeInput("Controls","Choose control variables:",
-                              c(colnames(global_controls_test_DE())[-1],"DAX"),multiple = TRUE)
+      input <- selectizeInput("Controls","Control variables:",
+                              c("Google-Trends Coronavirus"="coronavirus",
+                                "VIX"="VIX",
+                                "Financial Distress Index"="OFR.FSI",
+                                "Economic Uncertainty Index"="WLEMUINDXD",
+                                "DAX"="DAX"),selected = "VIX",multiple = FALSE)
       #c(colnames(res[3:length(res)])),multiple = TRUE
     }else{
-      input <- selectizeInput("Controls","Choose control variables:",
-                              c(colnames(global_controls_test_US())[-1],"DJI"),multiple = TRUE)
+      input <- selectizeInput("Controls","Control variables:",
+                              c("Google-Trends Coronavirus"="coronavirus",
+                                "VIX"="VIX",
+                                "Financial Distress Index"="OFR.FSI",
+                                "Economic Uncertainty Index"="WLEMUINDXD",
+                                "DJI"="DJI"),selected = "VIX",multiple = FALSE)
     }
 
   })
@@ -859,7 +895,10 @@ server <- function(input, output, session) {
 
   output$reg_summary <- function(){
     #colnames(df_need)<- "value"
-    knitr::kable(df_need_reg(), caption = glue("Summary statistics"),colnames = NULL) %>%
+    knitr::kable(df_need_reg(),colnames = NULL) %>%
+      column_spec(1:6, color = "lightgrey") %>%
+      column_spec(1, bold = T, color = "white") %>%
+      row_spec(1, bold = T) %>%
       kableExtra::kable_styling(c("striped","hover"), full_width = F,
                                 position = "center",
                                 font_size = 16)
@@ -958,12 +997,12 @@ server <- function(input, output, session) {
   output$stock_regression_var <- renderUI({
     validate(need(correct_path() == T, "Please choose the correct path"))
     if (input$country_regression_var == "Germany"){
-      input <- selectizeInput("Stock_Regression_var","Choose dependent variable:",
+      input <- selectizeInput("Stock_Regression_var","Choose company or Index:",
                               #c(COMPONENTS_DE()[["Company.Name"]],"GDAXI"),
                               company_terms_stock_ger,
                               selected = "DAX",multiple = FALSE)
     } else {
-      input <- selectizeInput("Stock_Regression_var","Choose dependent variable:",
+      input <- selectizeInput("Stock_Regression_var","Choose company or Index:",
                               #c(COMPONENTS_US()[["Company.Name"]],"DJI"),
                               company_terms_stock_us,
                               selected = "Dow Jones Industrial",multiple = FALSE)
@@ -974,12 +1013,20 @@ server <- function(input, output, session) {
   output$Controls_var <- renderUI({
     validate(need(correct_path() == T, "Please choose the correct path"))
     if (input$country_regression_var == "Germany"){
-      input <- selectizeInput("Controls_var","Choose control variables:",
-                              c("",colnames(global_controls_test_DE())[-1],"DAX"),selected = "",multiple = TRUE)
+      input <- selectizeInput("Controls_var","Control variables:",
+                              c("Google-Trends Coronavirus"="coronavirus",
+                                "VIX"="VIX",
+                                "Financial Distress Index"="OFR.FSI",
+                                "Economic Uncertainty Index"="WLEMUINDXD",
+                                "DAX"="DAX"),selected = "VIX",multiple = FALSE)
       #c(colnames(res[3:length(res)])),multiple = TRUE
     }else{
-      input <- selectizeInput("Controls_var","Choose control variables:",
-                              c("",colnames(global_controls_test_US())[-1],"DJI"),selected = "", multiple = TRUE)
+      input <- selectizeInput("Controls_var","Control variables:",
+                              c("Google-Trends Coronavirus"="coronavirus",
+                                "VIX"="VIX",
+                                "Financial Distress Index"="OFR.FSI",
+                                "Economic Uncertainty Index"="WLEMUINDXD",
+                                "DJI"="DJI"),selected = "VIX",multiple = FALSE)
     }
 
   })
@@ -1177,6 +1224,9 @@ server <- function(input, output, session) {
   output$var_summary <- function(){
     #colnames(df_need)<- "value"
     knitr::kable(df_need(), caption = glue("Summary statistics"),colnames = NULL) %>%
+      column_spec(1:6, color = "lightgrey") %>%
+      column_spec(1, bold = T, color = "white") %>%
+      row_spec(1, bold = T) %>%
       kableExtra::kable_styling(c("striped","hover"), full_width = F,
                                 position = "center",
                                 font_size = 16)
@@ -1287,7 +1337,7 @@ server <- function(input, output, session) {
       plot <- xts::xts(plot[c("forecast","actual")],order.by=plot[["a"]])
 
       dygraphs::dygraph(plot) %>%
-        dyEvent(final_regression_df_var()$Dates[(nrow(forecast_data())+1)], "Start of prediction", labelLoc = "bottom")
+        dyEvent(final_regression_df_var()$Dates[(nrow(forecast_data()))], "Start of prediction", labelLoc = "bottom")
 
     }
 
@@ -1333,6 +1383,9 @@ server <- function(input, output, session) {
     colnames(df_need)<- "forecast"
     df_need$insample <- test
     knitr::kable(df_need, caption = glue("Performance metrics"),colnames = NULL) %>%
+      column_spec(1:2, color = "lightgrey") %>%
+      column_spec(1, bold = T, color = "white") %>%
+      row_spec(1, bold = T) %>%
       kableExtra::kable_styling(c("striped","hover"), full_width = F,
                                 position = "center",
                                 font_size = 16)
@@ -1410,13 +1463,23 @@ server <- function(input, output, session) {
   #forecast
   forecast_var_real <- reactive({
     fcast <- stats::predict(var_model_real(), n.ahead = input$ahead)
-    if (ncol(forecast_data_real()) == 1) {
-      x <- fcast$pred[1:input$ahead]
-      x <- cumsum(x) + forecast_data_real()[nrow(forecast_data_real()),1]
-    }else {
-      x <- fcast$fcst[[1]]
-      x <- x[,1]
-      x <- cumsum(x) + forecast_data_real()[nrow(forecast_data_real()),1]
+    if(nrow(stationary())!=nrow(forecast_data())){
+      if (ncol(forecast_data_real()) == 1) {
+        x <- fcast$pred[1:input$ahead]
+        x <- cumsum(x) + forecast_data_real()[nrow(forecast_data_real()),1]
+      }else {
+        x <- fcast$fcst[[1]]
+        x <- x[,1]
+        x <- cumsum(x) + forecast_data_real()[nrow(forecast_data_real()),1]
+      }
+    }else{
+      if (ncol(forecast_data_real()) == 1) {
+        x <- fcast$pred[1:input$ahead]
+      }else {
+        x <- fcast$fcst[[1]]
+        x <- x[,1]
+      }
+
     }
     x
   })
@@ -1478,7 +1541,7 @@ server <- function(input, output, session) {
     new()$
     step(
       el = "lang_instr",
-      title = "Text Input",
+      title = "Language",
       description = "Here you can select the language of the tweets."
     )$
     step(
@@ -1518,7 +1581,8 @@ server <- function(input, output, session) {
       "plot_saver_button",
       "Save button",
       "You can temporarily store a plot in the area below the first plot. This may help you with comparing plots from different companies
-      or comparing different metrics without overcrowding the plot."
+      or comparing different metrics without overcrowding the plot. Note that both plots are connected, meaning that the zooming and date range
+      selection is applied to both plots."
     )$
     step(
       "time_series2_instr",
@@ -1574,8 +1638,8 @@ server <- function(input, output, session) {
     step(
       "stocks_comp_plot_instr",
       "Stock Plot",
-      "Here the stock values are depicted. Note that you can zoom in and out (through double click) of the plot. The zooming will affect
-      all plots in this tab."
+      "Here the stock values are depicted. Note that you can zoom in and out (through double click) of the plot. All plots in this tab are
+      connected which means that the zooming in one plot is also automatically applied to the other plots."
     )$
     step(
       "twitter_comp_instr",
@@ -1590,14 +1654,16 @@ server <- function(input, output, session) {
     )$
     step(
       "covid_comp_instr",
-      "COVID-19",
-      "Here you can select different COVID-19 related metrics for Germany and the US (can plot both simultaneously). Again you may choose
+      "Control variables",
+      "Here you can select different COVID-19 related metrics or other financial control variables
+      for Germany and the US (can plot both simultaneously). Again you may choose
       to depict a 7-day moving average."
     )$
     step(
       "covid_plot_comp_instr",
-      "COVID-19 Plot",
-      "Here the plot with the COVID-19 data is shown. Again, you can zoom in and out of the plot."
+      "Control Variables Plot",
+      "Here the plot for the control variables is shown. Note that COVID-19 data is only available starting in
+      March 2020. Again, you can zoom in and out of the plot."
     )
 
 
@@ -1626,13 +1692,19 @@ server <- function(input, output, session) {
       As the option for the word cloud and bar plot vary simply click on the question marks for further information on their
       controls. Note that you have an additional search option when selecting bigrams."
     )$
+    step("ngram_sel_instr",
+         "NGram Selection",
+         "You can decide between showing single words or bigrams. For bigrams you also have the option to search for bigrams
+         containing specific words."
+    )$
     step(
       "num_words_expl_instr",
       "Info",
       "Here we tell you the number of total umber of tweets for the current selection as well the the number of unique words/bigrams.
       Note that it can happen that 0 words/bigrams are found despite the info showing a positive amount of tweets
       for the current selection. This is due to the pre-processing of the data where we set an abosulte minimum frequency requirement of 5 and 2 (or
-      1% and 0.1% of total tweets per day depending on which is higher) occurences per day for words and bigrams respectively. "
+      1% and 0.1% of total tweets per day depending on which is higher) occurences per day for words and bigrams respectively. We also filter out
+      the company name itself as it would be overrepresented and would make frequencies of other words less visible."
     )$
     step(
       "expl_plots_instr",
@@ -1708,7 +1780,6 @@ server <- function(input, output, session) {
     )
 
 
-
   ############################################################################
   ################# Directory ###############################################
   ###########################################################################
@@ -1728,7 +1799,7 @@ server <- function(input, output, session) {
       #cat(glue("No directory has been selected. Current directory {getwd()})"))
 
     } else {
-      ##### when button is pressed set wd to choosen dir
+      ##### when button is pressed set wd to choosen dirfwefe
       path <- shinyFiles::parseDirPath(volumes, input$directory)
 
       setwd(path)
@@ -1742,6 +1813,19 @@ server <- function(input, output, session) {
   ####### manually entered path
   observeEvent(input$dir_path_man_btn, {
 
+
+    if (!dir.exists(input$dir_path_man)){
+      output$path_checker_man <- renderText({
+        "Please enter a valid path"
+      })
+    } else {
+      output$path_checker_man <- renderText({
+        ""
+      })
+    }
+
+    #### require that path exists
+    validate(need(dir.exists(input$dir_path_man), "Please enter a valid path"))
     ### when manual path button is pressed set wd to enterd path
     setwd(input$dir_path_man)
   })
@@ -1760,7 +1844,7 @@ server <- function(input, output, session) {
 
     #### when sqlitestudio dir exists everything correct
     if(dir.exists("SQLiteStudio")) {
-      glue("Current path is set to: {getwd()} ")
+      glue("Current path is set to: {getwd()}. This seems correct.")
 
     } else {
       #### if sqlitstudio does not exist something wrong probably
@@ -1920,13 +2004,32 @@ server <- function(input, output, session) {
     } else { #if company is chosen
       ### replace umlaute from input, 1233
 
-      comp <- gsub("ö","Ã¶", input$comp)
-      comp <- gsub("ü", "Ã¼", comp)
+      ### control for münchner rück and deutsch börse which are stored with normal
+      # and corrupted umlaute
 
-      glue('SELECT *  FROM sum_stats_companies WHERE
+
+      if( input$comp == "Münchener Rück"){
+        glue('SELECT *  FROM sum_stats_companies WHERE
          retweets_count = {input$rt} and likes_count = {input$likes} and
-         tweet_length = {long} and company  = "{comp}" and
+         tweet_length = {long} and company  = "Münchener Rück" or company ="MÃ¼nchener RÃ¼ck"
+         and
              language = "{tolower(input$lang)}"' )
+      } else if (input$comp == "Deutsche Börse") {
+
+
+        glue('SELECT *  FROM sum_stats_companies WHERE
+         retweets_count = {input$rt} and likes_count = {input$likes} and
+         tweet_length = {long} and company  = "Münchener Rück" or company ="MÃ¼nchener RÃ¼ck"
+         and
+             language = "{tolower(input$lang)}"' )
+
+      } else {
+
+        glue('SELECT *  FROM sum_stats_companies WHERE
+         retweets_count = {input$rt} and likes_count = {input$likes} and
+         tweet_length = {long} and company  = "{input$comp}" and
+             language = "{tolower(input$lang)}"' )
+      }
     }
 
 
@@ -1961,6 +2064,10 @@ server <- function(input, output, session) {
       df_need$company <- gsub("Ã¶", "ö", df_need$company)
       df_need$company <- gsub("Ã¼", "ü", df_need$company)
     }
+
+    #### drop duplicates
+    df_need <- unique(df_need)
+
     #### return df
     df_need
   })
@@ -2015,7 +2122,7 @@ server <- function(input, output, session) {
     num_tweets_avg <- formatC(round(mean(df_need$N)), format="f", big.mark = ",", digits=0)
 
     ##### set up string for header of time series graphs
-    glue("{comp_name} ({num_tweets} tweets total,
+    glue("{comp_name} ({num_tweets} tweets total;
            {num_tweets_avg} on average per day)")
   })
 
@@ -2038,7 +2145,7 @@ server <- function(input, output, session) {
     req(!is.null(input$value) | input$num_tweets_box == T)
 
     ###### need at least two days selected for time series plot
-    validate(need(length(input$dates_desc) != 1, "Cannot plot time series for single day"))
+    validate(need(length(input$dates_desc) != 1, "Cannot plot time series for single date. Please select more dates."))
 
     ##### need date input to not be null
     validate(need(!is.null(input$dates_desc), "Please select a date."))
@@ -2048,6 +2155,9 @@ server <- function(input, output, session) {
 
     ### get data for plots
     df <- get_data_sum_stats_tables()
+
+    ### need to have at least to obs for time series
+    validate(need(dim(df)[1] > 1, "Only one date found for current selection. Cannot plot time series for single date"))
 
 
     #### when number of tweets should not be plotted
@@ -2083,6 +2193,7 @@ server <- function(input, output, session) {
 
   ##### if button is clicked store time series plot in serperate part
   observeEvent(input$plot_saver_button, {
+
     #### date input cannot be null
     validate(need(!is.null(input$dates_desc), "Please select a date."))
     ###### need at leat ne value selected
@@ -2105,7 +2216,7 @@ server <- function(input, output, session) {
                                              input_title = input_title,
                                              group = "twitter_desc")
     } else { ## in case where number of tweets should be included in plot
-      save_plot$plot <- time_series_plotter2(df, input$metric, input$value, num_tweets = F,
+      save_plot$plot <- time_series_plotter2(df, input$metric, input$value, num_tweets = T,
                                              input$dates_desc[1], input$dates_desc[2], r,
                                              date_range = F,
                                              input_title = input_title,
@@ -2116,6 +2227,7 @@ server <- function(input, output, session) {
 
   ######## time series plot when pressing save plot button
   output$sum_stats_plot2 <-dygraphs::renderDygraph({
+
     req(!is.null(save_plot$plot))
     save_plot$plot
     # dygraphs::dygraph(don) %>%
@@ -2139,7 +2251,7 @@ server <- function(input, output, session) {
 
 
 
-
+    browser()
     # for case no company selected
     if (input$comp == "NoFilter"){
       file_path <- file.path(glue("Twitter/plot_data/{lang}_NoFilter/{querry_histo()}"))
@@ -2153,15 +2265,21 @@ server <- function(input, output, session) {
       ### need to have data
       validate(need(dim(df_need)[1] > 0, "No data available for current selection" ))
 
-
+      #### drop duplicates
+      df_need <- unique(df_need)
 
       df_need
     } else { #for case of choosen company
       file_path <- file.path(glue("Twitter/plot_data/Companies/{input$comp}/{querry_histo()}"))
       df_need <- data.table::fread(file_path,
-                                   select = 1:3)
+                                   select = 1:4) %>% filter(language == tolower(input$lang)) %>%
+        select(-language)
       ### need to have data
       validate(need(dim(df_need)[1] > 0, "No data available for current selection" ))
+
+
+      #### drop duplicates
+      df_need <- unique(df_need)
 
       df_need
 
@@ -2282,8 +2400,14 @@ server <- function(input, output, session) {
                                                     "emo"),
                               colClasses = c("date_variable" = "Date"))
 
+      #### drop duplicates
+      dt <- unique(dt)
+
       #### check if data in dt
       validate(need(dim(dt)[1] > 0, "No data available for current selection"))
+
+
+
 
       ### return dt
       dt
@@ -2298,6 +2422,9 @@ server <- function(input, output, session) {
                                                     "N",
                                                     "emo"),
                               colClasses = c("date" = "Date"))
+
+      #### drop duplicates
+      dt <- unique(dt)
 
       #### check if data in dt
       validate(need(dim(dt)[1] > 0, "No data available for current selection"))
@@ -2340,8 +2467,7 @@ server <- function(input, output, session) {
                                   tolower(input$lang),
                                   input$comp)
 
-    #### account for empty df
-    validate(need(!is.null(df), "No data available for current selection"))
+
 
     df
   })
@@ -2355,7 +2481,8 @@ server <- function(input, output, session) {
 
 
 
-
+    #### account for empty df
+    validate(need(!is.null(word_freq_df()), "No data available for current selection"))
 
 
     df <- df_filterer(word_freq_df() , input$n_freq)
@@ -2375,7 +2502,8 @@ server <- function(input, output, session) {
   output$wordcloud <- wordcloud2::renderWordcloud2({
     req(input$plot_type_expl == "Word Cloud")
 
-
+    #### account for empty df
+    validate(need(!is.null(word_freq_df()), "No data available for current selection"))
 
     df <- df_filterer(word_freq_df(), input$n_freq_wc)
 
@@ -2396,13 +2524,18 @@ server <- function(input, output, session) {
     df_need$created_at <- as.Date(df_need$created_at)
     # filter dates
     df_need <- df_need %>%
-      filter(between(created_at, as.Date(dates_desc()[1]), as.Date(dates_desc()[2])))
+      filter(between(created_at, as.Date(dates_desc()[1]), as.Date(dates_desc()[2])) &
+               language == tolower(input$lang))
     # get number of total tweets
     number_tweets <- round(sum(df_need$N))
 
 
     #### number of unqiue words/bigrams
     number_words <-  unique_words(word_freq_df())
+
+    if (is.null(number_words)){
+      number_words <- 0
+    }
 
     HTML(glue("Number of unique {tolower(input$ngram_sel)}s available for current selection: {number_words} <br>
          Number of tweets for current selection: {number_tweets}"))
@@ -2427,6 +2560,7 @@ server <- function(input, output, session) {
 
   ###########################################################################
   ###########################################################################
+  ###########################################################################
   ######################### GOING DEEPER ####################################
   ###########################################################################
   ###########################################################################
@@ -2442,7 +2576,6 @@ server <- function(input, output, session) {
       validate(need(days_inrange <= 1,"More than 2 days selected. Please choose a maximum of 2 days."))
     }
 
-
     lang <- stringr::str_to_title(input$lang_net)
     df <- network_plot_datagetter(lang, input$dates_net[1], input$dates_net[2], input$comp_net)
 
@@ -2454,7 +2587,8 @@ server <- function(input, output, session) {
   data_filterer_net_react <- reactive({
     df <- data_getter_net_react()
     if (dim(df)[1] > 0){
-      df <- network_plot_filterer(df, input$rt, input$likes_net, input$long_net,
+
+      df <- network_plot_filterer(df, input$rt_net, input$likes_net, input$long_net,
                                   input$sentiment_net, input$search_term_net,
                                   input$username_net, input$lang_net)
     }
@@ -2503,6 +2637,17 @@ server <- function(input, output, session) {
 
       validate("Need to select at least one day.")
     }
+  })
+
+
+  ###### username checker
+  ##### validate that more than 3 chars are put in
+  output$username_checker <- renderText({
+    if (input$username_net != "" & nchar(input$username_net) < 4){
+      validate("Usernames must have at least 4 characters.")
+    }
+
+
   })
 
   ############################################################
@@ -2809,15 +2954,92 @@ server <- function(input, output, session) {
   })
 
 
-  output$covid_comp <- dygraphs::renderDygraph({
-    req(!is.null(input$CoronaCountry))
+
+  ##### get control variables
+  df_controls_comp <- reactive({
+
+
+    ## validity checks
+    req(!is.null(input$ControlCountry))
     validate(need(correct_path() == T, "Please choose the correct path"))
 
 
-    df <- data.table::fread("Corona/owid.csv")
+    #### only load data when control is slected (and not covid)
+    if (input$controls_comp %in% c("coronavirus","OFR.FSI",
+                                   "VIX", "WLEMUINDXD")) {
 
 
-    covid_plotter(df, input$corona_measurement, input$CoronaCountry, input$roll_covid_comp)
+      if (length(input$ControlCountry) == 2) {
+
+
+        ### load both dfs and join them to one
+        df1 <- data.table::fread("Twitter/sentiment/Model/controls_DE.csv") %>%
+          select(Date, input$controls_comp)
+        names(df1) <- c("Date", "Germany")
+
+
+
+
+
+        df2 <- data.table::fread("Twitter/sentiment/Model/controls_US.csv") %>%
+          select(Date, input$controls_comp)
+        names(df2) <- c("Date", "USA")
+
+
+        ## join dfs
+        df <- df1 %>% dplyr::inner_join(df2)
+
+
+
+      } else if (input$ControlCountry == "Germany"){
+        lang <- "DE"
+
+        df <- data.table::fread(glue("Twitter/sentiment/Model/controls_{lang}.csv")) %>%
+          select(Date, input$controls_comp)
+
+      } else if (input$ControlCountry == "United States") {
+        lang <- "US"
+
+        df <- data.table::fread(glue("Twitter/sentiment/Model/controls_{lang}.csv")) %>%
+          select(Date, input$controls_comp)
+
+      }
+
+
+
+
+
+
+    } else {
+      df <- data.table::fread("Corona/owid.csv")
+    }
+    ### make sure df not empty
+    req(!is.null(df) & dim(df)[1] > 0)
+
+    df
+
+
+  })
+
+
+  ###### plot controls
+  output$covid_comp <- dygraphs::renderDygraph({
+
+
+    if (input$controls_comp %in% c("coronavirus","OFR.FSI",
+                                   "VIX", "WLEMUINDXD")) {
+
+
+      controls_plotter(df_controls_comp(), input$controls_comp, input$ControlCountry, input$roll_control_comp)
+
+    } else {
+
+      covid_plotter(df_controls_comp(), input$controls_comp, input$ControlCountry, input$roll_control_comp)
+    }
+
+
+
+
 
 
 
@@ -2907,7 +3129,7 @@ server <- function(input, output, session) {
     }
 
     ##### set up string for header of time series graphs
-    glue("{comp_name} ({round(sum(df_need$N))} tweets total,
+    glue("{comp_name} ({round(sum(df_need$N))} tweets total;
            {round(mean(df_need$N))} on average per day)")
   })
 
@@ -2940,12 +3162,12 @@ server <- function(input, output, session) {
   output$stock_regression_xgb <- renderUI({
     req( correct_path()== T)
     if (input$country_regression_xgb == "Germany"){
-      input <- selectizeInput("Stock_Regression_xgb","Choose dependent variable:",
+      input <- selectizeInput("Stock_Regression_xgb","Choose company or Index:",
                               #c(COMPONENTS_DE()[["Company.Name"]],"GDAXI"),
                               company_terms_stock_ger,
                               selected = "DAX",multiple = FALSE)
     } else {
-      input <- selectizeInput("Stock_Regression_xgb","Choose dependent variable:",
+      input <- selectizeInput("Stock_Regression_xgb","Choose company or Index:",
                               #c(COMPONENTS_US()[["Company.Name"]],"DJI"),
                               company_terms_stock_us,
                               selected = "Dow Jones Industrial",multiple = FALSE)
@@ -2958,12 +3180,20 @@ server <- function(input, output, session) {
     #res$name <- NULL
     req( correct_path()== T)
     if (input$country_regression_xgb == "Germany"){
-      input <- selectizeInput("Controls_xgb","Choose control variables:",
-                              c(colnames(global_controls_test_DE())[-1],"DAX"),multiple = TRUE)
+      input <- selectizeInput("Controls_xgb","Control variables:",
+                              c("Google-Trends Coronavirus"="coronavirus",
+                                "VIX"="VIX",
+                                "Financial Distress Index"="OFR.FSI",
+                                "Economic Uncertainty Index"="WLEMUINDXD",
+                                "DAX"="DAX"),selected = "VIX",multiple = FALSE)
       #c(colnames(res[3:length(res)])),multiple = TRUE
     }else{
-      input <- selectizeInput("Controls_xgb","Choose control variables:",
-                              c(colnames(global_controls_test_US())[-1],"DJI"),multiple = TRUE)
+      input <- selectizeInput("Controls_xgb","Control variables:",
+                              c("Google-Trends Coronavirus"="coronavirus",
+                                "VIX"="VIX",
+                                "Financial Distress Index"="OFR.FSI",
+                                "Economic Uncertainty Index"="WLEMUINDXD",
+                                "DJI"="DJI"),selected = "VIX",multiple = FALSE)
     }
 
   })
@@ -3216,28 +3446,33 @@ server <- function(input, output, session) {
     ###### clean input df
     res <- res %>% dplyr::select(-X,-location)
     ###### extract column based on input
-    res <- res[c("date",input$corona_xgb)]
+    ifelse(input$corona_measurement_xgb=="",res <- res[c("date")],res <- res[c("date",input$corona_measurement_xgb)])
+    #res <- res[c("date",input$corona_measurement_xgb)]
+
     res
   })
 
   corona_data_xgb <- reactive({
     ##### require database
     req( correct_path()== T)
-    req(input$country_corona_xgb)
+    req(input$country_regression_xgb)
     ##### call function: extract corona file for specific country
-    CORONA_xgb(input$country_corona_xgb)
+    test <- input$country_regression_xgb
+    ifelse(test=="USA",test <- "United States",test <- test)
+    #CORONA_xgb(input$country_regression_xgb)
+    CORONA_xgb(test)
   })
 
 
-  output$corona_vars_xgb <- renderUI({
-    req( correct_path()== T)
-    res <- corona_data_xgb()
-    #### delete redundant columns
-    res <- res %>% dplyr::select(-X,-location,-date)
-    input <- selectizeInput("corona_xgb","Choose a corona related variable:",
-                            names(res),multiple = TRUE)
-
-  })
+  # output$corona_vars_xgb <- renderUI({
+  #   req( correct_path()== T)
+  #   res <- corona_data_xgb()
+  #   #### delete redundant columns
+  #   res <- res %>% dplyr::select(-X,-location,-date)
+  #   input <- selectizeInput("corona_xgb","Choose a corona related variable:",
+  #                           names(res),multiple = TRUE)
+  #
+  # })
 
   observeEvent(input$reset_corona_xgb,{
     #### reset selection of corona dropdown
@@ -3248,6 +3483,9 @@ server <- function(input, output, session) {
   output$xgb_summary <- function(){
     ##### summary table
     knitr::kable(df_need_xgb(), caption = glue("Summary statistics"),colnames = NULL) %>%
+      column_spec(1:6, color = "lightgrey") %>%
+      column_spec(1, bold = T, color = "white") %>%
+      row_spec(1, bold = T) %>%
       kableExtra::kable_styling(c("striped","hover"), full_width = F,
                                 position = "center",
                                 font_size = 16)
@@ -3636,10 +3874,16 @@ server <- function(input, output, session) {
   output$tableCustom <- DT::renderDataTable({
     #### create datable based on final dataset created by the user
     DT::datatable(custom_df(),options = list(
-      autoWidth = FALSE, scrollX = TRUE)) %>% DT::formatStyle(names(custom_df()),
-                                                              lineHeight = '80%',
-                                                              lineWidth = '80%')
+      initComplete = JS(
+        "function(settings, json) {",
+        "$(this.api().table().header()).css({'background-color': '#000', 'color': '#fff'});",
+        "}")
+    ), rownames = F
+    ) %>% DT::formatStyle(columns = c(1), width='85px')
   })
+
+
+
 
   ######################################Default dataset###########################
   df_xgb <- reactive({
@@ -3660,11 +3904,24 @@ server <- function(input, output, session) {
   output$df_xgb_default <- DT::renderDataTable({
     ##### create datatable
     DT::datatable(df_xgb(),options = list(
-      autoWidth = FALSE, scrollX = TRUE)) %>% DT::formatStyle(names(df_xgb()),
-                                                              lineHeight = '80%',
-                                                              lineWidth = '80%')
+      scrollX = T,
+      autoWidth = T,
+      initComplete = JS(
+        "function(settings, json) {",
+        "$(this.api().table().header()).css({'background-color': '#000', 'color': '#fff'});",
+        "}")
+    ), rownames = F
+    ) %>% DT::formatStyle(columns = c(1), width='75px')
   })
 
+
+
+
+
+  # options = list(
+  #   autoWidth = FALSE, scrollX = TRUE)) %>% DT::formatStyle(names(df_xgb()),
+  #                                                           lineHeight = '80%',
+  #                                                           lineWidth = '80%')
   ########################### Validity tab #######################################
 
   df_xgb_train <- reactive({
@@ -3895,6 +4152,9 @@ server <- function(input, output, session) {
                             row.names = c("RMSE","MAE","MAPE"))
       colnames(df_need)<- "value"
       knitr::kable(df_need, caption = glue("Performance metrics"),colnames = NULL) %>%
+        column_spec(1:2, color = "lightgrey") %>%
+        column_spec(1, bold = T, color = "white") %>%
+        row_spec(1, bold = T) %>%
         kableExtra::kable_styling(c("striped","hover"), full_width = F,
                                   position = "center",
                                   font_size = 16)
@@ -3928,6 +4188,9 @@ server <- function(input, output, session) {
                           row.names = c("RMSE","MAE","MAPE"))
     colnames(df_need)<- "value"
     knitr::kable(df_need, caption = glue("Performance metrics"),colnames = NULL) %>%
+      column_spec(1:2, color = "lightgrey") %>%
+      column_spec(1, bold = T, color = "white") %>%
+      row_spec(1, bold = T) %>%
       kableExtra::kable_styling(c("striped","hover"), full_width = F,
                                 position = "center",
                                 font_size = 16)
@@ -3977,6 +4240,9 @@ server <- function(input, output, session) {
       colnames(df_need)<- "Summary"
       #### table output
       knitr::kable(df_need, caption = glue("Performance metrics"),colnames = NULL) %>%
+        column_spec(1:2, color = "lightgrey") %>%
+        column_spec(1, bold = T, color = "white") %>%
+        row_spec(1, bold = T) %>%
         kableExtra::kable_styling(c("striped","hover"), full_width = F,
                                   position = "center",
                                   font_size = 16)
@@ -4243,6 +4509,9 @@ server <- function(input, output, session) {
                             row.names = c("RMSE","MAE","MAPE"))
       colnames(df_need)<- "value"
       knitr::kable(df_need, caption = glue("Performance metrics"),colnames = NULL) %>%
+        column_spec(1:2, color = "lightgrey") %>%
+        column_spec(1, bold = T, color = "white") %>%
+        row_spec(1, bold = T) %>%
         kableExtra::kable_styling(c("striped","hover"), full_width = F,
                                   position = "center",
                                   font_size = 16)
@@ -4293,6 +4562,9 @@ server <- function(input, output, session) {
       colnames(df_need)<- "Summary"
       #### table output
       knitr::kable(df_need, caption = glue("Performance metrics"),colnames = NULL) %>%
+        column_spec(1:2, color = "lightgrey") %>%
+        column_spec(1, bold = T, color = "white") %>%
+        row_spec(1, bold = T) %>%
         kableExtra::kable_styling(c("striped","hover"), full_width = F,
                                   position = "center",
                                   font_size = 16)

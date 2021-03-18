@@ -95,7 +95,7 @@ df_filterer <- function(df, input_n){
 
 df <- df %>%
   group_by( word) %>%
-  summarise(n = sum(N)) %>%
+  summarise(n = sum(N, na.rm = T)) %>%
   arrange(desc(n)) %>%
   head(input_n)
 
@@ -153,7 +153,7 @@ word_filter_time_series_plotter <- function(df){
 ## create plot
 p <- df %>%
    group_by(date) %>%
-    summarise(n = sum(N)) %>%
+    summarise(n = sum(N, na.rm = T)) %>%
 
 
   ggplot() +

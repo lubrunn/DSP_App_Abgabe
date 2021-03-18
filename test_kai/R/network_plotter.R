@@ -1,12 +1,19 @@
+'
+In this file we compute everything needed for the network plot shown in the going deeper tab
+'
+
+
+
+#### this function gets the data from the source and appends files if multiple dates
+# are selected
 #'@export
 #'@rdname network_plot
 #'
-
-
 network_plot_datagetter <- function(input_lang, input_date1, input_date2, input_company){
 
 
-   # create date range
+   # create date range to be loaded accroding to user input
+  ### if second date provided set up sequence of dates
   if (!is.na(input_date2)){
    date_list <- seq(as.Date(input_date1), as.Date(input_date2), "days")
   } else{
@@ -24,7 +31,7 @@ network_plot_datagetter <- function(input_lang, input_date1, input_date2, input_
 
    }
    else { # source to files for companies
-     path_source <- glue("Twitter/cleaned_raw_sentiment/Companies2/{input_company}")
+     path_source <- glue("Twitter/cleaned_raw_sentiment/Companies/{input_company}")
    }
 
 
@@ -32,16 +39,34 @@ network_plot_datagetter <- function(input_lang, input_date1, input_date2, input_
    all_files <- list.files(path_source)[grepl(".csv", list.files(path_source)) &
                                           grepl(paste(date_list, collapse = "|"), list.files(path_source))]
 
-
+  if (is_empty(all_files)){
+    df <- data.frame("doc_id" = character(), "text" = character(),
+                           "username" = character(), "language" = character(),
+                           "retweets_count" = integer(), "likes_count" = integer(),
+                           "twet_length" = integer(), "created_at" = lubridate::Date(),
+                           "sentiment" = double(), "tweet" = character())
+    return(df)
+  } else {
   # read in all the files
    for (file in all_files){
 
+      #### onyl if read if file acutally exists
+     if (file.exists(file.path(path_source, file))) {
      df <- data.table::fread(file.path(path_source, file),
                              encoding = 'UTF-8',
                              colClasses = c("doc_id" = "character"))
+     } else {
+       ## else give back empty df
+       df <- data.frame("doc_id" = character(), "text" = character(),
+                        "username" = character(), "language" = character(),
+                        "retweets_count" = integer(), "likes_count" = integer(),
+                        "twet_length" = integer(), "created_at" = lubridate::Date(),
+                        "sentiment" = double(), "tweet" = character())
+     }
+   }
 
    # if its the first file set it up as df_all
-   if (is.null(df)){
+   if (is.null(df_all)){
 
         df_all <- df
 
@@ -61,13 +86,22 @@ network_plot_datagetter <- function(input_lang, input_date1, input_date2, input_
 
 
 
-
+###### this function filters the data retrieved accroding to user
+# search_term, username, rt, likes, length, language, comapny name
 #'@export
 #'@rdname network_plot
 network_plot_filterer <- function(df, input_rt, input_likes, input_tweet_length,
                                   input_sentiment, input_search_term,
                                   input_username, input_lang) {
 
+
+  #### control for empty rt/likes input
+  if(is.na(input_rt)){
+    input_rt <- 0
+  }
+  if(is.na(input_likes)){
+    input_likes <- 0
+  }
 
 #### convert search terms to lower
   input_search_term <- corpus::stem_snowball(tolower(input_search_term), algorithm = tolower(input_lang))
@@ -94,8 +128,10 @@ network_plot_filterer <- function(df, input_rt, input_likes, input_tweet_length,
 }
 
 
-
-
+##### this function unnests the tweets, i.e. gets every single word contained into new row
+### potentially filters out emoji words
+#'@export
+#'@rdname network_plot
 network_unnester <- function(network, df, input_emo_net){
   network <- network %>%
 
@@ -111,8 +147,9 @@ network_unnester <- function(network, df, input_emo_net){
 }
 
 
-
-
+#### this function unnests bigrams instead of single words
+#'@export
+#'@rdname network_plot
 network_unnester_bigrams <- function(network, input_emo){
 
 network <- network %>%
@@ -135,13 +172,26 @@ network <- network %>%
 
 }
 
-
-
+#### this funciton takes the df and converts it into a network after filtering for
+# minmium correlation and occruences
+#'@export
+#'@rdname network_plot
 network_word_corr <- function(network, input_n,
-                              input_corr, min_n){
+                              input_corr, min_n,
+                              input_username){
+
+  ### when username provided lower minimum thresholds
+  if (input_username != "") {
+    min_n <- max(1, min_n)
+    min_corr_abs <- 0.1
+  } else {
+    min_n <- max(10, min_n)
+    min_corr_abs <- 0.15
+  }
+
   #### get minimum n, either provided min_n which is 1% of nrows of of but at least 10
 
-  min_n <- max(10, min_n)
+
 
   network <- network %>%
 
@@ -165,7 +215,7 @@ network_word_corr <- function(network, input_n,
     # create network
     # filter out words with too low correaltion as baseline and even more if user
     # want it
-    filter(correlation >= 0.15) %>% # fix in order to avoid overcrowed plot
+    filter(correlation >= min_corr_abs) %>% # fix in order to avoid overcrowed plot
     filter(correlation >= input_corr)
 
  if (dim(network)[1] == 0){
@@ -200,13 +250,24 @@ network_word_corr <- function(network, input_n,
 
 
 
-
-
+###### this function createds network after filtering df with minimum occuruences
+#'@export
+#'@rdname network_plot
 network_bigrammer <- function(df, network, input_n, input_bigrams_n,
-                              min_n){
+                              min_n, input_username){
+#### lower min thresholds for usernames
+  if (input_username != "") {
+    min_n <- max(0, min_n)
+    input_bigrams_n <- max(0,input_bigrams_n)
+  } else {
+    ##### set input_bigrams_n to at least 10
+    min_n <- max(10, min_n)
+    ### same for n
+    input_bigrams_n <- max(10,input_bigrams_n)
+  }
 
-  ##### set input_bigrams_n to at least 10
-  input_bigrams_n <- max(10,input_bigrams_n)
+
+
 
   words_above_threshold <- df %>% unnest_tokens(word, text) %>%
     group_by(word) %>%
@@ -247,7 +308,7 @@ network_bigrammer <- function(df, network, input_n, input_bigrams_n,
 
 
 
-
+##### this funciton plots the network for word pairs
 #'@export
 #'@rdname network_plot
 network_plot_plotter <- function(network){
@@ -299,9 +360,9 @@ network_plot_plotter <- function(network){
       #linkColour = "red", #color of links
       bounded = F, # if T plot is limited and can not extend outside of box
       # colourScale = JS("d3.scaleOrdinal(d3.schemeCategory10);")# change color scheme
-      colourScale = networkD3::JS(ColourScale),
+      colourScale = networkD3::JS(ColourScale)
       #width = 200,
-     # height = 350
+      #height = 1200
     )
 
 
@@ -310,8 +371,9 @@ network_plot_plotter <- function(network){
 
 
 
-
-
+#### this function plots the network for bigrams
+#'@export
+#'@rdname network_plot
 network_plot_plotter_bigrams <- function(network){
 
 

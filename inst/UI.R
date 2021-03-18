@@ -239,6 +239,10 @@ ui <- fluidPage(
                                  ),
                                  mainPanel(
                                    tabsetPanel(type = "tabs", id = "tabs",
+                                               tabPanel("Information XGB",
+                                                        tags$hr(),
+                                                        htmlOutput("info_xgb_firstpage"),
+                                                        withMathJax()),
                                                tabPanel("Summary statistics",value="Summary statistics",
                                                         tableOutput("xgb_summary"),
                                                         tags$hr(style="border-color: white;"),

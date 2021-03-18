@@ -16,7 +16,7 @@ emoji_words <- c(
   "grin","bicep","flex","note","popper","fist","car","follow","retweet","year","ago",
   "social media","woman","voltag","star","ball","camera","man","ass","video","cake","cool",
   "fac","smil","see","evil","party","sweat","thumb","big","the","crying","fing",
-  "crossed","god","watch","leaf","food","arrow", "hugg", "cri", "tone"
+  "crossed","god","watch","leaf","food","arrow", "hugg", "cri", "tone", "mouth"
 
 )
 
@@ -93,11 +93,16 @@ unique_words <- function(df){
 df_filterer <- function(df, input_n){
 
 
-df <- df %>%
-  group_by( word) %>%
-  summarise(n = sum(N, na.rm = T)) %>%
-  arrange(desc(n)) %>%
-  head(input_n)
+
+## convert to dt
+setDT(df)
+
+#### group by words and sum up
+df <- df[,.(n = sum(N, na.rm = T)),
+         by = word]
+
+#### select top n
+df <- df[order(-n)][1:input_n,]
 
 return(df)
 
@@ -165,6 +170,7 @@ p <- df %>%
 
 
 plotly::ggplotly(p)
+
 
 }
 

@@ -86,6 +86,7 @@ pred_output <- function(res,input_var,model){
   colnames(res$df_forecast)[which(names(res$df_forecast) == input_var)] <- "y"
 
   colnames(res$df_train)[which(names(res$df_train) == input_var)] <- "y"
+  browser()
 
   preds <- model %>%
     fit(formula = y ~ .,data = res$df_train[,c(-1)]) %>%

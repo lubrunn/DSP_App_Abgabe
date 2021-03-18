@@ -125,9 +125,9 @@ ARMA_creator_for <- function(res,res_pre){
 #' @export
 #' @rdname xgboost_prep
 lag_cols <- function(res,variable){    #input variable for "Close"
-                              #insert here
+  #insert here
   b <- res %>% dplyr::select(-Dates,-variable) %>%  lag(1)
-                              #insert here
+  #insert here
   res <- res %>% dplyr::select(Dates,variable) %>%  cbind(b)
 
   res <- res[-1,]
@@ -139,12 +139,12 @@ lag_cols <- function(res,variable){    #input variable for "Close"
 #' @rdname xgboost_prep
 make_ts_stationary <- function(res){
 
- for(i in 2:ncol(res)){
- # optlags <- VARselect(res[,i],lag.max = 10,
- #                      type = "const")$selection[["AIC(n)"]]
- #
-  if(adf.test(res[,i],k=2)$p.value > 0.1){
-    res[,i] <- c(diff(res[,i],1),NA)
+  for(i in 2:ncol(res)){
+    # optlags <- VARselect(res[,i],lag.max = 10,
+    #                      type = "const")$selection[["AIC(n)"]]
+    #
+    if(adf.test(res[,i],k=2)$p.value > 0.1){
+      res[,i] <- c(diff(res[,i],1),NA)
 
     }
 
@@ -185,28 +185,28 @@ split_data_for <- function(sample,n_ahead,ftype,variable){
 
   if(ftype == "past_features"){
 
-  # append past X's to test data
-  past_features <- past_features %>% dplyr::select(-date,-days,-weeks,-months,-years,-quarter,-semester)
+    # append past X's to test data
+    past_features <- past_features %>% dplyr::select(-date,-days,-weeks,-months,-years,-quarter,-semester)
 
-  out$df_forecast <- cbind(out$df_forecast,past_features)
-  #out$date_forecast <- out$df_forecast %>% dplyr::select(date)
+    out$df_forecast <- cbind(out$df_forecast,past_features)
+    #out$date_forecast <- out$df_forecast %>% dplyr::select(date)
 
 
   }else if(ftype == "forecasted_features"){
-  covariates <- out$df_train %>% dplyr::select(-date,-days,-weeks,-months,-years,-quarter,-semester) %>%
+    covariates <- out$df_train %>% dplyr::select(-date,-days,-weeks,-months,-years,-quarter,-semester) %>%
       names()
 
-  for(i in covariates){
+    for(i in covariates){
 
-  Lambda <- forecast::BoxCox.lambda(out$df_train[,i])
-  arima_fit <-  forecast::auto.arima(out$df_train[,i],D=1,approximation = F,allowdrift = T,
-                           allowmean = T,seasonal = T,lambda = Lambda)
-  preds_cov <- forecast::forecast(arima_fit,h = n_ahead)
+      Lambda <- forecast::BoxCox.lambda(out$df_train[,i])
+      arima_fit <-  forecast::auto.arima(out$df_train[,i],D=1,approximation = F,allowdrift = T,
+                                         allowmean = T,seasonal = T,lambda = Lambda)
+      preds_cov <- forecast::forecast(arima_fit,h = n_ahead)
 
-  out$df_forecast <- cbind(out$df_forecast,fcast = preds_cov$mean)
-  names(out$df_forecast)[ncol(out$df_forecast)] <- paste0(i)
+      out$df_forecast <- cbind(out$df_forecast,fcast = preds_cov$mean)
+      names(out$df_forecast)[ncol(out$df_forecast)] <- paste0(i)
 
-  # out$date_forecast <- out$df_forecast %>% dplyr::select(date)
+      # out$date_forecast <- out$df_forecast %>% dplyr::select(date)
 
     }
   }else{
@@ -223,7 +223,7 @@ split_data_for <- function(sample,n_ahead,ftype,variable){
 
     out$df_forecast[, x_names] <- lapply(x_names, function(x) as.numeric(out$df_forecast[[x]]))
 
-   }
+  }
   return(out)
 }
 
@@ -286,7 +286,7 @@ split_data_for_ahead <- function(sample,n_ahead2,ftype2){
 
       Lambda <- forecast::BoxCox.lambda(out$df_train[,i])
       arima_fit <-  forecast::auto.arima(out$df_train[,i],D=1,approximation = F,allowdrift = T,
-                               allowmean = T,seasonal = T,lambda = Lambda)
+                                         allowmean = T,seasonal = T,lambda = Lambda)
       preds_cov <- forecast::forecast(arima_fit,h = n_ahead2)
 
       out$df_forecast <- cbind(out$df_forecast,fcast = preds_cov$mean)

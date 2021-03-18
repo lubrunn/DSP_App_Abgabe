@@ -55,9 +55,9 @@ forcast_plot_xgb <- function(res,preds,full_df,plot_type,variable,stock){
   last_obs <- tail(res$df_train[,variable], 1)
 
   preds <- rbind(last_obs,preds)
-  browser()
+
 preds <- preds %>%
-  zoo::zoo(seq(from = as.Date(min(res$f_dates)) -1, to = as.Date(max(res$f_dates)), by = "day"))
+  zoo::zoo(seq(from = as.Date(max(res$df_train$date)), to = as.Date(max(res$f_dates)), by = "day"))
 names(preds)[1] <- "predicted"
 if(plot_type == "Full"){
 
@@ -81,7 +81,7 @@ if(plot_type == "Full"){
                                                   ylab = variable) %>%
     dygraphs::dyOptions(axisLineWidth = 2) %>%
     dygraphs::dyLegend() %>%
-    dygraphs::dyShading(from = as.Date(min(res$f_dates)), to = as.Date(max(res$f_dates)), color = "white") %>%
+    dygraphs::dyShading(from = as.Date(min(full_df$Dates)), to = as.Date(max(full_df$Dates)), color = "white") %>%
     dyEvent(as.Date(max(res$df_train$date)), "Start forecast", labelLoc = "bottom",color = "red")
 
 }
@@ -97,6 +97,45 @@ if(plot_type == "Full"){
 # }
 
 }
+
+
+
+
+
+
+#' @export
+#' @rdname ts
+
+forcast_plot_xgb_2 <- function(res,preds,full_df,variable,stock,ahead){
+
+  last_obs <- tail(full_df[,variable], 1)
+
+  preds <- rbind(last_obs,preds)
+  preds <- preds %>% zoo::zoo(seq(from = as.Date(max(full_df$Dates)), to = as.Date(max(full_df$Dates)) + ahead, by = "day"))
+  names(preds)[1] <- "predicted"
+
+  ts <- full_df %>% pull(variable) %>%
+    zoo::zoo(seq(from = as.Date(min(full_df$Dates)), to = as.Date(max(full_df$Dates)), by = "day"))
+
+  {cbind(actual=ts, predicted=preds)} %>% dygraph(main = glue("Actual forecast for {stock}"),
+                                                  ylab = variable) %>%
+    dygraphs::dyOptions(axisLineWidth = 2) %>%
+    dygraphs::dyLegend() %>%
+    dygraphs::dyShading(from = as.Date(min(full_df$Dates)), to = as.Date(max(full_df$Dates)) + ahead, color = "white") %>%
+    dyEvent(as.Date(max(full_df$Dates)), "Start forecast", labelLoc = "bottom",color = "red")
+
+
+
+
+  }
+
+
+
+
+
+
+
+
 
 #
 # #### create zoo object

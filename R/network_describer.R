@@ -35,9 +35,21 @@ has been fully computed. But you can cancel the running process in case you want
 computation to be done. The networks can appear very empty when reducing the data through the use of filters. In that case you can adjust
 the minimum threshold for occurences and correlation using the advanced settings.
 However, note that setting values too low may result in very overcrowded plots. Hence, we only
-show a maximum of 2000 unique word combinations in a network plot. For most filter options the absolute thresholds for minimum number of
-occurrences is set to 10 (within the selected data) and the minimum
-correlation is set to 0.15. When choosing lower values, the filters will default to the aforementioned values. The username search is an
+show a maximum of 2000 unique word combinations in a network plot.
+
+
+For most filter options the absolute thresholds for minimum number of
+occurrences are set to the maximum of 10 and 0.1% of the number of tweets found.
+For the word correlation the minimum
+correlation is set to 0.15. However, don't worry too much about this as the filters will automatically
+default to the aforementioned values when choosing lower
+values than the absoulte thresholds.
+
+
+
+
+
+The username search is an
 exception here as it will results in considerably fewer tweets,
 Here the minimum number of occurences can be set as low as 1 and
 the minimum correlation can be

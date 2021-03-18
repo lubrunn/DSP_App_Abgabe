@@ -4645,7 +4645,7 @@ output$serial_out_xgb <- function(){
     colnames(res$df_train)[which(names(res$df_train) == input$regression_outcome_xgb)] <- "y"
 
     model_xgboost <- model_xgbi()[[1]] %>%
-      fit(formula = y ~ .,data = res$df_train[,c(-1)])
+      parsnip::fit(formula = y ~ .,data = res$df_train[,c(-1)])
 
     fits <- predict(model_xgboost,res$df_train[,c(-1)])
 
@@ -4994,7 +4994,7 @@ observeEvent(input$mod_spec_for, {
       res <- df_xgb_train_for()
       colnames(res$df_train)[which(names(res$df_train) == input$regression_outcome_xgb)] <- "y"
       model_xgboost <- model_xgbi2()[[1]] %>%
-        fit(formula = y ~ .,data = res$df_train[,c(-1)])
+        parsnip::fit(formula = y ~ .,data = res$df_train[,c(-1)])
       fits <- predict(model_xgboost,res$df_train[,c(-1)])
 
       resids <- (res$df_train$y - fits)
